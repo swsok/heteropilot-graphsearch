@@ -44,6 +44,7 @@ from graphsearch.equivalence import (
     Representative,
     compress,
 )
+from graphsearch.ranker import DEFAULT_RANKER_VARIANT
 from graphsearch.schema import ResourceGraph
 
 paths_root.ensure_importable()
@@ -280,6 +281,7 @@ def run_proposed(
     compression_policy: CompressionPolicy | None = None,
     bound_policy: BoundPolicy | None = None,
     config: AdaptiveConfig | None = None,
+    ranker_variant: str = DEFAULT_RANKER_VARIANT,
 ) -> ProposedResult:
     """The real pipeline: enumerate, compress, bound, rank, evaluate."""
     embeddings, stats = enumerate_embeddings(
@@ -295,7 +297,9 @@ def run_proposed(
     search = AdaptiveSearch(
         spec, cluster, islands, profiles, predictor,
         graph=graph, representatives=representatives, verdicts=verdicts,
-        ranker=build_ranker(representatives, spec, graph, islands, profiles),
+        ranker=build_ranker(
+            representatives, spec, graph, islands, profiles, variant=ranker_variant
+        ),
         config=config or AdaptiveConfig(k_schedule=(len(representatives) or 1,)),
         embedding_stats=stats, compression=report, bound_rejections=rejections,
         bind_embeddings=_binder(predictor, graph, spec, cluster, islands, profiles),
