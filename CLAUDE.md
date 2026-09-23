@@ -24,6 +24,13 @@ the quality gate runs it.
 **Imports go one way**: `graphsearch` imports `planner.*`; nothing in heteropilot
 knows this package exists. The precedent is ScenarioLab (heteropilot D24).
 
+**Tool configuration is committed to neither repository.** `.mcp.json`,
+`.ignore`, editor and agent settings belong in a global gitignore, not in a
+PR: three such files rode in on heteropilot's H4 (#132) and had to be removed
+by #133. The boundary rule is "only hook PRs reach heteropilot", and a tool's
+settings are not a hook. This repository's `.gitignore` names the patterns so
+the mistake is caught before a commit, not after a merge.
+
 **Do not monkeypatch heteropilot.** Its golden tests are what prove the default
 path is byte-identical, and a patch from here bypasses that proof. If something
 in `planner/` needs to change, it needs a hook — H1–H3 added four, and a fifth
