@@ -218,7 +218,7 @@ def test_the_hook_declines_a_candidate_it_was_not_given(monkeypatch, tmp_path) -
     )
     bind(
         predictor, {found[0].id: found[0]}, graph,
-        cluster=cluster, islands=islands, profiles=profiles,
+        cluster=cluster, islands=islands, profiles=profiles, spec=spec(),
     )
     monkeypatch.setattr(llmservingsim, "compile_to_sim_config", boom)
 
@@ -238,7 +238,7 @@ def test_a_bound_candidate_takes_the_graph_compile(tmp_path) -> None:
     )
     bind(
         predictor, {found[0].id: found[0]}, graph,
-        cluster=cluster, islands=islands, profiles=profiles,
+        cluster=cluster, islands=islands, profiles=profiles, spec=spec(),
     )
     candidate = found[0].template.model_copy(update={"id": found[0].id})
     hook = predictor._compile_hook
@@ -260,7 +260,7 @@ def test_rebinding_replaces_the_batch(tmp_path) -> None:
     )
     rebind = bind(
         predictor, {found[0].id: found[0]}, graph,
-        cluster=cluster, islands=islands, profiles=profiles,
+        cluster=cluster, islands=islands, profiles=profiles, spec=spec(),
     )
     hook = predictor._compile_hook
     assert hook is not None

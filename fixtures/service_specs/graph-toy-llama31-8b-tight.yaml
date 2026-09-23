@@ -1,0 +1,70 @@
+# A copy of `graph-toy-llama31-8b.yaml` whose SLO actually binds. Fictional.
+#
+# E-G1 runs every fixture with a roomy TTFT, so that its row measures the
+# SEARCH rather than whether the toy SLO is reachable. That makes it useless
+# for a top-K comparison: when every candidate is feasible, a ranker that
+# picks four at random has perfect recall and no regret, and the baseline is
+# flattered for free.
+#
+# E-G1b needs the opposite. These two limits were chosen from an oracle survey
+# of `graph-toy-abcde` (528 placements, MOCK figures, `--predictor mock`):
+#
+#   p99 TTFT   min 331.5   p25 868.1   p50 10840.4   max 13324.0  ms
+#   p99 TPOT   min  12.62  p25  25.10  p50    25.12  max    25.15 ms
+#
+#   ttft.max_ms: 1000   -- above the fast quartile, far below the median, so
+#                          roughly a quarter of the corpus can meet it.
+#   tpot.max_ms: 20     -- between the two clusters the mock produces, so the
+#                          decode-bound placements are excluded on their own
+#                          axis rather than as a side effect of the TTFT.
+#
+# Both limits bind, on different axes, which is what makes a top-K ranker's
+# recall a number about the ranker. Nothing here was measured.
+
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+
+traffic:
+  arrival_rate_rps: 10
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+  burstiness: 1.0
+  prefix_share_ratio: 0.0
+
+slo:
+  ttft:
+    percentile: 99
+    max_ms: 1000
+  tpot:
+    percentile: 99
+    max_ms: 20
+
+# `minimize_active_accelerators`, NOT the `minimize_cost_per_hour` the E-G1
+# spec uses, and the difference is the whole reason E-G1b can compare two arms
+# at all. Two objectives are unscoreable here, each for its own honest reason:
+#
+#   minimize_cost_per_hour          nothing in heteropilot populates
+#                                   `DeploymentPlan.cost_per_hour_usd`. It has
+#                                   no device-level price model, because a
+#                                   template does not name the devices it
+#                                   would run on, so `pareto.can_score`
+#                                   declines every plan and `search()`
+#                                   recommends nothing.
+#   *_per_joule / minimize_energy   the mock predictor has no power model and
+#                                   returns no energy, so the same thing
+#                                   happens for the same reason.
+#
+# Both are the planner saying so rather than guessing, and both leave nothing
+# to compare. `minimize_active_accelerators` reads only the plan's own device
+# count, which both arms have. E-G1b then prices the two recommendations
+# itself, with the one `cost.cost_of_devices`, so `cost_regret` comes from one
+# cost model rather than two.
+objective:
+  primary: minimize_active_accelerators

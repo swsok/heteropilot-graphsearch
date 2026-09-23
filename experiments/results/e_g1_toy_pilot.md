@@ -4,10 +4,10 @@
 
 | fixture | templates | embeddings | representatives | compression_ratio | oracle_simulations | proposed_simulations | feasible_recall | cost_regret | false_infeasible | mismerged_pairs | correct |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| graph-toy-abcde | 108 | 240 | 54 | 0.225 | 240 | 54 | 1.0 | 0.0 | 0 | 0 | True |
-| graph-toy-shared-nic | 42 | 72 | 72 | 1.0 | 72 | 72 | 1.0 | 0.0 | 0 | 0 | True |
-| graph-toy-asym | 150 | 360 | 360 | 1.0 | 360 | 360 | 1.0 | 0.0 | 0 | 0 | True |
-| heterogeneous-lab | 36 | 66 | 48 | 0.7273 | 66 | 48 | 1.0 | - | 0 | 0 | True |
+| graph-toy-abcde | 180 | 528 | 78 | 0.1477 | 528 | 78 | 1.0 | 0.0 | 0 | 0 | True |
+| graph-toy-shared-nic | 108 | 288 | 60 | 0.2083 | 288 | 60 | 1.0 | 0.0 | 0 | 0 | True |
+| graph-toy-asym | 270 | 840 | 840 | 1.0 | 840 | 840 | 1.0 | 0.0 | 0 | 0 | True |
+| heterogeneous-lab | 48 | 114 | 72 | 0.6316 | 114 | 48 | 1.0 | - | 0 | 0 | True |
 
 ## Reproducing
 
@@ -24,8 +24,10 @@ python experiments/scripts/e_g1_toy_pilot.py \
 A `compression_ratio` of 1.0 means exact equivalence folded nothing, and each row has its own reason:
 
 - **graph-toy-asym** is the designed failure condition. Five nodes, no two alike in price, uplink capacity or reservation, so no two placements can be isomorphic. It is in the corpus precisely so this number gets reported rather than avoided.
-- **graph-toy-shared-nic** wires only `gpu0` to the NIC, so the two GPUs in a node are not interchangeable and even an intra-node pair has no symmetry to fold. `graph-toy-abcde` gives both GPUs uplink access (the research design's §9 says they have it), which is most of why it reaches 0.225.
+- **graph-toy-shared-nic** is the counterexample fixture, and its row is the one that changed. It used to read `ratio 1.0, mismerged 0` and that was the result of an input with no counterexample in it: the fixture had two nodes and `enable_pd` was never set, so no flow a latency target charges for ever crossed an uplink. It now has three nodes -- X with 6 of its 10 GB/s held, Y and Z free -- and both GPUs wired to the NIC, so `P on X -> D on Z` and `P on Y -> D on Z` differ in nothing but the boundary they cross. Exact equivalence keeps them apart and folds Y with Z; `include_boundary=False` folds all three and the oracle reports the mis-merge (GS-9, retracted and replaced).
 
 `feasible_recall` is 1.0 and `cost_regret` 0.0 on every row because the K schedule defaults to every representative here. A budget makes recall fall and correctness hold -- that separation is what `tests/test_oracle_agreement.py` pins.
 
-`BinnedRooflineRanker` is heteropilot's own surrogate and is available as a baseline through the same ABC; it is not run here because a top-K comparison needs a corpus where the SLO actually binds, which the toy fixtures do not provide.
+`BinnedRooflineRanker` is heteropilot's own surrogate and is run as a baseline in **E-G1b** (`experiments/results/e_g1b_topk.md`), against a copy of the toy spec whose TTFT and TPOT limits actually bind. It is not run here because a top-K comparison against a corpus where everything is feasible measures nothing.
+
+A `cost_regret` of `-` is not a zero. It means the fixture priced nothing the objective could score, so the planner declined to guess rather than inventing a number -- `heterogeneous-lab` carries no `price_per_hour_usd`. A regret that cannot be computed is reported as uncomputed.

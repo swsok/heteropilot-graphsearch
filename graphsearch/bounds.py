@@ -41,8 +41,9 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from graphsearch import paths_root
+from graphsearch.contention import allreduces_per_token
 from graphsearch.cost import cost_lower_bound as cost_floor
-from graphsearch.demand import FlowKind, tp_allreduces_per_output_token
+from graphsearch.demand import FlowKind
 from graphsearch.embeddings import EmbeddedCandidate, EmbeddingStats
 from graphsearch.equivalence import Representative
 from graphsearch.paths import DEFAULT_POLICY, PathPolicy, cut_capacity
@@ -297,6 +298,9 @@ _COMM_RELAXATIONS = _relax(
     "no per-flow contention",
     "ring all-reduce, factor 2(tp-1)/tp",
     "measured effective bandwidths are NOT used: an average is not a ceiling",
+    "the external reservation snapshot is taken as an upper bound on outside "
+    "load: if something else is using less than it reserved, the real cut is "
+    "wider and the bound only looser",
 )
 
 
@@ -334,7 +338,15 @@ def _check_comm_latency(
     embedding = representative.exemplar
 
     # --- TPOT: the all-reduce floor, assuming compute is free.
-    layers_term = tp_allreduces_per_output_token(spec.model)
+    #
+    # The per-token multiplier comes from `contention.allreduces_per_token`, the
+    # same function the graph-aware mock calls. They used to compute it apart
+    # and disagreed -- the mock charged one all-reduce per token against this
+    # `2 x layers` -- so the mock could return a TPOT below the floor that
+    # admitted the candidate, and a mock faster than a bound makes an oracle
+    # disagreement meaningless. The CAPACITY still differs by design: a bound
+    # must divide by an optimistic cut, a predictor by its path.
+    layers_term = allreduces_per_token(spec.model)
     worst_tpot_ms = 0.0
     worst_inputs: dict[str, float] = {}
     for flow in embedding.flows:
@@ -368,10 +380,41 @@ def _check_comm_latency(
         )
 
     # --- TTFT: transfers that must finish before the first token.
+    #
+    # ONE request's path, not the sum over replicas. With dp=2 there are two
+    # `prefill i -> decode i` flows, and they carry DIFFERENT requests in
+    # parallel. Adding both to one request's TTFT makes the floor larger than
+    # anything achievable, which stops it being a relaxation -- it would reject
+    # a candidate the feasibility test would accept, the exact failure
+    # heteropilot's removed throughput bound was.
+    #
+    # So the KV transfer is charged at its FASTEST replica pair (the most
+    # optimistic route a request could take) and pipeline stages are summed,
+    # because those are sequential within one request.
     ttft_ms = 0.0
     ttft_inputs: dict[str, float] = {}
+
+    kv_times: list[float] = []
     for flow in embedding.flows:
-        if flow.kind not in (FlowKind.PD_KV_TRANSFER, FlowKind.PP_ACTIVATION):
+        if flow.kind is not FlowKind.PD_KV_TRANSFER:
+            continue
+        cut = _worst_cut(embedding, graph, flow.participants, policy)
+        latency_ns = min(
+            (p.best.latency_ns for p in flow.allowed_paths if p.best is not None),
+            default=0.0,
+        )
+        if cut <= 0:
+            kv_times.append(float("inf"))
+            continue
+        kv_times.append((latency_ns + flow.bytes_per_event / cut * 1e9) / 1e6)
+        ttft_inputs[f"{flow.flow_id}_bytes"] = flow.bytes_per_event
+        ttft_inputs[f"{flow.flow_id}_cut_bytes_per_s"] = cut
+    if kv_times:
+        ttft_ms += min(kv_times)
+        ttft_inputs["kv_transfer_ms_fastest_pair"] = min(kv_times)
+
+    for flow in embedding.flows:
+        if flow.kind is not FlowKind.PP_ACTIVATION:
             continue
         cut = _worst_cut(embedding, graph, flow.participants, policy)
         latency_ns = min(
@@ -380,10 +423,10 @@ def _check_comm_latency(
         )
         if cut <= 0:
             ttft_ms = float("inf")
-            ttft_inputs = {"cut_bytes_per_s": 0.0}
+            ttft_inputs["pp_cut_bytes_per_s"] = 0.0
             break
-        # Sequential: a KV transfer and a stage boundary both gate the first
-        # token, and nothing here models overlapping them.
+        # Sequential: each stage boundary is crossed on the way to the first
+        # token, and nothing here models overlapping them with compute.
         contribution = (latency_ns + flow.bytes_per_event / cut * 1e9) / 1e6
         ttft_ms += contribution
         ttft_inputs[f"{flow.flow_id}_bytes"] = flow.bytes_per_event
@@ -394,7 +437,10 @@ def _check_comm_latency(
             check="comm_latency", bound_value=ttft_ms,
             threshold=spec.slo.ttft.max_ms, unit="ms",
             relaxations=_COMM_RELAXATIONS + _relax(
-                "transfers are sequential and do not overlap compute",
+                "the KV transfer is charged at its fastest replica pair: "
+                "replicas carry different requests in parallel, so summing "
+                "them would floor one request's TTFT above anything achievable",
+                "pipeline stages are sequential and do not overlap compute",
                 "sized at the p50 prompt",
             ),
             inputs=ttft_inputs,

@@ -77,7 +77,6 @@ from planner.plan import (  # noqa: E402
     PlannerOutput,
     Rejection,
     RejectionStage,
-    ServingArch,
 )
 from planner.predictor import Predictor  # noqa: E402
 from planner.spec import ServiceSpec  # noqa: E402
@@ -201,31 +200,6 @@ def _graph_signature(representative: Representative, graph: ResourceGraph) -> st
     )
 
 
-def _undo_heteropilot_pd(
-    plan: DeploymentPlan, info: Mapping[str, object]
-) -> DeploymentPlan:
-    """Take back the class-default transfer cost `evaluate_candidates` added.
-
-    heteropilot prices the P/D handoff over the interconnect CLASS because a
-    `CandidateConfig` names islands and not devices. The graph driver knows the
-    path, so it replaces that figure rather than stacking on it -- adding both
-    would double-charge every P/D candidate's TTFT and the inflation would read
-    as a topology effect.
-    """
-    metrics = plan.predicted
-    return plan.model_copy(
-        update={
-            "predicted": metrics.model_copy(
-                update={
-                    "p50_ttft_ms": metrics.p50_ttft_ms - float(info["xfer_ms_p50"]),  # type: ignore[arg-type]
-                    "p95_ttft_ms": metrics.p95_ttft_ms - float(info["xfer_ms_p95"]),  # type: ignore[arg-type]
-                    "p99_ttft_ms": metrics.p99_ttft_ms - float(info["xfer_ms_p99"]),  # type: ignore[arg-type]
-                }
-            )
-        }
-    )
-
-
 class AdaptiveSearch:
     """Drive heteropilot's evaluator over representatives, batch by batch."""
 
@@ -250,6 +224,10 @@ class AdaptiveSearch:
         #: G11 installs the compile hook through this. Called once per batch
         #: with {candidate id -> exemplar}; None leaves the predictor alone.
         bind_embeddings: Callable[[Mapping[str, object]], None] | None = None,
+        #: True when the caller registered `apply_pd_transfer_cost_embedded` as
+        #: the predictor's result hook, so heteropilot must not also charge the
+        #: class-default figure.
+        embedded_pd_cost: bool = False,
         island_tiers: Mapping[str, object] | None = None,
         island_hw: Mapping[str, str] | None = None,
     ) -> None:
@@ -269,6 +247,7 @@ class AdaptiveSearch:
         self.scope_rejections = list(scope_rejections)
         self.bound_rejections = list(bound_rejections)
         self.bind_embeddings = bind_embeddings
+        self.embedded_pd_cost = embedded_pd_cost
         self.island_tiers = dict(island_tiers or {})
         self.island_hw = dict(island_hw or {})
 
@@ -335,9 +314,18 @@ class AdaptiveSearch:
             notes.extend(result.notes)
             rejections.extend(result.rejections)
             pd_transfers.extend(result.pd_transfers)
+            # The path-aware figures the result hook recorded, if one is
+            # installed. `evaluate_candidates` leaves `pd_transfers` empty when
+            # `pd_transfer=False`, so this is the only source in that mode.
+            embedded = getattr(self.predictor, "last_pd_transfers", None)
+            if embedded:
+                pd_transfers.extend(
+                    embedded[r.exemplar.id]
+                    for r in batch
+                    if r.exemplar.id in embedded
+                )
 
-            plans = self._replace_pd_cost(result.feasible_plans, result.pd_transfers)
-            plans = self._attach_cost(plans, by_id)
+            plans = self._attach_cost(result.feasible_plans, by_id)
             feasible.extend(plans)
             infeasible.extend(result.infeasible_plans)
 
@@ -430,33 +418,28 @@ class AdaptiveSearch:
             )
         cache = self.cache
         if cache is not None and batch:
-            # One signature per batch is not right -- each representative has
-            # its own. The driver makes a sibling per representative in G11's
-            # adapter; here the batch shares the first, which is correct only
-            # when the batch is one representative. Guarded rather than assumed.
-            cache = cache.with_graph_signature(
-                _graph_signature(batch[0], self.graph)
-            ) if len(batch) == 1 else cache
+            # PER CANDIDATE (D126). `EnvelopeKey` describes parallelism and
+            # hardware; it cannot describe which shared resources a placement
+            # crosses, so two representatives differing only in that collide on
+            # one key and the second is served the first's metrics. This used to
+            # apply a signature only for a batch of one, which meant every
+            # larger batch had the collision.
+            signatures = {
+                r.exemplar.id: _graph_signature(r, self.graph) for r in batch
+            }
+            cache = cache.with_signature_of(lambda c: signatures.get(c.id))
 
         return evaluate_candidates(
             [_candidate_for(r) for r in batch],
             self.spec, self.cluster, self.islands, self.profiles, self.predictor,
             cache=cache, plan_id_base=plan_id_base,
+            # heteropilot's class-default transfer cost is ABSENT, not
+            # subtracted afterwards (D125): the verdict is taken in here, so a
+            # figure corrected later would disagree with it. `adapter.bind`
+            # registers the path-aware cost as a result hook instead, which
+            # lands before both the verdict and the cache write.
+            pd_transfer=not self.embedded_pd_cost,
         )
-
-    def _replace_pd_cost(
-        self, plans: Sequence[DeploymentPlan], transfers: Sequence[dict]
-    ) -> list[DeploymentPlan]:
-        """Charge the transfer once, over the path this placement actually takes."""
-        by_candidate = {t["candidate_id"]: t for t in transfers}
-        out: list[DeploymentPlan] = []
-        for plan in plans:
-            if plan.candidate.serving_arch is not ServingArch.PD_SPLIT:
-                out.append(plan)
-                continue
-            info = by_candidate.get(plan.candidate.id)
-            out.append(plan if info is None else _undo_heteropilot_pd(plan, info))
-        return out
 
     def _attach_cost(
         self, plans: Sequence[DeploymentPlan], by_id: Mapping[str, Representative]
@@ -639,10 +622,11 @@ class AdaptiveSearch:
             # cost, which a reader needs to be able to see.
             provenance["pd_transfer"] = {
                 "note": (
-                    "planner-side analytical KV-transfer cost; the graph driver "
-                    "replaced heteropilot's interconnect-class figure with one "
-                    "priced over this placement's actual path, so the class "
-                    "figure below was subtracted, not added to"
+                    "planner-side analytical KV-transfer cost, priced over the "
+                    "path each placement actually takes. heteropilot's "
+                    "interconnect-class figure was not charged at all "
+                    "(pd_transfer=False), so nothing here was subtracted from "
+                    "anything -- see basis"
                 ),
                 "candidates": list(pd_transfers),
             }

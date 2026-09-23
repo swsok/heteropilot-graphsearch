@@ -481,3 +481,76 @@ def test_checking_the_exemplar_judges_every_placement_it_stands_for() -> None:
         for rejection in rejections
         if rejection.candidate_id == r.exemplar.id
     )
+
+
+# --- G14-C: a replicated P/D must not have its transfers summed -----------
+
+def _pd_dp2(islands, prefill: str, decode: str) -> CandidateConfig:
+    return CandidateConfig(
+        id="pd-dp2", model=MODEL, dtype="bfloat16",
+        serving_arch=ServingArch.PD_SPLIT,
+        assignments=[
+            IslandAssignment(
+                island_id=island_named(islands, prefill), role=Role.PREFILL,
+                tp_size=1, dp_replicas=2,
+            ),
+            IslandAssignment(
+                island_id=island_named(islands, decode), role=Role.DECODE,
+                tp_size=1, dp_replicas=2,
+            ),
+        ],
+    )
+
+
+def test_replicated_pd_transfers_are_not_summed_into_one_ttft() -> None:
+    """dp=2 gives two `prefill i -> decode i` flows carrying DIFFERENT requests
+    in parallel. Adding both to one request's TTFT floors it above anything
+    achievable, which stops the check being a relaxation -- the exact failure
+    heteropilot's removed throughput bound was.
+    """
+    service_spec = spec()
+    _, profiles, _islands, by_id, graph = setup("abcde_v2")
+    template = _pd_dp2(by_id, "nodeA", "nodeC")
+    found, stats = enumerate_embeddings([template], by_id, graph, service_spec)
+    assert found
+    representatives, _, _ = compress(found, graph)
+
+    verdicts, _ = prune(
+        representatives, service_spec, graph, by_id, profiles, stats,
+        policy=BoundPolicy(compat=False, memory=False, throughput_capacity=False),
+    )
+    proofs = [
+        p
+        for v in verdicts.values()
+        for p in v.proofs
+        if p.check == "comm_latency" and p.unit == "ms"
+    ]
+    for proof in proofs:
+        # The floor is the FASTEST pair, so it can never exceed the sum of the
+        # two — and the relaxation is named.
+        assert "fastest replica pair" in " ".join(proof.relaxations)
+        if "kv_transfer_ms_fastest_pair" in proof.inputs:
+            assert proof.bound_value >= proof.inputs["kv_transfer_ms_fastest_pair"]
+
+
+def test_the_relaxation_property_holds_for_a_replicated_pd() -> None:
+    """The same guard as `test_each_bound_is_a_relaxation`, on the shape that
+    the summing bug would have broken."""
+    service_spec = spec()
+    cluster, profiles, _islands, by_id, graph = setup("abcde_v2")
+    template = _pd_dp2(by_id, "nodeA", "nodeC")
+    found, stats = enumerate_embeddings([template], by_id, graph, service_spec)
+    representatives, _, _ = compress(found, graph)
+
+    verdicts, _ = prune(representatives, service_spec, graph, by_id, profiles, stats)
+    reference = _best_feasible(
+        surviving(representatives, verdicts), service_spec, cluster, by_id, profiles
+    )
+    loosened, _ = prune(
+        representatives, service_spec, graph, by_id, profiles, stats,
+        policy=BoundPolicy(comm_latency=False),
+    )
+    got = _best_feasible(
+        surviving(representatives, loosened), service_spec, cluster, by_id, profiles
+    )
+    assert got == reference

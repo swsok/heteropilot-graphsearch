@@ -26,10 +26,18 @@ WORK_ORDER_graph_search.md
 ```bash
 git clone https://github.com/swsok/heteropilot-graphsearch.git
 cd heteropilot-graphsearch
-git submodule update --init --recursive     # astra-sim included; without this nothing imports
+git submodule update --init                  # planner/ only -- enough for everything below
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+**`--recursive` is only for the simulator.** Everything in this repository runs
+against `--predictor mock`, which imports `planner/` and nothing under it, so
+the plain `--init` above is enough and skips ASTRA-Sim's own submodules. Add
+`--recursive` when you intend to run `--predictor sim`, which additionally
+needs heteropilot's built environment (see *Running the real simulator* below).
+CI checks out with `submodules: true`, which is the non-recursive form, for the
+same reason.
 
 heteropilot is **not** pip-installable — its `pyproject.toml` has no `[project]`
 table — so it is reached by path:

@@ -39,6 +39,7 @@ paths_root.ensure_importable()
 from planner.candidate_generator import CandidateGenerator  # noqa: E402
 from planner.envelope import EnvelopeCache  # noqa: E402
 from planner.inventory import detect_islands  # noqa: E402
+from planner.optimizer.exhaustive import evaluate_candidates  # noqa: E402
 from planner.plan import (  # noqa: E402
     CandidateConfig,
     IslandAssignment,
@@ -313,14 +314,31 @@ def _pd_world(service_spec):
 
 
 def test_the_pd_transfer_is_charged_once() -> None:
-    """heteropilot's class-default figure is taken BACK, not added to.
+    """The final TTFT is the simulator's own plus the EMBEDDED transfer.
 
-    Adding both would inflate every P/D candidate's TTFT and the inflation
-    would read as a topology effect rather than as double-counting.
+    heteropilot's interconnect-class figure is not charged at all
+    (`pd_transfer=False`), so nothing is subtracted from anything -- the
+    correction that used to happen afterwards could not have been right, because
+    the feasibility verdict is taken inside `evaluate_candidates` and would have
+    been taken on different numbers (heteropilot D125).
     """
+    from graphsearch.adapter import bind
+
     service_spec = spec(ttft=spec().slo.ttft.model_copy(update={"max_ms": 1e6}))
     w, _ = _pd_world(service_spec)
-    out, _ = search(w, config=AdaptiveConfig(k_schedule=(8,))).run()
+    predictor = GraphAwareMockPredictor()
+    predictor.bind_graph(w["graph"])
+
+    driver = search(
+        w, config=AdaptiveConfig(k_schedule=(8,)), predictor=predictor
+    )
+    driver.embedded_pd_cost = True
+    rebind = bind(
+        predictor, {}, w["graph"], cluster=w["cluster"], islands=w["islands"],
+        profiles=w["profiles"], spec=service_spec,
+    )
+    driver.bind_embeddings = rebind
+    out, _ = driver.run()
 
     plans = [s.plan for s in out.alternatives]
     if out.recommended is not None:
@@ -329,15 +347,15 @@ def test_the_pd_transfer_is_charged_once() -> None:
     assert plans, "no P/D plan came back"
 
     transfers = out.provenance.get("pd_transfer", {}).get("candidates", [])
-    assert transfers, "heteropilot did not price the handoff at all"
+    assert transfers, "the path-aware handoff was never priced"
+    assert all(t["basis"] == "graphsearch embedded path" for t in transfers)
     by_candidate = {t["candidate_id"]: t for t in transfers}
 
-    predictor = GraphAwareMockPredictor()
-    from planner.optimizer.exhaustive import evaluate_candidates
-
+    # The simulator's own figure, with no transfer cost of any kind.
+    bare = GraphAwareMockPredictor()
     raw = evaluate_candidates(
         [p.candidate for p in plans], service_spec, w["cluster"], w["islands"],
-        w["profiles"], predictor,
+        w["profiles"], bare, pd_transfer=False,
     )
     raw_by_id = {
         p.candidate.id: p
@@ -345,12 +363,10 @@ def test_the_pd_transfer_is_charged_once() -> None:
     }
     for plan in plans:
         info = by_candidate.get(plan.candidate.id)
-        if info is None:
-            continue
+        assert info is not None
         reference = raw_by_id[plan.candidate.id]
-        # The driver's plan is heteropilot's MINUS the class-default figure.
         assert plan.predicted.p99_ttft_ms == pytest.approx(
-            reference.predicted.p99_ttft_ms - float(info["xfer_ms_p99"]), rel=1e-9
+            reference.predicted.p99_ttft_ms + float(info["xfer_ms_p99"]), rel=1e-9
         )
 
 
@@ -379,3 +395,96 @@ def test_the_provenance_block_is_attached() -> None:
     w = world(spec())
     out, audit = search(w).run()
     assert out.provenance["graph_search"] == audit.as_provenance()
+
+
+# --- G14-B: the cache must not merge two boundaries into one entry --------
+
+def _x_and_y_to_z(service_spec):
+    """The counterexample: two prefill pairs, one shared decode partner.
+
+    X's uplink already has 6 of its 10 GB/s taken and Y's is free, so these two
+    are identical in every local attribute and differ only in a shared resource
+    `EnvelopeKey` cannot see.
+    """
+    cluster = load_toy_cluster("shared_nic_v2")
+    profiles = toy_profiles_for(cluster)
+    islands = {i.id: i for i in detect_islands(cluster, profiles)}
+
+    def island_of(node: str) -> str:
+        return next(i.id for i in islands.values() if i.node_id == node)
+
+    def pd(prefill: str) -> CandidateConfig:
+        return CandidateConfig(
+            id=f"pd-{prefill}-Z", model=MODEL, dtype="bfloat16",
+            serving_arch=ServingArch.PD_SPLIT,
+            assignments=[
+                IslandAssignment(
+                    island_id=island_of(prefill), role=Role.PREFILL, tp_size=2
+                ),
+                IslandAssignment(
+                    island_id=island_of("nodeZ"), role=Role.DECODE, tp_size=2
+                ),
+            ],
+        )
+
+    return world(
+        service_spec, name="shared_nic_v2", templates=[pd("nodeX"), pd("nodeY")]
+    )
+
+
+def _run_with_cache(w, service_spec, cache):
+    """The realistic arrangement: path-aware P/D cost through the result hook."""
+    from graphsearch.adapter import bind
+
+    predictor = GraphAwareMockPredictor()
+    driver = search(
+        w, config=AdaptiveConfig(k_schedule=(2,)), predictor=predictor, cache=cache
+    )
+    driver.embedded_pd_cost = True
+    driver.bind_embeddings = bind(
+        predictor, {}, w["graph"], cluster=w["cluster"], islands=w["islands"],
+        profiles=w["profiles"], spec=service_spec,
+    )
+    output, audit = driver.run()
+    plans = [s.plan for s in output.alternatives]
+    if output.recommended is not None:
+        plans.append(output.recommended.plan)
+    plans += [u.plan for u in output.unscored]
+    return {p.candidate.id: round(p.predicted.p99_ttft_ms, 6) for p in plans}, audit
+
+
+def test_a_warm_cache_keeps_two_boundaries_apart(tmp_path) -> None:
+    """heteropilot D126. `EnvelopeKey` describes parallelism and hardware, not
+    which shared resources a placement crosses, so two representatives differing
+    only in that collide on one key -- and on the warm run the second is served
+    the first's metrics with nothing in the output to say so.
+
+    The signature used to be applied only for a batch of ONE, which meant every
+    larger batch had the collision. Both are evaluated in one batch here, on
+    purpose.
+    """
+    service_spec = spec(ttft=spec().slo.ttft.model_copy(update={"max_ms": 1e6}))
+    w = _x_and_y_to_z(service_spec)
+    assert len(w["representatives"]) == 2, "the fixture stopped distinguishing them"
+
+    accelerator_of = {i: isl.accelerator_model for i, isl in w["islands"].items()}
+
+    def make_cache():
+        return EnvelopeCache(
+            tmp_path, w["spec"], accelerator_of=accelerator_of, link_bw_gbps=64.0
+        )
+
+    cold_ttft, cold = _run_with_cache(w, service_spec, make_cache())
+    assert cold.evaluated == 2
+    assert cold.cache_hits == 0
+    assert len(set(cold_ttft.values())) == 2, (
+        f"the two placements predict the same TTFT {cold_ttft}; the fixture no "
+        f"longer distinguishes them"
+    )
+
+    warm_ttft, warm = _run_with_cache(w, service_spec, make_cache())
+    assert warm.cache_hits == warm.simulations_run
+    assert warm_ttft == cold_ttft, (
+        f"a cached run changed the metrics: cold {cold_ttft}, warm {warm_ttft}. "
+        f"Two boundaries collided on one cache key."
+    )

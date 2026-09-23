@@ -12,8 +12,7 @@ Format: number · date · decision · why · what it affects.
 
 **Decision.** The graph search lives here; heteropilot takes only the hook PRs
 H1–H3 and is vendored at `vendor/heteropilot`, pinned to
-`675ea66fb4954ad3325ec4874a6cae9496c87e7d` (H3, plus the removal of this repo's
-staged document copies from there). Imports go one way,
+`3e1f7f73d0364afe7db2af30cd4cec1a7d5b5c65` (H4). Imports go one way,
 `graphsearch` → `planner`, never back.
 
 **Why.** Two reasons, and the second is the one that decides it.
@@ -55,8 +54,24 @@ upgrade can silently re-cut every equivalence class. Without the version in the
 key, a cache entry written before the upgrade would be served after it, and the
 compression report would describe a partition that no longer exists.
 
-**Affects.** `graphsearch/equivalence.py`, `graphsearch/paths.py`, the cache
-signature, and the reproducibility claim.
+**A cache written under one version is not readable under another**, and that
+is the whole point of putting the version in the key: the entry is missed
+rather than misread. Anyone carrying an envelope cache across a networkx
+upgrade should expect it to go cold, and should prefer that to a hit that
+answers about a partition the code no longer computes.
+
+**The floor stays at `>=3.2`, and not by preference.** `networkx>=3.5` needs
+Python >=3.11; heteropilot pins 3.10 and this repository's CI matches it, so
+raising the floor would make the repository uninstallable rather than
+stricter. `tool_version` already does what a higher floor was wanted for.
+Raise it the day the interpreter moves. `pyproject.toml` silences the hashing
+`FutureWarning` from `networkx.algorithms.graph_hashing` only -- the warning
+is correct and already acted on, and scoping it to that module keeps a hashing
+warning from anywhere else visible.
+
+**Affects.** `graphsearch/equivalence.py`, `graphsearch/paths.py`,
+`requirements.txt`, `pyproject.toml`, the cache signature, and the
+reproducibility claim.
 
 ---
 
@@ -242,8 +257,55 @@ that does not exist yet**, not a difference the MVP can demonstrate. The
 instrument is therefore tested directly — a representative holding two
 placements the oracle judged differently must be reported, with both ids named.
 
+**Retracted 2026-09-23 — the second finding above was wrong.** It is kept, not
+deleted, because a retracted conclusion that quietly disappears teaches nothing
+about how it was reached. The cause was not a missing contention model. It was
+two omissions and one more binding:
+
+1. `grep -rn enable_pd graphsearch tests experiments` returned nothing. The
+   `CandidateGenerator` default `enable_pd=False` stood everywhere, so a
+   `PD_KV_TRANSFER` flow had never been generated anywhere in the pipeline.
+   The only traffic crossing an uplink was `INGRESS`/`EGRESS`, whose critical
+   path is `"none"` — which is exactly what the retracted paragraph observed,
+   and then generalised into a property of the model.
+2. `graph-toy-shared-nic` had two nodes. A P/D candidate between X and Y
+   crosses BOTH uplinks whichever way round it runs, so there was nothing to
+   compare. The research design's §5 counterexample needs two prefill pairs
+   talking to the same third decode partner.
+3. `bind_predictor` bound the compile hook and not the result hook, so
+   heteropilot's class-default transfer figure stood — and that figure is
+   identical for every placement of a template.
+
+With `nodeZ` added, `enable_pd=True`, and both hooks bound, the counterexample
+comes out of the current code:
+
+```
+oracle p99 TTFT: P-on-X -> D-on-Z  527.6 ms     (MOCK, fictional)
+                 P-on-Y -> D-on-Z  470.9 ms
+                 SLO taken at the midpoint, 499.3 ms
+
+include_boundary=True : reps=2  mismerged_pairs=[]                  correct=True
+include_boundary=False: reps=1  mismerged_pairs=[['pd-nodeX-Z@bd1c59407606',
+                                                  'pd-nodeY-Z@ba17b8accbfa']]
+                                                                    correct=False
+```
+
+The 56.7 ms is the KV handoff crossing a wire with 6 of its 10 GB/s already
+taken instead of a free one. Under an SLO between the two figures the oracle
+judges them differently, and `tests/test_oracle_agreement.py::
+test_dropping_the_boundary_produces_a_mismerge` fails if the ablation stops
+merging them, if exact compression starts merging them, or if the handoff stops
+being priced over its own path. The SLO is read off the oracle rather than
+written into the test, because a threshold that drifts past both TTFTs stops
+separating them and goes green for the wrong reason.
+
+So the compression keeping those two apart is **not** a bet on future work. The
+reservation arithmetic, the boundary signature and the mis-merge detector were
+all already working; what was missing was a flag, a third node, and a hook.
+
 **Affects.** `graphsearch/oracle.py`; what an E-G experiment may claim from a
-`mismerged_pairs: 0` row. See GS-8 and heteropilot D124.
+`mismerged_pairs: 0` row — a zero from a run with no P/D candidates is the
+absence of a test, not a pass. See GS-8, GS-11 and heteropilot D124/D125.
 
 
 ---
@@ -275,3 +337,28 @@ dropping them would not be a looser search but a wrong one.
 
 **Affects.** `graphsearch/__main__.py`, `graphsearch/render.py`,
 `experiments/scripts/e_g1_toy_pilot.py`.
+
+
+---
+
+## GS-11 — graphsearch generates P/D candidates by default · 2026-09-23
+
+**Decision.** Every entry point here — `python -m graphsearch plan`, `compare`,
+`oracle.run_proposed`, the pilot script and the test helpers — builds its
+templates with `enable_pd=True`. heteropilot's own CLI leaves it off, and that
+stays as it is. `--no-enable-pd` restores heteropilot's default for anyone who
+wants to compare like with like.
+
+**Why.** The research contribution is a compression that preserves the shared
+boundary a placement crosses, and the only traffic a latency target charges for
+that can cross a node boundary is the P/D KV handoff. Every other cross-node
+flow in the model is `INGRESS`/`EGRESS`, whose critical path is `"none"`. With
+P/D off the pipeline generates no such flow, the boundary never reaches a
+metric, and the compression has nothing to demonstrate — which is precisely how
+GS-9's retracted second finding came to be written.
+
+A default that differs from the vendored repository's is worth stating once
+rather than discovering, so it is here and in `__main__._templates`' docstring.
+
+**Affects.** `graphsearch/__main__.py`, `graphsearch/oracle.py`,
+`tests/test_oracle_agreement.py`, `experiments/scripts/e_g1_toy_pilot.py`.
