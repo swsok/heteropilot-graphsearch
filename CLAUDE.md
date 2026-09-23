@@ -51,6 +51,26 @@ would be a new PR there.
 7. Determinism: sorted iteration, `json.dumps(sort_keys=True)`, sorted insertion
    into networkx graphs. The same input twice must give byte-identical output.
 
+## The pipeline, module by module
+
+```
+ClusterSpecV2 -> schema.py        normalised graph: bytes/s, directed, res: vertices
+              -> paths.py         allowed paths, cut capacity, the boundary
+              -> demand.py        CommFlow: what a candidate sends
+              -> embeddings.py    templates -> placements on named devices
+              -> equivalence.py   fold by VF2, never by hash alone
+              -> bounds.py        eliminate only on arithmetic that cannot be beaten
+              -> ranker.py        order what is left; never produce metrics
+              -> adaptive.py      spend the budget; report what it did not reach
+              -> adapter.py       compile, and name what the simulator was not told
+              -> restore.py       bind back to devices; multiplicity != max_concurrent
+              -> oracle.py        did the search lose the answer?
+```
+
+`cost.py` and `contention.py` sit beside these: an incomplete cost is None, and
+the contention model is named in every record so two results computed under
+different ones cannot be compared by accident.
+
 ## Recording a decision
 
 Here: `docs/decisions.md`, next free `GS-n` (number · date · decision · why ·

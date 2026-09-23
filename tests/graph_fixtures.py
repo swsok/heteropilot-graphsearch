@@ -7,6 +7,7 @@ header of any file under `fixtures/`.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -14,10 +15,6 @@ from graphsearch import paths_root
 
 paths_root.ensure_importable()
 
-# heteropilot's mock, loaded by `conftest` under a non-clashing module name.
-# Imported here rather than re-derived: its roofline consistency with the
-# bounds is what makes an oracle-agreement failure mean something.
-import hp_conftest  # noqa: E402
 from planner.inventory import (  # noqa: E402
     AcceleratorProfile,
     ClusterSpecV2,
@@ -29,7 +26,12 @@ from planner.inventory import (  # noqa: E402
 )
 from planner.spec import ServiceSpec, load_service_spec  # noqa: E402
 
-_MOCK_BASE = hp_conftest.MockPredictor
+# heteropilot's mock, loaded by path under a non-clashing module name.
+# Reused rather than re-derived: its roofline consistency with the bounds is
+# what makes an oracle-agreement failure mean something. The loader lives in
+# `paths_root` because `python -m graphsearch --predictor mock` needs it too,
+# and a fixture module that only works under pytest cannot serve a CLI.
+_MOCK_BASE: Any = paths_root.load_heteropilot_conftest().MockPredictor
 
 ROOT = paths_root.GRAPHSEARCH_ROOT
 FIXTURES = ROOT / "fixtures"

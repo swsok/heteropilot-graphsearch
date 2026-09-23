@@ -244,3 +244,34 @@ placements the oracle judged differently must be reported, with both ids named.
 
 **Affects.** `graphsearch/oracle.py`; what an E-G experiment may claim from a
 `mismerged_pairs: 0` row. See GS-8 and heteropilot D124.
+
+
+---
+
+## GS-10 — the CLI is a second entry point, not a wrapper · 2026-09-23
+
+**Decision.** `python -m graphsearch plan` calls the same functions
+`planner plan` calls, in a different order, and prints heteropilot's own render
+output followed by a `Graph search:` block. `planner/__main__.py` is not
+modified and not wrapped.
+
+**Why.** A wrapper would have to intercept the planner's arguments and its
+output, and would then own a format it does not control. Calling the parts
+directly keeps heteropilot's CLI exactly as it was — a reader who knows that
+output sees it unchanged, and can see precisely what the graph search added
+underneath.
+
+**The mock banner is not optional.** `--predictor mock` is the default and
+every run prints a banner saying the figures are fictional. The mock respects
+the same physics as the bounds, which is what makes an oracle disagreement mean
+something, but the distance between a fictional number and a quoted result is
+one copy-paste. `experiments/results/` repeats the banner in every report, and
+heteropilot's `docs/CLAIMS.md` does not carry any of these numbers.
+
+**`--bounds none` keeps the exact checks.** It turns off the *relaxations* —
+`comm_latency` and `throughput_capacity` — and leaves `compat` and `memory` on.
+Those two are exact: a candidate that fails them is not a candidate, and
+dropping them would not be a looser search but a wrong one.
+
+**Affects.** `graphsearch/__main__.py`, `graphsearch/render.py`,
+`experiments/scripts/e_g1_toy_pilot.py`.

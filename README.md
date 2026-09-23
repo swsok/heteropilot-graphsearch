@@ -39,6 +39,42 @@ export PYTHONPATH=$PWD:$PWD/vendor/heteropilot
 pytest -q && ruff check . && mypy graphsearch/
 ```
 
+## Running it
+
+```bash
+python -m graphsearch plan \
+    --service fixtures/service_specs/graph-toy-llama31-8b.yaml \
+    --cluster fixtures/clusters/graph-toy-abcde.v2.yaml \
+    --k-schedule 4,8,16 --output outputs/plan.yaml
+
+python -m graphsearch compare \
+    --service fixtures/service_specs/graph-toy-llama31-8b.yaml \
+    --cluster fixtures/clusters/graph-toy-shared-nic.v2.yaml
+```
+
+`plan` prints heteropilot's own render output unchanged, then a `Graph search:`
+block underneath. `compare` runs the oracle against the search and prints the
+four numbers, exiting non-zero when either correctness number is not zero.
+
+| flag | |
+| --- | --- |
+| `--k-schedule 4,8,16` | evaluate in batches of increasing size |
+| `--search-mode budget\|certify` | stop on budget, or only when nothing unevaluated could win |
+| `--budget-sims N`, `--budget-seconds S` | hard caps; what they cut is reported, never hidden |
+| `--epsilon E` | slack on the certificate |
+| `--max-embeddings-per-template N` | enumeration cap; truncation is charged to `excluded_by_scope` |
+| `--compression exact\|off` | `off` measures what the compression was worth |
+| `--bounds all\|none\|<list>` | `none` drops the *relaxations*; compat and memory are exact checks and stay |
+| `--diversity` | reserve part of each batch for distinct structures |
+| `--oracle` | evaluate every embedding: no compression, no bounds, no top-K |
+| `--predictor mock\|sim` | `mock` is the default and prints a banner on every run |
+
+**`--predictor mock` numbers are fictional.** The mock respects the same physics
+as the bounds -- which is what makes an oracle disagreement mean something --
+but nothing it prints is a measurement or a simulation of any hardware. The
+banner says so on every run, and `experiments/results/` repeats it in every
+report.
+
 `HETEROPILOT_ROOT` overrides where `planner.*` is imported from, if you would
 rather use an existing checkout than the submodule.
 
