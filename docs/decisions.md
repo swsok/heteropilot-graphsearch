@@ -12,7 +12,8 @@ Format: number · date · decision · why · what it affects.
 
 **Decision.** The graph search lives here; heteropilot takes only the hook PRs
 H1–H3 and is vendored at `vendor/heteropilot`, pinned to
-`ef22f11ec9f04317c43bd01057c32c161aa846b9` (H3). Imports go one way,
+`675ea66fb4954ad3325ec4874a6cae9496c87e7d` (H3, plus the removal of this repo's
+staged document copies from there). Imports go one way,
 `graphsearch` → `planner`, never back.
 
 **Why.** Two reasons, and the second is the one that decides it.
