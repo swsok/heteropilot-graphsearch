@@ -77,3 +77,40 @@ class NullContentionModel(ContentionModel):
 
 
 DEFAULT_CONTENTION_MODEL = NullContentionModel()
+
+
+def tp_allreduce_tpot_ms(
+    flow: CommFlow,
+    graph: ResourceGraph,
+    model: str,
+    *,
+    contention: ContentionModel = DEFAULT_CONTENTION_MODEL,
+) -> float:
+    """Milliseconds this TP group adds to ONE output token.
+
+    Shared by `bounds._check_comm_latency` and the graph-aware mock on purpose.
+    They used to compute it separately, and they disagreed: the mock charged one
+    all-reduce per token where the bound charges `2 x layers`, so the mock could
+    return a TPOT below the floor that admitted the candidate. That breaks the
+    invariant the whole oracle argument rests on -- a mock faster than a bound
+    makes an oracle disagreement meaningless -- and a docstring saying "never
+    faster" is not a mechanism. One function is.
+
+    The caller supplies the capacity: the bound divides by a CUT (optimistic,
+    and it must be), the mock by its path bottleneck. Only the per-token
+    multiplier lives here, because that is the part they were disagreeing about.
+    """
+    from graphsearch.demand import tp_allreduces_per_output_token
+
+    times = contention.transfer_times_ns([flow], graph)
+    per_allreduce_ns = times.get(flow.flow_id, float("inf"))
+    if per_allreduce_ns == float("inf"):
+        return float("inf")
+    return tp_allreduces_per_output_token(model) * per_allreduce_ns / 1e6
+
+
+def allreduces_per_token(model: str) -> int:
+    """Re-exported so a caller need not import `demand` for this alone."""
+    from graphsearch.demand import tp_allreduces_per_output_token
+
+    return tp_allreduces_per_output_token(model)

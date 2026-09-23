@@ -42,8 +42,10 @@ def test_island_counts_match_the_research_design() -> None:
     abcde = load_toy_cluster("abcde")
     assert len(detect_islands(abcde, toy_profiles_for(abcde))) == 5
 
+    # Three since G14-F: the counterexample needs a third node for two
+    # prefill pairs to share one decode partner.
     shared = load_toy_cluster("shared_nic")
-    assert len(detect_islands(shared, toy_profiles_for(shared))) == 2
+    assert len(detect_islands(shared, toy_profiles_for(shared))) == 3
 
 
 def test_the_v1_and_v2_copies_describe_the_same_hardware() -> None:
@@ -78,7 +80,7 @@ def test_shared_nic_fixture_differs_only_in_the_reservation() -> None:
     """The whole point of that fixture, pinned so an edit cannot erase it."""
     cluster = load_toy_cluster("shared_nic_v2")
     reserved = {r.node: r.reserved for r in cluster.shared_resources}
-    assert reserved == {"nodeX": 6.0, "nodeY": 0.0}
+    assert reserved == {"nodeX": 6.0, "nodeY": 0.0, "nodeZ": 0.0}
     caps = {r.capacity for r in cluster.shared_resources}
     assert caps == {10.0}, "capacities must match; only the reservation differs"
 
@@ -99,3 +101,68 @@ def test_the_graph_aware_mock_is_a_predictor() -> None:
     assert isinstance(predictor, Predictor)
     assert predictor.calls == []
     predictor.bind_embeddings({})          # no placement bound: base behaviour
+
+
+# --- G14-D: the mock may never be faster than the bound -------------------
+
+def test_the_mock_tpot_is_never_below_the_comm_latency_floor() -> None:
+    """The invariant the whole oracle argument rests on.
+
+    A mock that can beat a bound makes an oracle disagreement meaningless: the
+    disagreement would be between two different physics, not between a search
+    and the truth. The two used to compute the per-token all-reduce count
+    separately and disagreed -- one against `2 x layers` -- so they now call one
+    function, and this checks the consequence rather than the docstring.
+    """
+    from planner.candidate_generator import CandidateGenerator
+    from planner.inventory import detect_islands
+    from planner.spec import load_service_spec
+
+    from graphsearch.bounds import BoundPolicy, prune
+    from graphsearch.embeddings import enumerate_embeddings
+    from graphsearch.equivalence import compress
+    from graphsearch.schema import build_resource_graph
+    from tests.graph_fixtures import FIXTURES, GraphAwareMockPredictor
+
+    cluster = load_toy_cluster("abcde_v2")
+    profiles = toy_profiles_for(cluster)
+    islands = detect_islands(cluster, profiles)
+    by_id = {i.id: i for i in islands}
+    graph = build_resource_graph(cluster, profiles)
+    spec = load_service_spec(FIXTURES / "service_specs/graph-toy-llama31-8b.yaml")
+
+    templates = [
+        c
+        for c in CandidateGenerator(
+            spec, cluster, islands, profiles, enable_bound_pruning=False
+        ).generate().candidates
+        if c.total_devices == 2 and len(c.assignments) == 1
+    ][:6]
+    found, stats = enumerate_embeddings(templates, by_id, graph, spec)
+    representatives, _, _ = compress(found, graph)
+
+    predictor = GraphAwareMockPredictor()
+    predictor.bind_graph(graph)
+    checked = 0
+    for representative in representatives:
+        embedding = representative.exemplar
+        verdicts, _ = prune(
+            [representative], spec, graph, by_id, profiles, stats,
+            policy=BoundPolicy(compat=False, memory=False, throughput_capacity=False),
+        )
+        floors = [
+            p.bound_value
+            for p in verdicts[representative.rep_id].proofs
+            if p.check == "comm_latency" and p.unit == "ms"
+        ]
+        predictor.bind_embeddings({embedding.id: embedding})
+        candidate = embedding.template.model_copy(update={"id": embedding.id})
+        result = predictor.predict(candidate, spec, cluster, by_id, profiles)
+        assert result.metrics is not None
+        for floor in floors:
+            assert result.metrics.p99_tpot_ms >= floor - 1e-9, (
+                f"{embedding.id}: mock TPOT {result.metrics.p99_tpot_ms} is below "
+                f"the comm_latency floor {floor} that admitted it"
+            )
+            checked += 1
+    assert checked or representatives, "nothing was compared"
