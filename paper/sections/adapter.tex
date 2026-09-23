@@ -1,0 +1,13 @@
+%% Research design section 8 -- the simulator has to preserve the graph
+%% differences the search is making decisions about, or the search is deciding
+%% on a distinction the evaluator cannot see.
+%%
+%% graphsearch/adapter.py compiles a placement into a simulator configuration
+%% and NAMES what it could not express: TopologyLossReport, printed on every
+%% plan (GS-8). graphsearch/restore.py binds a representative back to named
+%% devices, where multiplicity is not max_concurrent.
+%%
+%% Prediction accuracy and search accuracy are separated here, per section 8's
+%% own instruction. E-G3 measures the second with the first held fixed; E-G5
+%% measures the first.
+\section{Compiling a placement, and what is lost}
