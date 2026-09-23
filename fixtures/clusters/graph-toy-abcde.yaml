@@ -60,19 +60,29 @@ links:
      bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
   - {id: l-nodeA-uplink, src: nodeA/gpu0, dst: nodeA/nic0, type: PCIE,
      bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeA, source: placeholder}
+  - {id: l-nodeA-uplink1, src: nodeA/gpu1, dst: nodeA/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeA, source: placeholder}
   - {id: l-nodeB-uplink, src: nodeB/gpu0, dst: nodeB/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeB, source: placeholder}
+  - {id: l-nodeB-uplink1, src: nodeB/gpu1, dst: nodeB/nic0, type: PCIE,
      bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeB, source: placeholder}
   - {id: l-nodeB-fabric, src: nodeB/nic0, dst: nodeA/nic0, type: ETHERNET,
      bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}
   - {id: l-nodeC-uplink, src: nodeC/gpu0, dst: nodeC/nic0, type: PCIE,
      bandwidth_gbps: 5.0, latency_ns: 900, contention_group: uplink-nodeC, source: placeholder}
+  - {id: l-nodeC-uplink1, src: nodeC/gpu1, dst: nodeC/nic0, type: PCIE,
+     bandwidth_gbps: 5.0, latency_ns: 900, contention_group: uplink-nodeC, source: placeholder}
   - {id: l-nodeC-fabric, src: nodeC/nic0, dst: nodeA/nic0, type: ETHERNET,
      bandwidth_gbps: 5.0, latency_ns: 5000, source: placeholder}
   - {id: l-nodeD-uplink, src: nodeD/gpu0, dst: nodeD/nic0, type: PCIE,
      bandwidth_gbps: 5.0, latency_ns: 900, contention_group: uplink-nodeD, source: placeholder}
+  - {id: l-nodeD-uplink1, src: nodeD/gpu1, dst: nodeD/nic0, type: PCIE,
+     bandwidth_gbps: 5.0, latency_ns: 900, contention_group: uplink-nodeD, source: placeholder}
   - {id: l-nodeD-fabric, src: nodeD/nic0, dst: nodeA/nic0, type: ETHERNET,
      bandwidth_gbps: 5.0, latency_ns: 5000, source: placeholder}
   - {id: l-nodeE-uplink, src: nodeE/npu0, dst: nodeE/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeE, source: placeholder}
+  - {id: l-nodeE-uplink1, src: nodeE/npu1, dst: nodeE/nic0, type: PCIE,
      bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeE, source: placeholder}
   - {id: l-nodeE-fabric, src: nodeE/nic0, dst: nodeA/nic0, type: ETHERNET,
      bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}

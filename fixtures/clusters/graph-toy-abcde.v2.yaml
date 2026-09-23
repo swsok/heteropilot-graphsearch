@@ -96,21 +96,31 @@ links:
      bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
   - {id: l-nodeA-uplink, src: nodeA/gpu0, dst: nodeA/nic0, type: PCIE,
      bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeA, source: placeholder}
+  - {id: l-nodeA-uplink1, src: nodeA/gpu1, dst: nodeA/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeA, source: placeholder}
   - {id: l-nodeA-sw, src: nodeA/nic0, dst: sw0, type: ETHERNET,
      bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}
   - {id: l-nodeB-uplink, src: nodeB/gpu0, dst: nodeB/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeB, source: placeholder}
+  - {id: l-nodeB-uplink1, src: nodeB/gpu1, dst: nodeB/nic0, type: PCIE,
      bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeB, source: placeholder}
   - {id: l-nodeB-sw, src: nodeB/nic0, dst: sw0, type: ETHERNET,
      bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}
   - {id: l-nodeC-uplink, src: nodeC/gpu0, dst: nodeC/nic0, type: PCIE,
      bandwidth_gbps: 5.0, latency_ns: 900, shared_resource: uplink-nodeC, source: placeholder}
+  - {id: l-nodeC-uplink1, src: nodeC/gpu1, dst: nodeC/nic0, type: PCIE,
+     bandwidth_gbps: 5.0, latency_ns: 900, shared_resource: uplink-nodeC, source: placeholder}
   - {id: l-nodeC-sw, src: nodeC/nic0, dst: sw0, type: ETHERNET,
      bandwidth_gbps: 5.0, latency_ns: 5000, source: placeholder}
   - {id: l-nodeD-uplink, src: nodeD/gpu0, dst: nodeD/nic0, type: PCIE,
      bandwidth_gbps: 5.0, latency_ns: 900, shared_resource: uplink-nodeD, source: placeholder}
+  - {id: l-nodeD-uplink1, src: nodeD/gpu1, dst: nodeD/nic0, type: PCIE,
+     bandwidth_gbps: 5.0, latency_ns: 900, shared_resource: uplink-nodeD, source: placeholder}
   - {id: l-nodeD-sw, src: nodeD/nic0, dst: sw0, type: ETHERNET,
      bandwidth_gbps: 5.0, latency_ns: 5000, source: placeholder}
   - {id: l-nodeE-uplink, src: nodeE/npu0, dst: nodeE/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeE, source: placeholder}
+  - {id: l-nodeE-uplink1, src: nodeE/npu1, dst: nodeE/nic0, type: PCIE,
      bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeE, source: placeholder}
   - {id: l-nodeE-sw, src: nodeE/nic0, dst: sw0, type: ETHERNET,
      bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}

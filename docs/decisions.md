@@ -98,3 +98,59 @@ compression ratio.
 
 **Affects.** `tests/test_embeddings.py`. No code change; the enumeration was
 already correct.
+
+---
+
+## GS-5 — the bucket key is the prediction key, not the template id · 2026-09-23
+
+**Decision.** `compress` buckets by `(prediction_key, wl_hash, attr_histogram,
+tool_version)`, where `prediction_key` is `CandidateConfig.signature()` with the
+island ids removed — model, dtype, serving architecture, topology mode and the
+vLLM knobs.
+
+**Why.** The work order's STEP G6 specifies `(template.id, wl_hash,
+attr_histogram)`. Measured on the §9 fixture, that produces **192 embeddings →
+84 representatives**: exactly one per template, because two placements on
+different islands are different templates and can never share a bucket. The
+saving this work exists to get is precisely that merge — the research design
+counts node A and node B as one representative.
+
+It cannot be dropped entirely either. The candidate graph carries hardware,
+topology, roles and parallelism, but **not** the knobs, the serving
+architecture, the dtype or the model. Two templates differing only in
+`max_num_seqs` have identical graphs and simulate differently, so a
+signature-only key would merge them — a real mis-merge, of exactly the kind VF2
+is there to prevent. `test_knobs_are_in_the_bucket_key_though_not_in_the_graph`
+pins it.
+
+With the prediction key the same fixture gives **192 → 42**, ratio 0.219.
+
+**Affects.** `graphsearch/equivalence.py`; every compression ratio this work
+reports.
+
+---
+
+## GS-6 — §9's scope is a cross-node TP group, which the planner cannot generate · 2026-09-23
+
+**Decision.** The §9 test asserts the five classes and their multiplicities
+`[2,2,4,4,16]`, and states in its docstring that the planner reaches them by a
+different route than the research design describes.
+
+**Why.** §9 enumerates "a single TP group over two of the ten accelerators", so
+its 45 device pairs include pairs spanning two nodes. heteropilot permits TP
+only within an island and islands are node-local (`CLAUDE.md`, *Execution
+Island*), so that candidate does not exist.
+
+What the generator produces instead is two single-device replicas across the
+two nodes — the same device pair, working together, under the parallelism label
+the planner's rules allow. The compression is the same operation on the same
+pairs, and all five of §9's rows come out with the multiplicities it states.
+
+The planner's space is also **richer** than §9's illustrative scope: an
+intra-node pair exists as `tp=2` (one group) *and* as `tp=1, dp=2` (two
+replicas), and those are different candidates with different representatives.
+That is why the full count per prediction key is seven, `[2,2,2,2,4,4,16]`, and
+§9's subset of it is five.
+
+**Affects.** `tests/test_equivalence.py`; how the §9 numbers should be quoted in
+the paper — as a reproduction of the compression, not of the candidate space.
