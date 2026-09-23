@@ -8,12 +8,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/vendor/heteropilot
     steps:
-      # The submodule is private, so the default GITHUB_TOKEN cannot reach it.
-      # HETEROPILOT_TOKEN must be a PAT with read access to swsok/heteropilot.
+      # HETEROPILOT_TOKEN must be a PAT with Contents: Read on BOTH swsok
+      # repositories, not just the submodule. actions/checkout uses whatever
+      # token it is given for the main clone as well, so a PAT scoped only to
+      # swsok/heteropilot fails here with a 403 on THIS repository, before the
+      # submodule is ever attempted. If the secret is missing entirely the
+      # error is "Input required and not supplied: token".
+      #
+      # `submodules: true`, not `recursive`: that initialises vendor/heteropilot
+      # and stops. astra-sim and its four nested modules are only needed to RUN
+      # the simulator, and every step of this work order uses the mock
+      # predictor -- ns-3 alone would add minutes to each run. An uninitialised
+      # nested submodule is still reported clean by the pristine check below.
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
           token: ${{ secrets.HETEROPILOT_TOKEN }}
 
       - uses: actions/setup-python@v5
@@ -24,8 +36,6 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/vendor/heteropilot
         run: pytest -q
 
       - name: Lint
@@ -44,6 +54,8 @@ jobs:
 
       # Health check on the pin itself: the subset of heteropilot's suite that
       # runs without a built simulator. Catches a bump to a broken sha.
+      # pandas is installed here and not in requirements.txt because nothing in
+      # THIS repo imports it; only heteropilot's own predictor module does.
       - name: Vendored planner still passes its own tests
         working-directory: vendor/heteropilot
         run: |
