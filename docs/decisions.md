@@ -438,3 +438,104 @@ them — if it ever does, the ranker has leaked into a judgement.
 `graphsearch/oracle.py::run_proposed`, `graphsearch/__main__.py` (`--ranker`),
 `experiments/scripts/e_g1b_topk.py`, `e_g2_ranker_diagnosis.py`,
 `e_g2_topk_holdout.py`, `fixtures/service_specs/heterogeneous-lab-llama31-8b-tight.yaml`.
+
+
+---
+
+## GS-13 — `plan` judged templates, because it never bound the predictor · 2026-09-23
+
+**What was wrong.** `graphsearch/oracle.py` built its `AdaptiveSearch` with
+`bind_embeddings=` and `embedded_pd_cost=`; `graphsearch/__main__.py::cmd_plan`
+built one with neither. So `compare` told the predictor which devices each
+candidate ran on and `plan` did not, and the two answered different questions
+from the same fixtures:
+
+- with no binder, `AdaptiveSearch._evaluate` skips the bind entirely, so the
+  predictor sees a `CandidateConfig` and nothing else. Every embedding of one
+  template gets the same metrics.
+- that is exactly the condition GS-9 was retracted over. Two placements alike
+  in every local attribute and differing only in which contended uplink they
+  cross come back identical — the one distinction the equivalence relation
+  exists to preserve, lost at the last step, in the entry point a reader is
+  most likely to run.
+- the P/D handoff fell back to heteropilot's class default, which is a property
+  of the template and not of the path, so `--k-schedule` runs of the
+  counterexample fixture could not have produced the counterexample.
+
+Nothing detected it because nothing printed it. `E-G1`, `E-G1b` and `E-G2` all
+go through `oracle.run_proposed`, which was correct; only the CLI was affected,
+and the CLI's output has no number in it that a binder would visibly move on the
+abcde fixture.
+
+**Decision.** `cmd_plan` installs the same binder `run_proposed` installs, via
+`oracle.binder_for` and `oracle.prices_pd_on_the_path` — the same two functions,
+made public rather than reimplemented, so the two entry points cannot drift
+again. `oracle._binder` and `oracle._prices_pd_on_the_path` are renamed; they
+had no callers outside that module.
+
+**And the reason it was invisible is fixed too.** `adapter.bind` now counts what
+its hooks did — `batches`, `bound`, `compile_seen`, `compile_applied`,
+`result_seen`, `result_applied` — cumulatively across every batch, and
+`SearchAudit.hook_calls` carries them into `provenance.graph_search` and into
+the rendered block. `compile_applied == 0` against the real simulator is the
+signature of this defect, and `experiments/scripts/e_g3_smoke.sh` fails on it by
+name. Against the mock, `compile` stays 0 by design — the mock reads the
+placement directly and never asks for a simulator config — so `bound` is the
+number that answers the question there, and all four are printed rather than
+summarised into a verdict.
+
+`SearchAudit` also gains `topology_loss`, summarising every
+`TopologyLossReport` the compile hook produced: how many representatives were
+compiled, how many lost a shared resource, which resources, which flows were
+priced analytically, and the contention model's name. An empty dict is a real
+answer (nothing was compiled); an absent key would be indistinguishable from a
+run that dropped a shared resource silently.
+
+**Affects.** `graphsearch/__main__.py`, `graphsearch/oracle.py`,
+`graphsearch/adapter.py`, `graphsearch/adaptive.py`, `graphsearch/render.py`,
+`tests/test_cli.py`, `tests/test_adapter.py`,
+`experiments/scripts/e_g3_smoke.sh`.
+
+
+---
+
+## GS-14 — `--predictor sim` is reachable, and only from the simulator's own venv · 2026-09-23
+
+**What was wrong.** `--predictor sim` raised `SystemExit` unconditionally. The
+first branch explained that `vendor/heteropilot/.venv` did not exist; the second
+explained that the run had to be launched through it — and the second ran even
+when it had been. There was no code path to a real simulator at all, so P1's
+"run the same correctness check under LLMServingSim" had nothing to run.
+
+**Decision.** `_require_the_simulator_venv` separates the two failures, because
+the fix differs: build the venv, or relaunch through it. The second check is
+`Path(sys.prefix) == vendor/heteropilot/.venv`, and it is not pedantry — since
+heteropilot D27 the Chakra converter runs in-process, so the interpreter that
+started the run decides which protobuf converts the trace. A venv without
+`protobuf>=7.35.1` raises at the first conversion instead of converting wrongly
+(D26/D27), which is the failure mode worth having.
+
+`_sim_environment` then builds the trace, the envelope cache and the predictor
+**in heteropilot's own shape**: `generate_trace(spec, …, num_requests, seed)`,
+`EnvelopeCache(dir, spec, accelerator_of=…, link_bw_gbps=…, trace_digest=…,
+topology_level=1)`, `LLMServingSimPredictor(trace, work_dir=…, timeout_s=…)`.
+Not a second convention: `EnvelopeKey` is heteropilot's, and a cache directory
+shared between `python -m planner plan` and `python -m graphsearch plan` must
+agree about what a hit is. `--num-requests` and `--seed` therefore default to
+heteropilot's own 300 and 42, and
+`tests/test_cli.py::test_the_trace_defaults_match_heteropilots_own` reads those
+two constants out of `planner/__main__.py` so a drift in either is caught rather
+than discovered as a cache that never hits.
+
+The per-representative graph signature the cache already used (D126) is
+unchanged, and it is what keeps two representatives differing only in a shared
+resource from colliding on one `EnvelopeKey`.
+
+**`--max-workers` does not touch determinism.** `evaluate_candidates` runs the
+simulations concurrently and assembles the results sequentially in candidate
+order, so plan ids and every appended list are byte-identical to a serial run.
+That is heteropilot's guarantee, restated here because this is the first caller
+in this repository to use it.
+
+**Affects.** `graphsearch/__main__.py`, `graphsearch/adaptive.py`
+(`max_workers`), `tests/test_cli.py`.

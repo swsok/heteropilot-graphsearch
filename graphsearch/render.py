@@ -81,8 +81,30 @@ def render_graph_block(
                 f"reservations {holds}"
             )
 
+    # Whether the predictor was ever told which devices a candidate runs on.
+    # A run that bound nothing judged TEMPLATES, and every claim it makes about
+    # two placements differing in their uplink is empty (GS-13). `compile` is 0
+    # against the mock by design -- the mock reads the placement directly and
+    # never asks for a simulator config -- so the number that answers the
+    # question is `bound`, and all four are printed rather than one summarised.
+    calls = audit.hook_calls
+    if calls:
+        lines.append(
+            f"  hooks: bound {calls.get('bound', 0)} over "
+            f"{calls.get('batches', 0)} batch(es); compile "
+            f"{calls.get('compile_applied', 0)}/{calls.get('compile_seen', 0)}"
+            f", result {calls.get('result_applied', 0)}/"
+            f"{calls.get('result_seen', 0)}"
+        )
+    else:
+        lines.append(
+            "  hooks: none installed -- the predictor was never told which "
+            "devices a candidate runs on, so these metrics are per TEMPLATE"
+        )
+
     dropped = sorted(
-        {
+        audit.topology_loss.get("dropped_shared_resources", [])
+        or {
             resource
             for report_ in (loss_reports or {}).values()
             for resource in getattr(report_, "dropped_shared_resources", [])

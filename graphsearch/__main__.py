@@ -17,6 +17,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from graphsearch import paths_root
@@ -42,7 +44,13 @@ from graphsearch.adaptive import (  # noqa: E402
 from graphsearch.bounds import ALL_CHECKS, BoundPolicy, prune  # noqa: E402
 from graphsearch.embeddings import EmbeddingPolicy, enumerate_embeddings  # noqa: E402
 from graphsearch.equivalence import CompressionPolicy, compress  # noqa: E402
-from graphsearch.oracle import compare, run_oracle, run_proposed  # noqa: E402
+from graphsearch.oracle import (  # noqa: E402
+    binder_for,
+    compare,
+    prices_pd_on_the_path,
+    run_oracle,
+    run_proposed,
+)
 from graphsearch.ranker import (  # noqa: E402
     DEFAULT_RANKER_VARIANT,
     RANKER_VARIANTS,
@@ -51,6 +59,12 @@ from graphsearch.ranker import (  # noqa: E402
 from graphsearch.render import render_graph_block  # noqa: E402
 from graphsearch.restore import RestoreError, restore  # noqa: E402
 from graphsearch.schema import build_resource_graph  # noqa: E402
+
+#: heteropilot's own defaults, repeated rather than imported: `planner.__main__`
+#: is a script, and importing it to read a constant would run its argparse
+#: setup. Pinned by a test so a drift in either is caught.
+DEFAULT_TRACE_REQUESTS = 300
+DEFAULT_TRACE_SEED = 42
 
 MOCK_BANNER = (
     "=" * 78 + "\n"
@@ -93,13 +107,30 @@ def _bound_policy(text: str) -> BoundPolicy:
     )
 
 
-def _predictor(args, trace_dir: Path):
-    if args.predictor == "mock":
-        sys.path.insert(0, str(paths_root.GRAPHSEARCH_ROOT))
-        from tests.graph_fixtures import GraphAwareMockPredictor
+#: What a `--predictor sim` run needs beyond the predictor itself. The trace
+#: and the cache key are built exactly the way heteropilot's own `plan` builds
+#: them, so a cache directory is shared between the two rather than silently
+#: forked -- `EnvelopeKey` is heteropilot's and a second convention here would
+#: make the two disagree about what a hit is.
+@dataclass
+class SimEnvironment:
+    predictor: object
+    cache: object | None
+    trace_path: Path
+    work_root: Path
 
-        return GraphAwareMockPredictor()
 
+def _require_the_simulator_venv() -> Path:
+    """The one interpreter `--predictor sim` may run under, or a refusal.
+
+    Two separate failures, said separately because the fix differs: the venv
+    does not exist (build it), or it exists and is not the one running this
+    process (relaunch through it). The second is not pedantry -- since
+    heteropilot D27 the Chakra converter runs IN-PROCESS, so which venv started
+    the run decides which protobuf converts the trace, and a venv without
+    `protobuf>=7.35.1` raises at the first conversion instead of converting
+    wrongly (D26/D27).
+    """
     venv = paths_root.HETEROPILOT_ROOT / ".venv"
     if not venv.exists():
         raise SystemExit(
@@ -107,11 +138,65 @@ def _predictor(args, trace_dir: Path):
             f"exist. Read vendor/heteropilot/CLAUDE.md § Environment, then run "
             f"this through that interpreter."
         )
-    raise SystemExit(
-        "--predictor sim must be launched through vendor/heteropilot/.venv, "
-        "because the Chakra converter runs in-process and the wrong venv "
-        "converts a trace to different bytes (heteropilot D26/D27)."
+    if Path(sys.prefix).resolve() != venv.resolve():
+        raise SystemExit(
+            f"--predictor sim must be launched through {venv}/bin/python, not "
+            f"{sys.executable}. The Chakra converter runs in-process, so the "
+            f"interpreter decides which protobuf converts the trace "
+            f"(heteropilot D26/D27)."
+        )
+    return venv
+
+
+def _sim_environment(args, spec, cluster, islands) -> SimEnvironment:
+    """Trace, envelope cache and simulator predictor, in heteropilot's own shape."""
+    _require_the_simulator_venv()
+
+    from planner.envelope import EnvelopeCache
+    from planner.predictor.llmservingsim import LLMServingSimPredictor
+    from planner.topology import TopologyGraph
+    from planner.util import provenance as prov
+    from planner.util.workload import generate_trace
+
+    work_root = (
+        Path(args.work_dir)
+        if args.work_dir
+        else Path(tempfile.mkdtemp(prefix="gs-sim-", dir=paths_root.GRAPHSEARCH_ROOT))
     )
+    work_root.mkdir(parents=True, exist_ok=True)
+    trace = generate_trace(
+        spec, work_root / "workload.jsonl",
+        num_requests=args.num_requests, seed=args.seed,
+    )
+
+    cache = None
+    if args.cache_dir:
+        reduction = TopologyGraph(cluster).reduce_for_simulator(list(islands.values()))
+        cache = EnvelopeCache(
+            Path(args.cache_dir),
+            spec,
+            accelerator_of={i.id: i.accelerator_model for i in islands.values()},
+            link_bw_gbps=reduction.link_bw_gbps,
+            trace_digest=prov.hash_file(trace.path),
+            topology_level=1,
+        )
+
+    predictor = LLMServingSimPredictor(
+        trace,
+        work_dir=work_root / "sims",
+        timeout_s=args.timeout,
+    )
+    return SimEnvironment(
+        predictor=predictor, cache=cache,
+        trace_path=Path(trace.path), work_root=work_root,
+    )
+
+
+def _mock_predictor():
+    sys.path.insert(0, str(paths_root.GRAPHSEARCH_ROOT))
+    from tests.graph_fixtures import GraphAwareMockPredictor
+
+    return GraphAwareMockPredictor()
 
 
 def _load(args):
@@ -146,7 +231,18 @@ def cmd_plan(args) -> int:
     spec, cluster, profiles, islands, graph = _load(args)
     by_id = {i.id: i for i in islands}
     templates = _templates(spec, cluster, islands, profiles, not args.no_enable_pd)
-    predictor = _predictor(args, Path(args.output or ".").parent)
+    if args.predictor == "mock":
+        predictor, cache = _mock_predictor(), None
+    else:
+        environment = _sim_environment(args, spec, cluster, by_id)
+        predictor, cache = environment.predictor, environment.cache
+        print(
+            f"sim: trace {environment.trace_path} "
+            f"({args.num_requests} requests, seed {args.seed}); "
+            f"work {environment.work_root}; "
+            f"cache {args.cache_dir or 'none'}",
+            file=sys.stderr,
+        )
 
     embedding_policy = EmbeddingPolicy(
         max_embeddings_per_template=args.max_embeddings_per_template
@@ -190,6 +286,18 @@ def cmd_plan(args) -> int:
             epsilon=args.epsilon,
         ),
         embedding_stats=stats, compression=report, bound_rejections=rejections,
+        cache=cache,
+        # Without these the predictor never learns WHICH devices a candidate
+        # runs on, so it answers per template and two placements differing only
+        # in the uplink they cross come back identical -- the distinction this
+        # whole search exists to keep. `compare` bound them from the start;
+        # `plan` did not, and the audit's `hook_calls` is now the evidence
+        # either way (GS-13).
+        bind_embeddings=binder_for(
+            predictor, graph, spec, cluster, by_id, profiles
+        ),
+        embedded_pd_cost=prices_pd_on_the_path(predictor),
+        max_workers=args.max_workers,
     )
     output, audit = search.run()
 
@@ -245,7 +353,11 @@ def cmd_compare(args) -> int:
     spec, cluster, profiles, islands, graph = _load(args)
     by_id = {i.id: i for i in islands}
     templates = _templates(spec, cluster, islands, profiles, not args.no_enable_pd)
-    predictor = _predictor(args, Path("."))
+    predictor = (
+        _mock_predictor()
+        if args.predictor == "mock"
+        else _sim_environment(args, spec, cluster, by_id).predictor
+    )
 
     oracle = run_oracle(
         spec, cluster, by_id, profiles, predictor, graph=graph, templates=templates
@@ -281,6 +393,19 @@ def build_parser() -> argparse.ArgumentParser:
             "--ranker", choices=RANKER_VARIANTS, default=DEFAULT_RANKER_VARIANT,
             help="service_margin_v1 is the pre-G15 estimate, kept as the baseline",
         )
+        # --predictor sim only. Named the same as heteropilot's own `plan`
+        # flags, and defaulting to the same values, so a cache directory is
+        # shared between the two rather than forked.
+        p.add_argument("--num-requests", type=int, default=DEFAULT_TRACE_REQUESTS)
+        p.add_argument("--seed", type=int, default=DEFAULT_TRACE_SEED)
+        p.add_argument("--cache-dir", default=None,
+                       help="PerformanceEnvelope cache directory (--predictor sim)")
+        p.add_argument("--work-dir", default=None,
+                       help="where the trace and the simulator inputs are staged")
+        p.add_argument("--timeout", type=float, default=900.0,
+                       help="seconds per simulation before it is abandoned")
+        p.add_argument("--max-workers", type=int, default=None,
+                       help="concurrent simulations; assembly stays sequential")
 
     plan = sub.add_parser("plan", help="search, and print what the search did")
     common(plan)
