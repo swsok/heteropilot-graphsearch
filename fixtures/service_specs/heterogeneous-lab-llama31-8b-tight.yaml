@@ -1,0 +1,47 @@
+# heteropilot's `examples/service_specs/llama31-8b.yaml` with an SLO that binds.
+# A HOLDOUT for E-G2: the ranker correction was diagnosed and made on
+# graph-toy-abcde and graph-toy-shared-nic only, and this spec was written
+# BEFORE the corrected ranker was run on heterogeneous-lab.
+#
+# The limits follow the same rule E-G1b's tight spec used, applied to an oracle
+# survey of heterogeneous-lab (114 placements, MOCK figures):
+#
+#   p99 TTFT   fast quartile 160-552 ms, median 10840, then 13241/16441/inf
+#   p99 TPOT   clusters at 6.1 / 12.1 / 25.1 ms
+#
+#   ttft.max_ms: 1000   -- above the fast quartile, far below the median.
+#   tpot.max_ms: 20     -- between the 12.1 and 25.1 clusters.
+#
+# Same two numbers the toy tight spec has, which is a coincidence of the
+# distributions and not a choice. The objective is `minimize_active_accelerators`
+# for the reason `graph-toy-llama31-8b-tight.yaml` gives: heteropilot has no
+# price model and the mock has no power model, so nothing else is scoreable by
+# both arms. Nothing here was measured.
+
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+
+traffic:
+  arrival_rate_rps: 10
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+  burstiness: 1.0
+  prefix_share_ratio: 0.07     # measured prefix hit ratio on this workload
+
+slo:
+  ttft:
+    percentile: 99
+    max_ms: 1000
+  tpot:
+    percentile: 99
+    max_ms: 20
+
+objective:
+  primary: minimize_active_accelerators

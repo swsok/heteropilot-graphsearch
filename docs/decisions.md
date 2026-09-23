@@ -362,3 +362,79 @@ rather than discovering, so it is here and in `__main__._templates`' docstring.
 
 **Affects.** `graphsearch/__main__.py`, `graphsearch/oracle.py`,
 `tests/test_oracle_agreement.py`, `experiments/scripts/e_g1_toy_pilot.py`.
+
+
+---
+
+## GS-12 — the ranker's goodput term divides by an estimate, not by the bound's ceiling · 2026-09-23
+
+**What was wrong.** E-G1b: under a spec whose SLO binds, `AdaptiveSearch` with
+the service-margin ranker recommended nothing at k=4 on both fixtures and found
+its first feasible candidate at simulation 5. E-G2 (`e_g2_ranker_diagnosis.md`)
+diagnosed it on graph-toy-abcde and graph-toy-shared-nic only, with three
+hypotheses answered in numbers:
+
+- **H-b — supported, and the cause.** Every false positive in the ranker's
+  comfortable band was a `max_num_seqs=32` placement whose `s128`/`s256`
+  siblings on the same devices were feasible. `goodput_ratio` divided by the
+  bound's optimistic ceiling, which admits as many sequences as the KV cache
+  holds and never reads the knob — so it read 0.085 for a placement the mock
+  ran at 2.48× its capacity, where queueing drove the TTFT to 5.8× the SLO.
+  Confusion matrix on the ranked representatives: tp 8 / **fp 4** / fn 0 / tn 66
+  (abcde) and 8 / **4** / 0 / 48 (shared-nic). Goodput residual
+  `actual/predicted` p50 5.19, p90 12.86, max 29.09.
+- **H-a — premise true, remedy immaterial.** The TTFT estimate is 0 for every
+  non-P/D placement against an actual of up to 13.3×, but a prefill roofline
+  pass covers at most 4.4 % of that TTFT; the rest is queueing, which is
+  utilisation, which is H-b's term. Adding the prefill term alone flips 0
+  verdicts.
+- **H-c — not supported.** Feasible and infeasible members of the band have the
+  same `risk_proxy` to three decimals (0.527 vs 0.526) and the same cost; there
+  is no margin gradient a δ-tier could sort on. `DiversityQuota` does not help
+  either (0 → 0 feasible in the top four): it spreads over structures, and the
+  misclassification is inside one.
+
+**Decision.** `features_for` gains a `variant`. `service_margin` (the default)
+divides `goodput_ratio` by `greedy.estimate`'s knob-aware throughput
+(`proxy_throughput_tps / output_tokens.p50`) and adds one prefill roofline pass
+(weights once + p50 prompt KV, from `memutil`) to the TTFT term; which terms
+went in is written into the new `RankFeatures.basis`. `service_margin_v1` keeps
+the original terms and is the baseline every claim here is measured against:
+`--ranker service_margin_v1` on the CLI, and
+`tests/test_ranker.py::test_v1_reproduces_the_pre_g15_order_exactly` pins its
+order on shared-nic to a file frozen from `main` at 9751f4f. No constant was
+tuned: the correction replaces a denominator with the estimator heteropilot's
+own stage-5 physics already computes, and H-c's δ was not introduced because
+the data showed nothing for it to sort on.
+
+**The bound keeps the ceiling, on purpose.** A relaxation must be optimistic; a
+ranker must guess well. They now disagree by design, in one direction only:
+`test_the_corrected_goodput_is_never_more_optimistic_than_the_ceiling` pins that
+the ranker never calls comfortable what the ceiling would not — the direction
+that would let it rank comfortably what a bound has proved impossible.
+
+**Holdout.** The correction was checked on two fixtures the diagnosis never saw,
+with the holdout spec for heterogeneous-lab written before the corrected ranker
+ran on it (`e_g2_topk_holdout.md`):
+
+| fixture | k=4 recall v1 → corrected | first feasible at sim | k=16 recall |
+| --- | --- | --- | --- |
+| graph-toy-asym | 0.1 → 0.2 | 3 → 1 | 0.5 → 0.8 |
+| heterogeneous-lab | 0.125 → 0.25 | 3 → 1 | 0.5 → 1.0 |
+
+Both meet the completion condition. Read honestly: at k=4 the corrected ranker
+only ties heteropilot's surrogate on asym (0.2) and still trails it on the lab
+(0.25 vs 0.375); it overtakes at k=8 on both and is alone at 1.0 on the lab at
+k=16. E-G1b re-run: k=4 recall 0.0 → 0.5 and first feasible 5 → 1 on both
+diagnosis fixtures; the pre-G15 table is recomputed with `service_margin_v1` at
+the bottom of that file on every run rather than pasted.
+
+**The ranker is still a heuristic and still only orders.** Nothing here reaches
+a verdict: `false_infeasible` and `mismerged_pairs` are 0 before and after, and
+`tests/test_oracle_agreement.py` is the proof that a ranker change cannot move
+them — if it ever does, the ranker has leaked into a judgement.
+
+**Affects.** `graphsearch/ranker.py`, `graphsearch/adaptive.py::build_ranker`,
+`graphsearch/oracle.py::run_proposed`, `graphsearch/__main__.py` (`--ranker`),
+`experiments/scripts/e_g1b_topk.py`, `e_g2_ranker_diagnosis.py`,
+`e_g2_topk_holdout.py`, `fixtures/service_specs/heterogeneous-lab-llama31-8b-tight.yaml`.

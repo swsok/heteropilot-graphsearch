@@ -51,6 +51,7 @@ from graphsearch.cost import cost_of_devices
 from graphsearch.embeddings import EmbeddingStats
 from graphsearch.equivalence import CompressionReport, Representative
 from graphsearch.ranker import (
+    DEFAULT_RANKER_VARIANT,
     DiversityQuota,
     RankFeatures,
     ServiceMarginRanker,
@@ -664,6 +665,7 @@ def build_ranker(
     *,
     quota: DiversityQuota | None = None,
     k_hint: int | None = None,
+    variant: str = DEFAULT_RANKER_VARIANT,
 ) -> ServiceMarginRanker:
     """A `ServiceMarginRanker` keyed by embedding id, ready for the driver.
 
@@ -682,7 +684,7 @@ def build_ranker(
         )
         table[representative.exemplar.id] = features_for(
             representative, spec, graph, islands, profiles,
-            cost_per_hour=breakdown.total_usd_per_hour,
+            cost_per_hour=breakdown.total_usd_per_hour, variant=variant,
         )
     return ServiceMarginRanker(table, quota=quota, k_hint=k_hint)
 

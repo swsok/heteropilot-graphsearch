@@ -43,7 +43,11 @@ from graphsearch.bounds import ALL_CHECKS, BoundPolicy, prune  # noqa: E402
 from graphsearch.embeddings import EmbeddingPolicy, enumerate_embeddings  # noqa: E402
 from graphsearch.equivalence import CompressionPolicy, compress  # noqa: E402
 from graphsearch.oracle import compare, run_oracle, run_proposed  # noqa: E402
-from graphsearch.ranker import DiversityQuota  # noqa: E402
+from graphsearch.ranker import (  # noqa: E402
+    DEFAULT_RANKER_VARIANT,
+    RANKER_VARIANTS,
+    DiversityQuota,
+)
 from graphsearch.render import render_graph_block  # noqa: E402
 from graphsearch.restore import RestoreError, restore  # noqa: E402
 from graphsearch.schema import build_resource_graph  # noqa: E402
@@ -176,7 +180,7 @@ def cmd_plan(args) -> int:
         graph=graph, representatives=representatives, verdicts=verdicts,
         ranker=build_ranker(
             representatives, spec, graph, by_id, profiles, quota=quota,
-            k_hint=args.k_schedule[-1] if quota else None,
+            k_hint=args.k_schedule[-1] if quota else None, variant=args.ranker,
         ),
         config=AdaptiveConfig(
             k_schedule=args.k_schedule,
@@ -247,7 +251,8 @@ def cmd_compare(args) -> int:
         spec, cluster, by_id, profiles, predictor, graph=graph, templates=templates
     )
     proposed = run_proposed(
-        spec, cluster, by_id, profiles, predictor, graph=graph, templates=templates
+        spec, cluster, by_id, profiles, predictor, graph=graph, templates=templates,
+        ranker_variant=args.ranker,
     )
     comparison = compare(oracle, proposed)
     if args.predictor == "mock":
@@ -271,6 +276,10 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument(
             "--no-enable-pd", action="store_true",
             help="do not generate P/D candidates (heteropilot's CLI default)",
+        )
+        p.add_argument(
+            "--ranker", choices=RANKER_VARIANTS, default=DEFAULT_RANKER_VARIANT,
+            help="service_margin_v1 is the pre-G15 estimate, kept as the baseline",
         )
 
     plan = sub.add_parser("plan", help="search, and print what the search did")

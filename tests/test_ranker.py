@@ -14,13 +14,18 @@ calls a candidate comfortable that `bounds.py` has already proved impossible.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from graphsearch import paths_root
+from graphsearch.adaptive import build_ranker
 from graphsearch.bounds import BoundPolicy, prune
 from graphsearch.embeddings import enumerate_embeddings
 from graphsearch.equivalence import compress
 from graphsearch.ranker import (
+    RANKER_V1,
     DiversityQuota,
     RankFeatures,
     ServiceMarginRanker,
@@ -60,14 +65,17 @@ def spec(**slo):
     return base
 
 
-def pipeline(service_spec, *, limit: int = 2, name: str = "abcde_v2"):
+def pipeline(
+    service_spec, *, limit: int = 2, name: str = "abcde_v2", enable_pd: bool = False
+):
     cluster = load_toy_cluster(name)
     profiles = toy_profiles_for(cluster)
     islands = detect_islands(cluster, profiles)
     by_id = {i.id: i for i in islands}
     graph = build_resource_graph(cluster, profiles)
     generated = CandidateGenerator(
-        service_spec, cluster, islands, profiles, enable_bound_pruning=False
+        service_spec, cluster, islands, profiles,
+        enable_bound_pruning=False, enable_pd=enable_pd,
     ).generate()
     templates = [c for c in generated.candidates if c.total_devices <= limit]
     found, stats = enumerate_embeddings(templates, by_id, graph, service_spec)
@@ -292,9 +300,11 @@ def test_the_tpot_ratio_is_not_below_the_comm_latency_floor() -> None:
         )
 
 
-def test_the_goodput_ceiling_is_the_one_the_bound_uses() -> None:
-    """If the two differed, a candidate could rank comfortably and then be
-    eliminated by a bound that disagreed with the ranking."""
+def test_the_v1_goodput_ceiling_is_the_one_the_bound_uses() -> None:
+    """`service_margin_v1` shares the bound's ceiling, so a v1 ranking and a
+    throughput proof can never disagree. The corrected ranker deliberately does
+    not (see the test after this one): a ranker wants a good guess, a bound
+    wants a relaxation, and E-G2 showed the relaxation is a bad guess."""
     service_spec = spec(min_goodput_rps=1e9)
     _, profiles, by_id, graph, representatives, stats = pipeline(service_spec)
     verdicts, _ = prune(representatives, service_spec, graph, by_id, profiles, stats)
@@ -306,11 +316,174 @@ def test_the_goodput_ceiling_is_the_one_the_bound_uses() -> None:
         ]
         if not proofs:
             continue
-        got = features_for(representative, service_spec, graph, by_id, profiles)
+        got = features_for(
+            representative, service_spec, graph, by_id, profiles, variant=RANKER_V1
+        )
         assert got.goodput_ratio > 1.0
         break
     else:
         pytest.fail("no throughput proof to compare against")
+
+
+# --- G15: the corrected estimate ------------------------------------------
+
+def test_the_corrected_goodput_is_never_more_optimistic_than_the_ceiling() -> None:
+    """The one direction that is forbidden.
+
+    The bound's ceiling is a relaxation; the corrected ranker divides by a
+    knob-aware estimate instead. Whatever else that changes, it must never
+    call a candidate MORE comfortable than the ceiling did -- that would let
+    the ranker rank comfortably what a bound has already proved impossible.
+    """
+    service_spec = spec()
+    _, profiles, by_id, graph, representatives, _ = pipeline(service_spec)
+    assert representatives
+    for representative in representatives:
+        v1 = features_for(
+            representative, service_spec, graph, by_id, profiles, variant=RANKER_V1
+        )
+        v2 = features_for(representative, service_spec, graph, by_id, profiles)
+        assert v2.goodput_ratio >= v1.goodput_ratio - 1e-12, explain(v2)
+        assert v2.ttft_ratio >= v1.ttft_ratio - 1e-12, explain(v2)
+
+
+def test_the_knob_is_what_separates_the_corrected_estimate_from_the_ceiling() -> None:
+    """E-G2's finding, as a property: two templates identical but for
+    `max_num_seqs` get the SAME v1 goodput (the ceiling never reads the knob)
+    and DIFFERENT v2 goodput, the smaller knob reading as less throughput."""
+    service_spec = spec()
+    _, profiles, by_id, graph, representatives, _ = pipeline(service_spec)
+    by_knob: dict[tuple, dict[int, RankFeatures]] = {}
+    for representative in representatives:
+        template = representative.exemplar.template
+        key = (
+            tuple((a.island_id, a.tp_size, a.dp_replicas) for a in template.assignments),
+            template.knobs.max_model_len,
+        )
+        by_knob.setdefault(key, {})[template.knobs.max_num_seqs] = (
+            features_for(representative, service_spec, graph, by_id, profiles),
+            features_for(
+                representative, service_spec, graph, by_id, profiles, variant=RANKER_V1
+            ),
+        )
+    compared = 0
+    for group in by_knob.values():
+        if len(group) < 2:
+            continue
+        small, large = min(group), max(group)
+        v2_small, v1_small = group[small]
+        v2_large, v1_large = group[large]
+        assert v1_small.goodput_ratio == v1_large.goodput_ratio
+        assert v2_small.goodput_ratio > v2_large.goodput_ratio, (
+            f"seqs {small} vs {large}: {explain(v2_small)} / {explain(v2_large)}"
+        )
+        compared += 1
+    assert compared, "no two templates differed only in max_num_seqs"
+
+
+def test_the_corrected_ttft_is_not_below_the_comm_latency_floor() -> None:
+    """Same property as the TPOT one, for the TTFT term the correction touched:
+    a P/D representative the bound proves impossible on its KV transfer must
+    not rank comfortable."""
+    service_spec = spec(ttft=spec().slo.ttft.model_copy(update={"max_ms": 0.001}))
+    _, profiles, by_id, graph, representatives, stats = pipeline(
+        service_spec, enable_pd=True
+    )
+    verdicts, _ = prune(
+        representatives, service_spec, graph, by_id, profiles, stats,
+        policy=BoundPolicy(compat=False, memory=False, throughput_capacity=False),
+    )
+    eliminated = [r for r in representatives if verdicts[r.rep_id].eliminated]
+    assert eliminated, "nothing was eliminated; the check is vacuous"
+    for representative in eliminated:
+        got = features_for(representative, service_spec, graph, by_id, profiles)
+        assert not got.comfortable, explain(got)
+
+
+def test_the_corrected_order_is_deterministic() -> None:
+    service_spec = spec()
+    _, profiles, by_id, graph, representatives, _ = pipeline(service_spec)
+    candidates = [
+        r.exemplar.template.model_copy(update={"id": r.exemplar.id})
+        for r in representatives
+    ]
+    first = build_ranker(representatives, service_spec, graph, by_id, profiles)
+    second = build_ranker(representatives, service_spec, graph, by_id, profiles)
+    a = [c.id for c in first.order(list(candidates), service_spec, by_id, profiles)]
+    b = [c.id for c in second.order(list(reversed(candidates)), service_spec, by_id, profiles)]
+    assert a == b
+
+
+def test_v1_reproduces_the_pre_g15_order_exactly() -> None:
+    """`service_margin_v1` is the baseline every G15 claim is measured against,
+    so it has to be the ranker E-G1b first ran with -- byte for byte. The
+    frozen order was written from `main` at 9751f4f, before the correction."""
+    frozen = json.loads(
+        (Path(__file__).parent / "data/ranker_v1_order_shared_nic_tight.json").read_text()
+    )
+    service_spec = load_service_spec(
+        FIXTURES / "service_specs/graph-toy-llama31-8b-tight.yaml"
+    )
+    _, profiles, by_id, graph, representatives, _ = pipeline(
+        service_spec, name="shared_nic_v2", enable_pd=True
+    )
+    ranker = build_ranker(
+        representatives, service_spec, graph, by_id, profiles, variant=RANKER_V1
+    )
+    candidates = [
+        r.exemplar.template.model_copy(update={"id": r.exemplar.id})
+        for r in representatives
+    ]
+    got = [c.id for c in ranker.order(candidates, service_spec, by_id, profiles)]
+    assert got == frozen["order"]
+
+
+def test_the_corrected_order_differs_from_v1_where_e_g2_said_it_would() -> None:
+    """Not a golden: the property. Under the tight spec on shared-nic the four
+    `s32` tp2 placements led the v1 order and are not in the corrected top
+    four, because their knob-aware goodput is above 1."""
+    service_spec = load_service_spec(
+        FIXTURES / "service_specs/graph-toy-llama31-8b-tight.yaml"
+    )
+    _, profiles, by_id, graph, representatives, _ = pipeline(
+        service_spec, name="shared_nic_v2", enable_pd=True
+    )
+    candidates = [
+        r.exemplar.template.model_copy(update={"id": r.exemplar.id})
+        for r in representatives
+    ]
+    v1 = build_ranker(
+        representatives, service_spec, graph, by_id, profiles, variant=RANKER_V1
+    )
+    v2 = build_ranker(representatives, service_spec, graph, by_id, profiles)
+    v1_top = [c.id for c in v1.order(list(candidates), service_spec, by_id, profiles)[:4]]
+    v2_top = [c.id for c in v2.order(list(candidates), service_spec, by_id, profiles)[:4]]
+    assert all("-s32-" in cid for cid in v1_top), v1_top
+    assert not any("-s32-" in cid for cid in v2_top), v2_top
+    for cid in v1_top:
+        features = v2.features(next(c for c in candidates if c.id == cid))
+        assert features is not None and not features.comfortable, explain(features)
+
+
+def test_an_unknown_variant_is_refused() -> None:
+    service_spec = spec()
+    _, profiles, by_id, graph, representatives, _ = pipeline(service_spec)
+    with pytest.raises(ValueError, match="unknown ranker variant"):
+        features_for(
+            representatives[0], service_spec, graph, by_id, profiles, variant="v3"
+        )
+
+
+def test_features_say_which_estimate_they_are() -> None:
+    service_spec = spec()
+    _, profiles, by_id, graph, representatives, _ = pipeline(service_spec)
+    v2 = features_for(representatives[0], service_spec, graph, by_id, profiles)
+    v1 = features_for(
+        representatives[0], service_spec, graph, by_id, profiles, variant=RANKER_V1
+    )
+    assert v2.basis.startswith("service_margin:")
+    assert v1.basis.startswith("service_margin_v1:")
+    assert "knob-aware" in v2.basis and "knob-blind" in v1.basis
 
 
 # --- (vi) the baseline ranker still works on the same input ---------------

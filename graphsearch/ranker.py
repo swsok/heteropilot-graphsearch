@@ -21,6 +21,22 @@ numbers would flow into a plan as though a simulation had produced them.
 one of them is met, so the binding constraint is the worst ratio; averaging
 them would let generous TTFT headroom hide a TPOT miss.
 
+**Two estimates, and the bound keeps the other one (E-G2, GS-12).** Under a
+spec whose SLO actually binds, the first version of this ranker put four
+candidates in its comfortable band that missed their TTFT by 5.8x. Every one
+was a `max_num_seqs=32` placement whose sibling at 128 was fine, and the term
+that should have said so -- `goodput_ratio` -- read 0.085 against an actual
+2.48, because its denominator was the bound's optimistic ceiling, which lets
+as many sequences run as the KV cache holds and never reads the knob. That is
+the right denominator for a BOUND: a relaxation must be optimistic. It is the
+wrong one for a RANKER, whose job is to guess well. `service_margin` therefore
+divides by `greedy.estimate`'s knob-aware throughput and adds one prefill
+roofline pass to the TTFT; `service_margin_v1` keeps the original terms as the
+baseline every comparison is made against. The bound still uses the ceiling,
+on purpose, and `test_ranker.py` pins that the ranker is never MORE optimistic
+than the ceiling -- the direction that would let it call comfortable what a
+bound has proved impossible.
+
 **Diversity is a hedge against the proxy being wrong.** Sorting purely by risk
 then cost fills a small budget with near-identical placements, and if the proxy
 mis-ranks that structure the whole batch is wasted. `DiversityQuota` reserves
@@ -52,6 +68,13 @@ from planner.predictor.calibration import load_domain_index  # noqa: E402
 from planner.spec import ServiceSpec  # noqa: E402
 from planner.util import memory as memutil  # noqa: E402
 
+#: The ranker variants a caller may name. `service_margin` is the corrected
+#: estimate (G15); `service_margin_v1` is the original, kept so every claim
+#: about the correction can be checked against the thing it corrected.
+RANKER_V1 = "service_margin_v1"
+DEFAULT_RANKER_VARIANT = "service_margin"
+RANKER_VARIANTS = (DEFAULT_RANKER_VARIANT, RANKER_V1)
+
 
 @dataclass(frozen=True)
 class RankFeatures:
@@ -71,6 +94,9 @@ class RankFeatures:
     #: carried so a caller can report it.
     outside_calibration: bool
     structure_key: tuple
+    #: Which terms went into the three ratios, in words. A surprising order is
+    #: explained from here; a changed estimate is visible from here.
+    basis: str = ""
 
     @property
     def risk_proxy(self) -> float:
@@ -166,6 +192,41 @@ def _goodput_ceiling(
     return total_tps / max(1, spec.traffic.output_tokens.p50)
 
 
+def prefill_roofline_ms(
+    template: CandidateConfig,
+    spec: ServiceSpec,
+    islands: Mapping[str, ExecutionIsland],
+    profiles: Mapping[str, AcceleratorProfile],
+    *,
+    utilization: float = GPU_MEMORY_UTILIZATION,
+) -> float:
+    """The least time a prefill (or aggregated) engine needs for one p50 prompt.
+
+    Reading the weights once and writing the prompt's KV, over the profile's
+    memory bandwidth -- the same roofline the bounds and heteropilot's own
+    stage-5 physics use, and optimistic in the same way: no batching, no
+    queueing, no slack. `GreedyEstimate` deliberately has no such field (its
+    `roofline_tpot_ms` is decode-only), so it is computed here. E-G2 measured
+    it at 2-4 % of the mock's p99 TTFT: a term that is real, small, and better
+    than the zero it replaces.
+    """
+    worst = 0.0
+    for assignment in template.assignments:
+        if assignment.role not in (Role.PREFILL, Role.AGGREGATED):
+            continue
+        island = islands[assignment.island_id]
+        profile = profiles.get(island.accelerator_model)
+        if profile is None or profile.memory_bandwidth_gbps <= 0:
+            return float("inf")
+        report = _memory_report(assignment, island, spec, utilization)
+        prompt_bytes = spec.traffic.input_tokens.p50 * report.kv_bytes_per_token
+        seconds = (report.weight_bytes + prompt_bytes) / (
+            profile.memory_bandwidth_gbps * 1e9
+        )
+        worst = max(worst, seconds * 1e3)
+    return worst
+
+
 def _structure_key(embedding: EmbeddedCandidate, graph: ResourceGraph) -> tuple:
     """What makes two candidates the same BET, for diversity purposes."""
     template = embedding.template
@@ -194,17 +255,33 @@ def features_for(
     gpu_memory_utilization: float = GPU_MEMORY_UTILIZATION,
     cost_per_hour: float | None = None,
     domain_root=None,
+    variant: str = DEFAULT_RANKER_VARIANT,
 ) -> RankFeatures:
-    """Read one representative's exemplar into the numbers the ordering uses."""
+    """Read one representative's exemplar into the numbers the ordering uses.
+
+    `variant` picks the estimate. `service_margin` (default) is the corrected
+    one; `service_margin_v1` is the original and exists so the correction can
+    be measured rather than asserted. Anything else is refused: a misspelt
+    variant that silently fell back would make every comparison a lie.
+    """
+    if variant not in RANKER_VARIANTS:
+        raise ValueError(
+            f"unknown ranker variant {variant!r}; one of {RANKER_VARIANTS}"
+        )
+    corrected = variant == DEFAULT_RANKER_VARIANT
     embedding = representative.exemplar
     template = embedding.template
 
-    ttft_seconds = sum(
+    ttft_ms = 1e3 * sum(
         _flow_seconds(f, graph, per_request=False)
         for f in embedding.flows
         if f.kind in (FlowKind.PD_KV_TRANSFER, FlowKind.PP_ACTIVATION)
     )
-    ttft_ratio = (ttft_seconds * 1e3) / spec.slo.ttft.max_ms
+    if corrected:
+        ttft_ms += prefill_roofline_ms(
+            template, spec, islands, profiles, utilization=gpu_memory_utilization
+        )
+    ttft_ratio = ttft_ms / spec.slo.ttft.max_ms
 
     estimate = greedy.estimate(
         template, spec, dict(islands), dict(profiles),
@@ -222,11 +299,30 @@ def features_for(
     )
     tpot_ratio = (estimate.roofline_tpot_ms + tp_ms) / spec.slo.tpot.max_ms
 
-    ceiling = _goodput_ceiling(
-        embedding, spec, islands, profiles, gpu_memory_utilization
-    )
     demanded = spec.slo.min_goodput_rps or spec.traffic.arrival_rate_rps
-    goodput_ratio = demanded / ceiling if ceiling > 0 else float("inf")
+    if corrected:
+        # The knob-aware estimate, not the bound's ceiling. The ceiling admits
+        # as many sequences as the KV cache holds; a `max_num_seqs=32`
+        # placement can serve 32, and the mock -- like a real engine -- stops
+        # there. E-G2: ceiling 0.085 vs actual 2.48 on exactly those.
+        achievable_rps = estimate.proxy_throughput_tps / max(
+            1, spec.traffic.output_tokens.p50
+        )
+        basis = (
+            "service_margin: ttft = PD/PP transfer + one prefill roofline pass; "
+            "tpot = decode roofline + TP all-reduce; goodput = demanded / "
+            "knob-aware greedy throughput (the bound keeps the optimistic ceiling)"
+        )
+    else:
+        achievable_rps = _goodput_ceiling(
+            embedding, spec, islands, profiles, gpu_memory_utilization
+        )
+        basis = (
+            "service_margin_v1: ttft = PD/PP transfer only; tpot = decode "
+            "roofline + TP all-reduce; goodput = demanded / optimistic ceiling "
+            "(knob-blind, same as the bound)"
+        )
+    goodput_ratio = demanded / achievable_rps if achievable_rps > 0 else float("inf")
 
     shared_nic_util = 0.0
     for resource_id, demand in embedding.resource_demand.items():
@@ -281,6 +377,7 @@ def features_for(
         memory_margin=memory_margin,
         outside_calibration=outside,
         structure_key=_structure_key(embedding, graph),
+        basis=basis,
     )
 
 

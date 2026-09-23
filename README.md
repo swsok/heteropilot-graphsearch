@@ -74,6 +74,7 @@ four numbers, exiting non-zero when either correctness number is not zero.
 | `--compression exact\|off` | `off` measures what the compression was worth |
 | `--bounds all\|none\|<list>` | `none` drops the *relaxations*; compat and memory are exact checks and stay |
 | `--diversity` | reserve part of each batch for distinct structures |
+| `--ranker service_margin\|service_margin_v1` | `service_margin_v1` is the pre-G15 estimate, kept as the baseline every claim about the correction is measured against (E-G2) |
 | `--oracle` | evaluate every embedding: no compression, no bounds, no top-K |
 | `--predictor mock\|sim` | `mock` is the default and prints a banner on every run |
 
@@ -88,6 +89,18 @@ rather use an existing checkout than the submodule.
 
 **The submodule is private.** CI and any agent need a read token or an SSH key
 to clone it; there is no public fallback.
+
+### Results
+
+All under `experiments/results/`, every one from `--predictor mock` and headed
+by the banner that says so.
+
+| id | file | what it answers |
+| --- | --- | --- |
+| E-G1 | `e_g1_toy_pilot.md` | compression ratio and the two correctness numbers (`false_infeasible`, `mismerged_pairs`) on the toy corpus and heteropilot's lab example |
+| E-G1b | `e_g1b_topk.md` | top-K against a spec that binds: heteropilot's surrogate vs this search, with the pre-G15 table kept at the bottom |
+| E-G2 | `e_g2_ranker_diagnosis.md` | why the ranker recommended nothing at k=4 -- confusion matrix, residuals, the four it chose, three hypotheses answered in numbers |
+| E-G2 | `e_g2_topk_holdout.md` | the corrected ranker on two fixtures the diagnosis never saw, before and after in adjacent rows |
 
 ### Running against the real simulator
 
