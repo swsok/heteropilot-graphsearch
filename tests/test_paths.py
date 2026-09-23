@@ -240,12 +240,27 @@ def test_allowed_types_filters() -> None:
 
 # --- (v) the boundary -----------------------------------------------------
 
-def test_an_intra_node_pair_has_an_empty_boundary() -> None:
+def test_an_intra_node_pair_touches_its_own_uplink_and_no_other() -> None:
+    """The boundary is over ALL allowed paths, not just the best one.
+
+    §9's nodes give both GPUs equal access to the uplink, so a pair inside one
+    node can also reach the other through its NIC -- a slower route the ranker
+    would not choose, but one the candidate can take. Counting it keeps two
+    placements distinct when they differ only in a fallback route, which is the
+    conservative direction for an equivalence signature: a merge that loses a
+    real difference is the failure G6 exists to prevent, and an extra
+    representative is only a missed saving.
+
+    What matters for the compression is the second assertion: node A's pair does
+    not claim node C's uplink, so A-internal and C-internal stay different
+    representatives -- which is what makes §9's five rather than three.
+    """
     graph = graph_of("abcde_v2")
     devices = ["nodeA/gpu0", "nodeA/gpu1"]
     context = boundary_context(graph, devices, all_pairs(graph, devices))
-    assert context.shared_resources == frozenset()
-    assert context.transit_vertices == frozenset()
+    assert context.shared_resources == {"uplink-nodeA"}
+    assert "nodeA/nic0" in context.transit_vertices
+    assert not any(r.endswith(("nodeB", "nodeC", "nodeD")) for r in context.shared_resources)
 
 
 def test_a_cross_node_pair_carries_both_uplinks() -> None:
