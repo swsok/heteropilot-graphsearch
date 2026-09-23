@@ -3,12 +3,28 @@
 # comparable against itself: the same graph hashed by two releases may differ,
 # and an equivalence class silently re-cut by an upgrade would be invisible.
 networkx>=3.2
-# The rest are what vendor/heteropilot's planner/ needs to import and run
-# against a mock predictor. Running the real simulator needs far more; reuse
-# `vendor/heteropilot/.venv` for that (see README).
+
+# What vendor/heteropilot's planner/ needs to be imported and run against a
+# mock predictor.
 pydantic
 pyyaml
 numpy
+
+# Reached through `planner.util.memory`, which calls into upstream `serving/`:
+#   rich     - serving.core.logger, via memory_model -> radix_tree
+#   msgspec  - serving.core.radix_tree. It looks optional there (an ImportError
+#              sets it to None) but the module then subclasses `msgspec.Struct`
+#              unconditionally, so the guard does not work and it is required.
+# Not needed before G3; `demand.py` is the first module here to size a KV
+# transfer, which is what reaches that far.
+rich
+msgspec
+
+# NOT pandas: only `planner.predictor.llmservingsim` imports it, and nothing
+# here does. The CI step that runs heteropilot's own tests installs it there.
+# Running the real simulator needs far more than any of this; reuse
+# `vendor/heteropilot/.venv` for that (see README).
+
 pytest
 ruff
 mypy
