@@ -180,3 +180,34 @@ Found by the G7 relaxation test rather than reasoned about in advance.
 
 **Affects.** `graphsearch/adaptive.py` (G9), `graphsearch/oracle.py` (G12), and
 anything else that batches representatives into heteropilot's evaluator.
+
+---
+
+## GS-8 — the MVP adapter cannot express a shared resource, and says so on every plan · 2026-09-23
+
+**Decision.** `compile_embedded` replaces only `link_bw` and `link_latency`
+with this placement's path bottleneck, and returns a `TopologyLossReport`
+naming every shared resource the config could not express. Any plan whose
+report is non-empty carries a caveat. `contention.py` ships an interface and a
+null implementation, and the model's name travels in every record.
+
+**Why.** heteropilot's `docs/deviations.md` D3 records that the legacy cluster
+config carries no topology graph. For graph search the consequence is sharper
+than for the planner: **two placements differing only in whether they cross a
+contended uplink compile to the same simulator input**, so the simulator
+returns the same prediction for both — and a difference G6 was careful to
+preserve is lost at the last step.
+
+A flow-level contention model is out of scope for the MVP. The alternative to
+losing the fact quietly is to name it, which is what the report does.
+
+**What this costs a reader.** A `graphsearch` comparison of two such
+representatives compares their *bounds and their cost*, not their simulated
+performance, because the simulator gave both the same answer. That is a real
+limit on what the first paper can claim from simulation alone, and it is why
+the contention experiment is listed as work that follows a `ContentionModel`
+implementation rather than as something the MVP measures.
+
+**Affects.** `graphsearch/adapter.py`, `graphsearch/contention.py`; the
+provenance block of every plan; heteropilot **D124**, which records the same
+thing from the other side.
