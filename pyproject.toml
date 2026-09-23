@@ -17,3 +17,15 @@ exclude = ["vendor/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# networkx changed what `weisfeiler_lehman_graph_hash` returns between
+# releases and warns about it. The warning is correct and this repository
+# already acts on it -- `Signature.tool_version` records the version so a hash
+# is never compared across one -- so it is noise in a test run rather than
+# news. Scoped to the one module: a hashing warning from anywhere else is
+# something we have not thought about yet and should still be visible.
+#
+# Pre-emptive: it cannot be reproduced here, because the release that emits it
+# needs Python 3.11 and this repository runs 3.10 (see requirements.txt).
+filterwarnings = [
+    "ignore::FutureWarning:networkx.algorithms.graph_hashing",
+]

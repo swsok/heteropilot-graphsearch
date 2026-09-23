@@ -2,6 +2,15 @@
 # recorded in `Signature.tool_version` because a Weisfeiler-Lehman hash is only
 # comparable against itself: the same graph hashed by two releases may differ,
 # and an equivalence class silently re-cut by an upgrade would be invisible.
+#
+# The floor stays at 3.2 although 3.5 would be preferable, and the reason is
+# not preference: `networkx>=3.5` requires Python >=3.11, while heteropilot
+# pins 3.10 (`uv venv --python 3.10`) and this repo's CI matches it. Raising
+# the floor makes the repository uninstallable rather than stricter. What the
+# floor was being asked to do -- stop a hash from one release being compared
+# against a hash from another -- is done by `tool_version` in the signature
+# instead, which fails the comparison loudly rather than quietly re-cutting a
+# class. Raise this the same day the interpreter moves, not before.
 networkx>=3.2
 
 # What vendor/heteropilot's planner/ needs to be imported and run against a

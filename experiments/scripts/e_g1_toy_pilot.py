@@ -90,7 +90,8 @@ def one(name: str, path: Path, limit: int) -> dict:
     by_id = {i.id: i for i in islands}
     graph = build_resource_graph(cluster, profiles)
     generated = CandidateGenerator(
-        spec, cluster, islands, profiles, enable_bound_pruning=False
+        spec, cluster, islands, profiles,
+        enable_bound_pruning=False, enable_pd=True,
     ).generate()
     templates = [c for c in generated.candidates if c.total_devices <= limit]
 
@@ -168,11 +169,16 @@ def markdown(rows: list[dict]) -> str:
         "number gets reported rather than avoided."
     )
     out.append(
-        "- **graph-toy-shared-nic** wires only `gpu0` to the NIC, so the two "
-        "GPUs in a node are not interchangeable and even an intra-node pair has "
-        "no symmetry to fold. `graph-toy-abcde` gives both GPUs uplink access "
-        "(the research design's §9 says they have it), which is most of why "
-        "it reaches 0.225."
+        "- **graph-toy-shared-nic** is the counterexample fixture, and its row "
+        "is the one that changed. It used to read `ratio 1.0, mismerged 0` and "
+        "that was the result of an input with no counterexample in it: the "
+        "fixture had two nodes and `enable_pd` was never set, so no flow a "
+        "latency target charges for ever crossed an uplink. It now has three "
+        "nodes -- X with 6 of its 10 GB/s held, Y and Z free -- and both GPUs "
+        "wired to the NIC, so `P on X -> D on Z` and `P on Y -> D on Z` differ "
+        "in nothing but the boundary they cross. Exact equivalence keeps them "
+        "apart and folds Y with Z; `include_boundary=False` folds all three "
+        "and the oracle reports the mis-merge (GS-9, retracted and replaced)."
     )
     out.append("")
     out.append(
@@ -183,10 +189,19 @@ def markdown(rows: list[dict]) -> str:
     )
     out.append("")
     out.append(
-        "`BinnedRooflineRanker` is heteropilot's own surrogate and is available "
-        "as a baseline through the same ABC; it is not run here because a "
-        "top-K comparison needs a corpus where the SLO actually binds, which "
-        "the toy fixtures do not provide."
+        "`BinnedRooflineRanker` is heteropilot's own surrogate and is run as a "
+        "baseline in **E-G1b** (`experiments/results/e_g1b_topk.md`), against "
+        "a copy of the toy spec whose TTFT and TPOT limits actually bind. It "
+        "is not run here because a top-K comparison against a corpus where "
+        "everything is feasible measures nothing."
+    )
+    out.append("")
+    out.append(
+        "A `cost_regret` of `-` is not a zero. It means the fixture priced "
+        "nothing the objective could score, so the planner declined to guess "
+        "rather than inventing a number -- `heterogeneous-lab` carries no "
+        "`price_per_hour_usd`. A regret that cannot be computed is reported as "
+        "uncomputed."
     )
     return "\n".join(out)
 
