@@ -8,12 +8,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/vendor/heteropilot
     steps:
-      # The submodule is private, so the default GITHUB_TOKEN cannot reach it.
-      # HETEROPILOT_TOKEN must be a PAT with read access to swsok/heteropilot.
+      # HETEROPILOT_TOKEN must be a PAT with Contents: Read on BOTH swsok
+      # repositories, not just the submodule. actions/checkout uses whatever
+      # token it is given for the main clone as well, so a PAT scoped only to
+      # swsok/heteropilot fails here with a 403 on THIS repository, before the
+      # submodule is ever attempted. If the secret is missing entirely the
+      # error is "Input required and not supplied: token".
+      #
+      # `submodules: true`, not `recursive`: that initialises vendor/heteropilot
+      # and stops. astra-sim and its four nested modules are only needed to RUN
+      # the simulator, and every step of this work order uses the mock
+      # predictor -- ns-3 alone would add minutes to each run. An uninitialised
+      # nested submodule is still reported clean by the pristine check below.
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
           token: ${{ secrets.HETEROPILOT_TOKEN }}
 
       - uses: actions/setup-python@v5
@@ -24,8 +36,6 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/vendor/heteropilot
         run: pytest -q
 
       - name: Lint
@@ -43,11 +53,22 @@ jobs:
             || { git -C vendor/heteropilot status --short; exit 1; }
 
       # Health check on the pin itself: the subset of heteropilot's suite that
-      # runs without a built simulator. Catches a bump to a broken sha.
+      # runs without a BUILT simulator. Catches a bump to a broken sha, and in
+      # particular a hook PR (H1/H3) that stopped doing what this repo needs.
+      #
+      # These three are installed here and not in requirements.txt because
+      # nothing in THIS repo imports them. They are what that subset reaches
+      # through `planner.util.memory`, which calls into upstream `serving/`:
+      #   pandas   - planner.predictor.llmservingsim
+      #   rich     - serving.core.logger, via memory_model -> radix_tree
+      #   msgspec  - serving.core.radix_tree. It looks optional there (an
+      #              ImportError sets it to None) but the module then uses
+      #              `msgspec.Struct` unconditionally, so it is not.
+      # Verified against a clean venv: 120 passed with these, 9 fail without.
       - name: Vendored planner still passes its own tests
         working-directory: vendor/heteropilot
         run: |
-          pip install pandas
+          pip install pandas rich msgspec
           python -m pytest tests/test_spec.py tests/test_inventory.py \
                            tests/test_inventory_v2.py tests/test_optimizer.py \
                            tests/test_spec_contract.py tests/test_search_hooks.py -q
