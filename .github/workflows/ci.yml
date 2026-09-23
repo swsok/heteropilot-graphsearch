@@ -56,15 +56,13 @@ jobs:
       # runs without a BUILT simulator. Catches a bump to a broken sha, and in
       # particular a hook PR (H1/H3) that stopped doing what this repo needs.
       #
-      # pandas is installed here and not in requirements.txt because only
-      # `planner.predictor.llmservingsim` imports it and nothing in this repo
-      # does. `rich` and `msgspec` moved INTO requirements.txt at G3, when
-      # `demand.py` became the first module here to reach upstream `serving/`
-      # through `planner.util.memory`.
+      # Everything this step needs is already in requirements.txt: `rich` and
+      # `msgspec` moved there at G3 (`demand.py` reaches upstream `serving/`
+      # through `planner.util.memory`) and `pandas` at G11 (`adapter.py`
+      # imports `planner.predictor.llmservingsim`).
       - name: Vendored planner still passes its own tests
         working-directory: vendor/heteropilot
         run: |
-          pip install pandas
           python -m pytest tests/test_spec.py tests/test_inventory.py \
                            tests/test_inventory_v2.py tests/test_optimizer.py \
                            tests/test_spec_contract.py tests/test_search_hooks.py -q
