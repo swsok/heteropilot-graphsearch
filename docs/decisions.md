@@ -57,3 +57,44 @@ compression report would describe a partition that no longer exists.
 
 **Affects.** `graphsearch/equivalence.py`, `graphsearch/paths.py`, the cache
 signature, and the reproducibility claim.
+
+---
+
+## GS-3 — replica symmetry is folded by the canonical key, not by construction · 2026-09-23
+
+**Decision.** `_ordered_groupings` enumerates replica orderings and lets
+`canonical_only` collapse them, rather than emitting each partition once by
+fixing the lowest device into the first group.
+
+**Why.** Collapsing by construction makes `EmbeddingStats.skipped_symmetric`
+structurally zero. A counter that cannot move is not evidence that symmetry was
+removed — it is a claim with nothing behind it, and the compression numbers this
+work reports are exactly the kind of claim that needs evidence. Enumerating the
+orderings makes the count real, and `canonical_only=False` then measures how
+much symmetry a cluster had.
+
+The cost is a factor of `replicas!`, paid in building lists rather than in
+simulation, which is the cheap side of this pipeline by orders of magnitude.
+
+**Affects.** `graphsearch/embeddings.py`; the `skipped_symmetric` column of
+every compression table.
+
+---
+
+## GS-4 — the work order's `dp=2 tp=1 -> 3` reads as `tp=2 dp=2` · 2026-09-23
+
+**Decision.** G5's test asserts 3 for `tp=2 dp=2` and 6 for `tp=1 dp=2`, and
+says in its docstring that the work order's example names the other one.
+
+**Why.** For an island of n devices, R replicas of D each, the count is
+`C(n, RD) x (RD)! / (D!^R R!)`. On four devices that is 3 for (R=2, D=2) —
+partitioning four labelled devices into two unordered pairs — and 6 for
+(R=2, D=1). The work order's STEP G5 test (iv) pairs the number 3 with the
+parameters `dp=2 tp=1`, which the arithmetic does not support.
+
+Rather than pick one, the test asserts both readings and states the formula, so
+a future change to enumeration cannot quietly move the denominator of every
+compression ratio.
+
+**Affects.** `tests/test_embeddings.py`. No code change; the enumeration was
+already correct.

@@ -111,29 +111,82 @@ class GraphAwareMockPredictor(_MOCK_BASE):
     sizes and the profile's memory bandwidth, so it respects the same physics as
     the bounds. That property is load-bearing -- a mock that can beat a bound
     makes the oracle-agreement test fail for reasons unrelated to the search --
-    so this subclasses it rather than replacing it, and only ADDS communication
-    time on top.
+    so this subclasses it rather than replacing it, and only ADDS time:
 
-    Until G5 binds embeddings this behaves exactly like its base. From G5:
-
-        TTFT = base TTFT + sum over PD_KV_TRANSFER flows of
-               bytes / (path bottleneck - external reservation)
-        TPOT = base TPOT + TP all-reduce time on the flow's path bottleneck
+        TTFT += sum over PD_KV_TRANSFER flows of
+                bytes / (path bottleneck - external reservation)
+        TPOT += TP all-reduce time on the flow's path bottleneck
 
     Both are additions to an already-roofline-bounded figure, so the result is
-    never faster than the bound that admitted it.
+    never faster than the bound that admitted it -- which is the invariant that
+    makes an oracle disagreement mean something.
+
+    With nothing bound it is exactly its base class, so a test that does not
+    care about placement does not have to.
     """
 
     def __init__(self, **kw) -> None:
         super().__init__(**kw)
-        #: template id -> the embedding whose placement to price. Empty means
-        #: "no placement known", which is the base class's behaviour.
-        self._embeddings: dict = {}
+        #: template id -> the embedding whose placement to price.
+        self._embeddings: dict[str, object] = {}
 
     def bind_embeddings(self, by_template_id: dict) -> None:
         """Tell the mock which placement each template was evaluated at.
 
-        Filled in at G5, when `EmbeddedCandidate` exists. Binding an empty dict
-        clears it.
+        Keyed by TEMPLATE id because that is what a `CandidateConfig` carries
+        into `predict`; the driver binds one representative exemplar per
+        template before each batch.
         """
         self._embeddings = dict(by_template_id)
+
+    def predict(self, candidate, spec, cluster, islands, profiles):
+        result = super().predict(candidate, spec, cluster, islands, profiles)
+        embedding = self._embeddings.get(candidate.id)
+        if embedding is None or result.metrics is None:
+            return result
+
+        from graphsearch.demand import FlowKind
+        from graphsearch.paths import effective_bottleneck_bytes_per_s
+
+        graph = getattr(self, "_graph", None)
+        ttft_add = tpot_add = 0.0
+        for flow in embedding.flows:
+            if not flow.allowed_paths:
+                continue
+            best = flow.allowed_paths[0].best
+            if best is None:
+                continue
+            if graph is not None:
+                capacity = effective_bottleneck_bytes_per_s(graph, best)
+            else:
+                capacity = best.bottleneck_bytes_per_s
+            if capacity <= 0:
+                continue
+            seconds = flow.bytes_per_event / capacity + best.latency_ns / 1e9
+            if flow.kind is FlowKind.PD_KV_TRANSFER:
+                ttft_add += seconds * 1e3
+            elif flow.kind is FlowKind.TP_ALLREDUCE:
+                tpot_add += seconds * 1e3
+
+        metrics = result.metrics.model_copy(
+            update={
+                "p50_ttft_ms": result.metrics.p50_ttft_ms + ttft_add,
+                "p95_ttft_ms": result.metrics.p95_ttft_ms + ttft_add,
+                "p99_ttft_ms": result.metrics.p99_ttft_ms + ttft_add,
+                "p50_tpot_ms": result.metrics.p50_tpot_ms + tpot_add,
+                "p95_tpot_ms": result.metrics.p95_tpot_ms + tpot_add,
+                "p99_tpot_ms": result.metrics.p99_tpot_ms + tpot_add,
+            }
+        )
+        # `replace`, not a hand-built SimResult: that would silently drop
+        # `artifacts` and `operating_point`, and the accuracy-domain machinery
+        # reads the second one.
+        from dataclasses import replace
+
+        return replace(result, metrics=metrics)
+
+    def bind_graph(self, graph) -> None:
+        """The graph whose reservations to subtract. Optional: without it the
+        nominal path bottleneck is used, which is the base-class behaviour plus
+        link time and still never faster than a bound."""
+        self._graph = graph
