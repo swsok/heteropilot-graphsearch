@@ -26,7 +26,7 @@ the first paper can claim from simulation alone.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from graphsearch import paths_root
 from graphsearch.contention import DEFAULT_CONTENTION_MODEL, ContentionModel
@@ -245,6 +245,7 @@ def apply_pd_transfer_cost_embedded(
     )
     info = {
         "candidate_id": embedding.id,
+        "basis": "graphsearch embedded path",
         "xfer_ms_p50": offsets["p50"],
         "xfer_ms_p95": offsets["p95"],
         "xfer_ms_p99": offsets["p99"],
@@ -268,6 +269,7 @@ def bind(
     cluster: ClusterSpecV2,
     islands: Mapping[str, ExecutionIsland],
     profiles: Mapping[str, AcceleratorProfile],
+    spec: ServiceSpec,
     gpu_memory_utilization: float = 0.90,
     activation_reserve_gb: float = 0.0,
 ) -> Callable[[Mapping[str, EmbeddedCandidate]], None]:
@@ -279,6 +281,7 @@ def bind(
     """
     bound: dict[str, EmbeddedCandidate] = dict(embeddings_by_candidate_id)
     reports: dict[str, TopologyLossReport] = {}
+    transfers: dict[str, dict] = {}
     topology = TopologyGraph(cluster)
 
     def hook(
@@ -299,13 +302,51 @@ def bind(
         reports[candidate.id] = report
         return config, reduction
 
+    def result_hook(candidate: CandidateConfig, result):
+        """Price the P/D handoff over the path this placement takes.
+
+        Registered rather than applied afterwards (heteropilot D125): the
+        feasibility verdict is taken inside `evaluate_candidates`, and the
+        envelope cache stores whatever `predict` returns, so a correction made
+        outside would leave the verdict on different numbers and would vanish
+        on a cache hit. Callers pair this with
+        `evaluate_candidates(pd_transfer=False)` so heteropilot's
+        class-default figure is ABSENT rather than subtracted.
+        """
+        embedding = bound.get(candidate.id)
+        if embedding is None or result.metrics is None:
+            return result
+        metrics, info = apply_pd_transfer_cost_embedded(
+            embedding, result.metrics, spec, graph
+        )
+        if not info:
+            return result
+        transfers[candidate.id] = info
+        return replace(result, metrics=metrics)
+
     predictor.set_compile_hook(hook)
+    predictor.set_result_hook(result_hook)
     predictor.last_loss_reports = reports          # type: ignore[attr-defined]
+    predictor.last_pd_transfers = transfers        # type: ignore[attr-defined]
 
     def rebind(next_batch: Mapping[str, EmbeddedCandidate]) -> None:
+        """Point both hooks at the next batch.
+
+        A predictor that can see placements itself -- the graph-aware mock --
+        is told too, so a caller has one binder rather than two that can drift
+        out of step.
+        """
         bound.clear()
         bound.update(next_batch)
+        transfers.clear()
+        binder = getattr(predictor, "bind_embeddings", None)
+        if binder is not None:
+            binder(dict(next_batch))
+        graph_binder = getattr(predictor, "bind_graph", None)
+        if graph_binder is not None:
+            graph_binder(graph)
 
+    rebind(dict(embeddings_by_candidate_id))
     return rebind
 
 

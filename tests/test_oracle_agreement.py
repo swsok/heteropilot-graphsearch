@@ -42,7 +42,15 @@ paths_root.ensure_importable()
 
 from planner.candidate_generator import CandidateGenerator  # noqa: E402
 from planner.inventory import detect_islands  # noqa: E402
+from planner.plan import (  # noqa: E402
+    CandidateConfig,
+    IslandAssignment,
+    Role,
+    ServingArch,
+)
 from planner.spec import Objective, load_service_spec  # noqa: E402
+
+MODEL = "meta-llama/Llama-3.1-8B"
 
 
 def spec(**slo):
@@ -66,7 +74,8 @@ def world(name: str, service_spec, *, limit: int = 2):
     by_id = {i.id: i for i in islands}
     graph = build_resource_graph(cluster, profiles)
     generated = CandidateGenerator(
-        service_spec, cluster, islands, profiles, enable_bound_pruning=False
+        service_spec, cluster, islands, profiles,
+        enable_bound_pruning=False, enable_pd=True,
     ).generate()
     templates = [c for c in generated.candidates if c.total_devices <= limit]
     return cluster, profiles, by_id, graph, templates
@@ -126,46 +135,105 @@ def test_no_representative_merges_two_different_answers(fixture: str) -> None:
 
 # --- the check can fail --------------------------------------------------
 
-def test_dropping_the_boundary_merges_what_the_predictor_cannot_tell_apart() -> None:
-    """The ablation merges -- and under the NULL contention model that merge is
-    undetectable, which is the point GS-8 and heteropilot D124 record.
+def _x_and_y_to_z():
+    """The research design's §5 counterexample, as two templates.
 
-    `include_boundary=False` folds nodeX and nodeY into one representative even
-    though X holds 6 of its 10 GB/s and Y's uplink is free. The oracle does not
-    object, and it is right not to: the uplink that distinguishes them appears
-    only on the INGRESS and EGRESS paths, which are `on_critical_path: "none"`,
-    so its utilisation never reaches a metric. Two placements that differ only
-    in a resource no latency target charges for predict identically.
-
-    That is not the compression being safe. It is the predictor being blind to
-    the difference -- the same blindness the adapter's `TopologyLossReport`
-    reports on every plan. A mismerge here becomes DETECTABLE only once a
-    `ContentionModel` exists, and until then a comparison of these two
-    representatives is a comparison of bounds and cost.
+    Two prefill pairs talking to the SAME third decode partner. With only X and
+    Y a P/D candidate crosses BOTH uplinks whichever way it runs, so there is
+    nothing to compare -- which is why this needs nodeZ.
     """
-    service_spec = roomy_spec()
-    cluster, profiles, islands, graph, templates = world("shared_nic_v2", service_spec)
-    oracle = run_oracle(
-        service_spec, cluster, islands, profiles, GraphAwareMockPredictor(),
+    cluster = load_toy_cluster("shared_nic_v2")
+    profiles = toy_profiles_for(cluster)
+    islands = {i.id: i for i in detect_islands(cluster, profiles)}
+    graph = build_resource_graph(cluster, profiles)
+
+    def island_of(node: str) -> str:
+        return next(i.id for i in islands.values() if i.node_id == node)
+
+    def pd(prefill: str) -> CandidateConfig:
+        return CandidateConfig(
+            id=f"pd-{prefill}-Z", model=MODEL, dtype="bfloat16",
+            serving_arch=ServingArch.PD_SPLIT,
+            assignments=[
+                IslandAssignment(
+                    island_id=island_of(prefill), role=Role.PREFILL, tp_size=2
+                ),
+                IslandAssignment(
+                    island_id=island_of("nodeZ"), role=Role.DECODE, tp_size=2
+                ),
+            ],
+        )
+
+    return cluster, profiles, islands, graph, [pd("nodeX"), pd("nodeY")]
+
+
+def test_dropping_the_boundary_produces_a_mismerge() -> None:
+    """The existence proof for the research contribution.
+
+    X's uplink already has 6 of its 10 GB/s taken and Y's is free. `P on X ->
+    D on Z` and `P on Y -> D on Z` are otherwise identical, so the KV handoff
+    crosses a half-taken wire in one and a free one in the other:
+
+    * with the boundary in the signature they stay apart, and the oracle
+      agrees -- `mismerged_pairs == []`;
+    * with `include_boundary=False` they FOLD, and the oracle judges them
+      differently, so the harness must report the pair.
+
+    A correctness check that cannot fail is not one. This one can, and it is
+    the first test in this repository that would fail if the compression
+    stopped reading the boundary.
+
+    The SLO is read off the oracle rather than written down, because a
+    hard-coded threshold that drifts past both TTFTs stops separating them
+    and goes green for the wrong reason.
+    """
+    cluster, profiles, islands, graph, templates = _x_and_y_to_z()
+
+    def oracle_for(service_spec):
+        return run_oracle(
+            service_spec, cluster, islands, profiles, GraphAwareMockPredictor(),
+            graph=graph, templates=templates,
+        )
+
+    survey = oracle_for(roomy_spec())
+    ttfts = sorted(p.predicted.p99_ttft_ms for p in survey.plans.values())
+    assert len(ttfts) == 2, f"expected the two placements, got {len(ttfts)}"
+    assert ttfts[0] < ttfts[1], (
+        f"the contended uplink cost nothing: both TTFTs are {ttfts}. The "
+        f"result hook that prices the handoff over its own path is not bound."
+    )
+    tight = spec(
+        ttft=roomy_spec().slo.ttft.model_copy(
+            update={"max_ms": (ttfts[0] + ttfts[1]) / 2}
+        )
+    )
+
+    oracle = oracle_for(tight)
+    sighted = run_proposed(
+        tight, cluster, islands, profiles, GraphAwareMockPredictor(),
         graph=graph, templates=templates,
     )
     blind = run_proposed(
-        service_spec, cluster, islands, profiles, GraphAwareMockPredictor(),
+        tight, cluster, islands, profiles, GraphAwareMockPredictor(),
         graph=graph, templates=templates,
         compression_policy=CompressionPolicy(include_boundary=False),
     )
-    sighted = run_proposed(
-        service_spec, cluster, islands, profiles, GraphAwareMockPredictor(),
-        graph=graph, templates=templates,
+
+    assert len(sighted.representatives) == 2, "exact compression merged them"
+    assert len(blind.representatives) == 1, "the ablation did not merge them"
+
+    assert compare(oracle, sighted).mismerged_pairs == []
+
+    blind_pairs = compare(oracle, blind).mismerged_pairs
+    assert blind_pairs, (
+        "dropping the boundary merged two placements the oracle judged "
+        "differently, and the harness did not report it"
     )
-    assert len(blind.representatives) < len(sighted.representatives), (
-        "the ablation did not actually merge anything"
+    verdicts = {oracle.feasible[e.id] for e in blind.representatives[0].embeddings}
+    assert verdicts == {True, False}, (
+        f"the pair was reported, but not for the reason this test claims: "
+        f"{verdicts}"
     )
-    # Both are "correct" by the oracle, because the oracle cannot see the
-    # difference either. The compression keeping them apart is a bet on a
-    # contention model that does not exist yet.
-    assert compare(oracle, sighted).correct
-    assert compare(oracle, blind).correct
 
 
 def test_the_harness_does_report_a_mismerge_when_there_is_one() -> None:

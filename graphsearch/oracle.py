@@ -143,24 +143,56 @@ def bind_predictor(
     predictor: Predictor,
     embeddings: Sequence[EmbeddedCandidate],
     graph: ResourceGraph,
-) -> None:
+    *,
+    spec: ServiceSpec | None = None,
+    cluster: ClusterSpecV2 | None = None,
+    islands: Mapping[str, ExecutionIsland] | None = None,
+    profiles: Mapping[str, AcceleratorProfile] | None = None,
+) -> bool:
     """Let the predictor see WHICH devices each candidate runs on.
 
     Without this the oracle judges templates, not placements: every embedding
     of one template gets the same metrics, so `mismerged_pairs` can never be
-    non-zero and the correctness check is vacuous. The mock exposes
-    `bind_embeddings`; the real predictor gets the same thing through G11's
-    `adapter.bind`. A predictor with neither is used as-is, and the caller is
-    then measuring something weaker -- which is why this is a named function
+    non-zero and the correctness check is vacuous.
+
+    Two things have to be bound, and binding only the first was a real defect.
+    The compile hook tells the predictor the devices; the RESULT hook prices
+    the P/D handoff over the path those devices force. Without the second,
+    heteropilot's class-default transfer figure stands -- and that figure is
+    the same for every placement of a template, so two placements differing
+    only in which contended uplink they cross come back identical and the
+    counterexample cannot appear. Returns True when the result hook is
+    installed, which is the caller's signal to ask `evaluate_candidates` for
+    `pd_transfer=False` so the class-default figure is ABSENT rather than
+    subtracted (heteropilot D125).
+
+    A predictor with neither hook is used as-is, and the caller is then
+    measuring something weaker -- which is why this is a named function
     rather than a silent `getattr`.
     """
+    have_context = None not in (spec, cluster, islands, profiles)
+    if have_context and hasattr(predictor, "set_result_hook"):
+        from graphsearch.adapter import bind as bind_adapter
+
+        bind_adapter(
+            predictor,                               # type: ignore[arg-type]
+            {e.id: e for e in embeddings},
+            graph,
+            cluster=cluster,                         # type: ignore[arg-type]
+            islands=islands,                         # type: ignore[arg-type]
+            profiles=profiles,                       # type: ignore[arg-type]
+            spec=spec,                               # type: ignore[arg-type]
+        )
+        return True
+
     binder = getattr(predictor, "bind_embeddings", None)
     if binder is None:
-        return
+        return False
     graph_binder = getattr(predictor, "bind_graph", None)
     if graph_binder is not None:
         graph_binder(graph)
     binder({e.id: e for e in embeddings})
+    return False
 
 
 def run_oracle(
@@ -184,11 +216,15 @@ def run_oracle(
     result = OracleResult(embeddings=list(embeddings))
     if not embeddings:
         return result
-    bind_predictor(predictor, embeddings, graph)
+    embedded_pd = bind_predictor(
+        predictor, embeddings, graph,
+        spec=spec, cluster=cluster, islands=islands, profiles=profiles,
+    )
 
     evaluation = evaluate_candidates(
         [_candidate_for(e) for e in embeddings],
         spec, cluster, dict(islands), dict(profiles), predictor,
+        pd_transfer=not embedded_pd,
     )
     result.simulations = len(embeddings)
 
@@ -208,6 +244,27 @@ def run_oracle(
     for embedding in embeddings:
         result.feasible.setdefault(embedding.id, False)
     return result
+
+
+def _binder(predictor, graph, spec, cluster, islands, profiles):
+    """`AdaptiveSearch` wants a binder that returns nothing; `bind_predictor`
+    returns whether it installed the result hook. `_prices_pd_on_the_path`
+    answers the same question up front, so the return value is dropped here
+    rather than widening the callback's type."""
+
+    def bind(batch: Mapping[str, object]) -> None:
+        bind_predictor(
+            predictor,
+            [e for e in batch.values() if isinstance(e, EmbeddedCandidate)],
+            graph, spec=spec, cluster=cluster, islands=islands, profiles=profiles,
+        )
+
+    return bind
+
+
+def _prices_pd_on_the_path(predictor: Predictor) -> bool:
+    """Whether `bind_predictor` will install the graph-aware transfer cost."""
+    return hasattr(predictor, "set_result_hook")
 
 
 def run_proposed(
@@ -241,10 +298,8 @@ def run_proposed(
         ranker=build_ranker(representatives, spec, graph, islands, profiles),
         config=config or AdaptiveConfig(k_schedule=(len(representatives) or 1,)),
         embedding_stats=stats, compression=report, bound_rejections=rejections,
-        bind_embeddings=lambda batch: bind_predictor(
-            predictor, [e for e in batch.values() if isinstance(e, EmbeddedCandidate)],
-            graph,
-        ),
+        bind_embeddings=_binder(predictor, graph, spec, cluster, islands, profiles),
+        embedded_pd_cost=_prices_pd_on_the_path(predictor),
     )
     output, audit = search.run()
 

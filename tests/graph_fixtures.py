@@ -106,6 +106,12 @@ def profile_path(name: str) -> Path:
     return FIXTURES / "profiles" / f"{name}.yaml"
 
 
+def _allreduces(model: str) -> int:
+    from graphsearch.contention import allreduces_per_token
+
+    return allreduces_per_token(model)
+
+
 class GraphAwareMockPredictor(_MOCK_BASE):
     """Deterministic mock that can see WHERE a candidate was placed.
 
@@ -131,6 +137,8 @@ class GraphAwareMockPredictor(_MOCK_BASE):
         super().__init__(**kw)
         #: template id -> the embedding whose placement to price.
         self._embeddings: dict[str, object] = {}
+        self._result_hook = None
+        self._compile_hook = None
 
     def bind_embeddings(self, by_template_id: dict) -> None:
         """Tell the mock which placement each template was evaluated at.
@@ -145,13 +153,16 @@ class GraphAwareMockPredictor(_MOCK_BASE):
         result = super().predict(candidate, spec, cluster, islands, profiles)
         embedding = self._embeddings.get(candidate.id)
         if embedding is None or result.metrics is None:
-            return result
+            # Still through `_finish`: the result hook prices the P/D handoff
+            # and is independent of whether this mock knows the placement.
+            return self._finish(candidate, result)
 
+        from graphsearch.contention import tp_allreduce_tpot_ms
         from graphsearch.demand import FlowKind
         from graphsearch.paths import effective_bottleneck_bytes_per_s
 
         graph = getattr(self, "_graph", None)
-        ttft_add = tpot_add = 0.0
+        tpot_add = 0.0
         for flow in embedding.flows:
             if not flow.allowed_paths:
                 continue
@@ -165,16 +176,19 @@ class GraphAwareMockPredictor(_MOCK_BASE):
             if capacity <= 0:
                 continue
             seconds = flow.bytes_per_event / capacity + best.latency_ns / 1e9
-            if flow.kind is FlowKind.PD_KV_TRANSFER:
-                ttft_add += seconds * 1e3
-            elif flow.kind is FlowKind.TP_ALLREDUCE:
-                tpot_add += seconds * 1e3
+            if flow.kind is FlowKind.TP_ALLREDUCE:
+                # Through the SAME function the bound uses. Charging one
+                # all-reduce per token here (which this did) put the mock below
+                # the floor that admitted the candidate, and a mock faster than
+                # a bound makes every oracle disagreement meaningless.
+                tpot_add += (
+                    tp_allreduce_tpot_ms(flow, graph, spec.model)
+                    if graph is not None
+                    else seconds * 1e3 * _allreduces(spec.model)
+                )
 
         metrics = result.metrics.model_copy(
             update={
-                "p50_ttft_ms": result.metrics.p50_ttft_ms + ttft_add,
-                "p95_ttft_ms": result.metrics.p95_ttft_ms + ttft_add,
-                "p99_ttft_ms": result.metrics.p99_ttft_ms + ttft_add,
                 "p50_tpot_ms": result.metrics.p50_tpot_ms + tpot_add,
                 "p95_tpot_ms": result.metrics.p95_tpot_ms + tpot_add,
                 "p99_tpot_ms": result.metrics.p99_tpot_ms + tpot_add,
@@ -185,7 +199,27 @@ class GraphAwareMockPredictor(_MOCK_BASE):
         # reads the second one.
         from dataclasses import replace
 
-        return replace(result, metrics=metrics)
+        return self._finish(candidate, replace(result, metrics=metrics))
+
+    def set_result_hook(self, hook) -> None:
+        """The same seam heteropilot's real predictor has (D125).
+
+        The P/D transfer is NOT added inside `predict` any more. It used to be,
+        and then it was charged in two places -- here and by the driver -- which
+        happened to cancel out only because the driver was subtracting
+        heteropilot's figure rather than adding its own. One place charges it
+        now, and this is the seam that place plugs into.
+        """
+        self._result_hook = hook
+
+    def set_compile_hook(self, hook) -> None:
+        """Accepted and ignored: this predictor never compiles anything, so
+        `adapter.bind` can install both hooks on it without a special case."""
+        self._compile_hook = hook
+
+    def _finish(self, candidate, result):
+        hook = getattr(self, "_result_hook", None)
+        return result if hook is None else hook(candidate, result)
 
     def bind_graph(self, graph) -> None:
         """The graph whose reservations to subtract. Optional: without it the

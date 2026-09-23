@@ -123,16 +123,25 @@ def _load(args):
     return spec, cluster, profiles, islands, graph
 
 
-def _templates(spec, cluster, islands, profiles):
+def _templates(spec, cluster, islands, profiles, enable_pd: bool = True):
+    """P/D generation is ON by default here, unlike heteropilot's CLI (GS-11).
+
+    The research counterexample -- two placements alike in everything except
+    which contended uplink they cross -- only becomes visible through a
+    `PD_KV_TRANSFER` flow, because that is the only traffic a latency target
+    charges for that can cross a node boundary. With P/D off the pipeline
+    generates none, and the compression has nothing to demonstrate.
+    """
     return CandidateGenerator(
-        spec, cluster, islands, profiles, enable_bound_pruning=False
+        spec, cluster, islands, profiles,
+        enable_bound_pruning=False, enable_pd=enable_pd,
     ).generate().candidates
 
 
 def cmd_plan(args) -> int:
     spec, cluster, profiles, islands, graph = _load(args)
     by_id = {i.id: i for i in islands}
-    templates = _templates(spec, cluster, islands, profiles)
+    templates = _templates(spec, cluster, islands, profiles, not args.no_enable_pd)
     predictor = _predictor(args, Path(args.output or ".").parent)
 
     embedding_policy = EmbeddingPolicy(
@@ -231,7 +240,7 @@ def _write(output, audit, report, restored, path: Path) -> None:
 def cmd_compare(args) -> int:
     spec, cluster, profiles, islands, graph = _load(args)
     by_id = {i.id: i for i in islands}
-    templates = _templates(spec, cluster, islands, profiles)
+    templates = _templates(spec, cluster, islands, profiles, not args.no_enable_pd)
     predictor = _predictor(args, Path("."))
 
     oracle = run_oracle(
@@ -259,6 +268,10 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--cluster", required=True)
         p.add_argument("--profiles-root", default=None)
         p.add_argument("--predictor", choices=("mock", "sim"), default="mock")
+        p.add_argument(
+            "--no-enable-pd", action="store_true",
+            help="do not generate P/D candidates (heteropilot's CLI default)",
+        )
 
     plan = sub.add_parser("plan", help="search, and print what the search did")
     common(plan)
