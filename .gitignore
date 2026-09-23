@@ -16,7 +16,23 @@ experiments/results/**/work/
 .mcp.json
 .ignore
 .claude/
+.omc/
 .cursor/
 .vscode/
 .idea/
 graft/
+
+# The paper. `tables/` is generated from experiments/results/*.md by
+# `make tables` and committing it would let a stale table outlive the markdown
+# it came from; the directory itself is kept so `\input` paths resolve before
+# the first build. LaTeX's own droppings are regenerable by definition.
+paper/tables/*.tex
+paper/main.pdf
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
