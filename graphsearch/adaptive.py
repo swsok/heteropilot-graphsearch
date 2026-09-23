@@ -139,6 +139,10 @@ class SearchAudit:
     certificate: dict | None = None
     unevaluated_ids: list[str] = field(default_factory=list)
     unevaluated_placements: int = 0
+    #: Exemplar ids the evaluator judged feasible. NOT the same as what reaches
+    #: `PlannerOutput.alternatives`, which is the Pareto frontier with
+    #: equivalents collapsed -- a caller measuring recall needs the full set.
+    feasible_ids: list[str] = field(default_factory=list)
     compression: dict = field(default_factory=dict)
     residual_splits: list[str] = field(default_factory=list)
 
@@ -173,6 +177,10 @@ class SearchAudit:
                 "representatives": len(self.unevaluated_ids),
                 "placements": self.unevaluated_placements,
                 "ids": sorted(self.unevaluated_ids),
+            },
+            "feasible": {
+                "representatives": len(self.feasible_ids),
+                "ids": sorted(self.feasible_ids),
             },
             "compression": self.compression,
             "residual_splits": sorted(self.residual_splits),
@@ -359,6 +367,7 @@ class AdaptiveSearch:
         audit.unevaluated_ids = [r.exemplar.id for r in unreached]
         audit.unevaluated_placements = sum(r.multiplicity for r in unreached)
         audit.evaluated = len(evaluated)
+        audit.feasible_ids = sorted({p.candidate.id for p in feasible})
         audit.termination = termination
         audit.certificate = certificate
 

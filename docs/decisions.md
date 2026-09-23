@@ -211,3 +211,36 @@ implementation rather than as something the MVP measures.
 **Affects.** `graphsearch/adapter.py`, `graphsearch/contention.py`; the
 provenance block of every plan; heteropilot **D124**, which records the same
 thing from the other side.
+
+---
+
+## GS-9 — the oracle must see the placement, or the correctness check is vacuous · 2026-09-23
+
+**Decision.** `run_oracle` binds the predictor to every embedding before
+evaluating, through `bind_predictor`. `run_proposed` binds each batch the same
+way. A predictor with no binding hook is used as-is, and `bind_predictor` is a
+named function rather than a silent `getattr` so that weakening is visible.
+
+**Why.** Without it the oracle judges **templates**, not placements: every
+embedding of one template gets identical metrics, so two members of a
+representative can never disagree and `mismerged_pairs` is structurally zero.
+A correctness check that cannot fail is not one, and this one would have
+reported success for any equivalence rule at all.
+
+Found while writing G12's ablation test, which produced no mis-merge no matter
+what was dropped from the labels.
+
+**And a second finding, recorded because it bounds what G12 can prove.** Even
+with the predictor bound, the shared-NIC ablation produces **no detectable
+mis-merge**. `include_boundary=False` folds nodeX and nodeY although X holds 6
+of its 10 GB/s, and the oracle does not object — correctly, because the uplink
+that distinguishes them appears only on the `INGRESS` and `EGRESS` paths, which
+are `on_critical_path: "none"`. Its utilisation never reaches a metric.
+
+So the compression keeping those two apart is a **bet on a contention model
+that does not exist yet**, not a difference the MVP can demonstrate. The
+instrument is therefore tested directly — a representative holding two
+placements the oracle judged differently must be reported, with both ids named.
+
+**Affects.** `graphsearch/oracle.py`; what an E-G experiment may claim from a
+`mismerged_pairs: 0` row. See GS-8 and heteropilot D124.
