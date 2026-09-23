@@ -154,3 +154,29 @@ That is why the full count per prediction key is seven, `[2,2,2,2,4,4,16]`, and
 
 **Affects.** `tests/test_equivalence.py`; how the §9 numbers should be quoted in
 the paper — as a reproduction of the compression, not of the candidate space.
+
+---
+
+## GS-7 — a representative is dispatched under its embedding id, not its template id · 2026-09-23
+
+**Decision.** Anything that hands representatives to
+`planner.optimizer.exhaustive.evaluate_candidates` must give each one a
+`CandidateConfig` whose `id` is the exemplar's embedding id. G9's driver does
+this, and `tests/test_bounds.py` already does.
+
+**Why.** Several representatives routinely share one template — two placements
+of the same template with different boundaries are different representatives,
+which is the entire point of G5 and G6. Dispatching them under the template id
+produces duplicates, and `planner/util/parallel.py` refuses those outright:
+
+    ValueError: predict_all requires unique candidate ids
+
+It refuses for a good reason. Its per-candidate isolation (run directory,
+`--run-id`) and its returned mapping both key on `candidate.id`, so duplicates
+would race and silently drop a result — a plan built from another
+representative's metrics, with nothing in the output to show it.
+
+Found by the G7 relaxation test rather than reasoned about in advance.
+
+**Affects.** `graphsearch/adaptive.py` (G9), `graphsearch/oracle.py` (G12), and
+anything else that batches representatives into heteropilot's evaluator.
