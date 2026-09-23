@@ -1,32 +1,51 @@
-# Fictional. Two nodes that are identical in every local attribute -- same two
-# GPUs, same NVLINK between them, same price -- and differ ONLY in what is
-# already using their uplink. X's is 6 of 10 GB/s held by something outside this
-# deployment; Y's is free.
+# Fictional. Three nodes, identical in every local attribute -- same two GPUs,
+# same NVLINK between them, same price -- and differing only in what is already
+# using their uplink. X's has 6 of its 10 GB/s held by something outside this
+# deployment; Y's and Z's are free.
+#
+# **nodeZ is what makes the counterexample visible.** With only X and Y, a P/D
+# candidate between them crosses BOTH uplinks whichever way round it runs, so
+# there is nothing to compare. The research design's §5 counterexample needs two
+# prefill pairs talking to the SAME third decode partner: `P on X -> D on Z` and
+# `P on Y -> D on Z` are then identical in every local attribute and differ only
+# in that X's uplink is already half taken. Exact equivalence keeps them apart;
+# `include_boundary=False` folds them, and the oracle prices them differently --
+# which is the mis-merge the ablation is supposed to produce.
 #
 # That difference is invisible to the envelope key and to any bound that reads
-# only the island. It is the case the exact-equivalence layer exists to catch:
-# fold these two and you have merged a candidate that will miss its SLO with one
-# that will not. `include_boundary=False` is the ablation that does exactly that,
-# and the oracle harness reports the mis-merge.
-#
-# The v1 copy can say only THAT the links share something (contention_group),
-# not how much is left, which is why the capacity lives in the v2 file.
-# Every number is source: placeholder.
+# only the island. The v1 copy can say only THAT the links share something
+# (contention_group), not how much is left, which is why the capacity lives in
+# the v2 file. Every number is source: placeholder.
+
 cluster_id: graph-toy-shared-nic
 nodes:
   - id: nodeX
     accelerators:
-      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda,
+         memory_gb: 80,
          profile: fixtures/profiles/toy_gpu.yaml}
-      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda,
+         memory_gb: 80,
          profile: fixtures/profiles/toy_gpu.yaml}
     nics:
       - {id: nic0, type: ethernet, speed_gbps: 10}
   - id: nodeY
     accelerators:
-      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda,
+         memory_gb: 80,
          profile: fixtures/profiles/toy_gpu.yaml}
-      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda,
+         memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+  - id: nodeZ
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda,
+         memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda,
+         memory_gb: 80,
          profile: fixtures/profiles/toy_gpu.yaml}
     nics:
       - {id: nic0, type: ethernet, speed_gbps: 10}
@@ -34,11 +53,31 @@ nodes:
 links:
   - {id: l-nodeX-nv, src: nodeX/gpu0, dst: nodeX/gpu1, type: NVLINK,
      bandwidth_gbps: 112.5, latency_ns: 500, source: placeholder}
-  - {id: l-nodeX-uplink, src: nodeX/gpu0, dst: nodeX/nic0, type: PCIE,
-     bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeX, source: placeholder}
+  - {id: l-nodeX-uplink0, src: nodeX/gpu0, dst: nodeX/nic0,
+     type: PCIE, bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeX,
+     source: placeholder}
+  - {id: l-nodeX-uplink1, src: nodeX/gpu1, dst: nodeX/nic0,
+     type: PCIE, bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeX,
+     source: placeholder}
   - {id: l-nodeY-nv, src: nodeY/gpu0, dst: nodeY/gpu1, type: NVLINK,
      bandwidth_gbps: 112.5, latency_ns: 500, source: placeholder}
-  - {id: l-nodeY-uplink, src: nodeY/gpu0, dst: nodeY/nic0, type: PCIE,
-     bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeY, source: placeholder}
-  - {id: l-fabric, src: nodeX/nic0, dst: nodeY/nic0, type: ETHERNET,
-     bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}
+  - {id: l-nodeY-uplink0, src: nodeY/gpu0, dst: nodeY/nic0,
+     type: PCIE, bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeY,
+     source: placeholder}
+  - {id: l-nodeY-uplink1, src: nodeY/gpu1, dst: nodeY/nic0,
+     type: PCIE, bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeY,
+     source: placeholder}
+  - {id: l-nodeZ-nv, src: nodeZ/gpu0, dst: nodeZ/gpu1, type: NVLINK,
+     bandwidth_gbps: 112.5, latency_ns: 500, source: placeholder}
+  - {id: l-nodeZ-uplink0, src: nodeZ/gpu0, dst: nodeZ/nic0,
+     type: PCIE, bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeZ,
+     source: placeholder}
+  - {id: l-nodeZ-uplink1, src: nodeZ/gpu1, dst: nodeZ/nic0,
+     type: PCIE, bandwidth_gbps: 10.0, latency_ns: 900, contention_group: uplink-nodeZ,
+     source: placeholder}
+  - {id: l-fabric-nodeY, src: nodeX/nic0, dst: nodeY/nic0,
+     type: ETHERNET, bandwidth_gbps: 10.0, latency_ns: 5000,
+     source: placeholder}
+  - {id: l-fabric-nodeZ, src: nodeX/nic0, dst: nodeZ/nic0,
+     type: ETHERNET, bandwidth_gbps: 10.0, latency_ns: 5000,
+     source: placeholder}

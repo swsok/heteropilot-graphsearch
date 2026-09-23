@@ -192,23 +192,39 @@ def test_two_unalike_nodes_do_not() -> None:
 
 # --- (iii) the boundary is what tells two placements apart ----------------
 
-def test_a_crossed_uplink_is_not_the_same_placement() -> None:
-    """X holds 6 of its 10 GB/s for something else; Y's is free.
+def _three_node_templates(islands):
+    return [
+        template([IslandAssignment(island_id=island_named(islands, node), tp_size=2)], node)
+        for node in ("nodeX", "nodeY", "nodeZ")
+    ]
 
-    Everything local is identical -- same GPUs, same NVLINK, same prices. Fold
-    these and you have merged a candidate that will miss its SLO with one that
-    will not, and nothing downstream can tell, because the two arrive as one.
+
+def test_a_crossed_uplink_is_not_the_same_placement() -> None:
+    """X holds 6 of its 10 GB/s for something else; Y's and Z's are free.
+
+    Everything local is identical on all three -- same GPUs, same NVLINK, same
+    prices. Fold X in with the others and you have merged a candidate that
+    will miss its SLO with ones that will not, and nothing downstream can
+    tell, because they arrive as one.
+
+    Three nodes say more than two: the signature has to keep X apart AND put
+    Y with Z. A signature that simply read the node id would give three, and
+    would be preserving a name rather than a boundary.
     """
     cluster = load_toy_cluster("shared_nic_v2")
     profiles = toy_profiles_for(cluster)
     islands = {i.id: i for i in detect_islands(cluster, profiles)}
     graph = build_resource_graph(cluster, profiles)
-    templates = [
-        template([IslandAssignment(island_id=island_named(islands, node), tp_size=2)], node)
-        for node in ("nodeX", "nodeY")
-    ]
-    found, _ = enumerate_embeddings(templates, islands, graph, spec())
-    assert len(compress(found, graph)[0]) == 2
+    found, _ = enumerate_embeddings(
+        _three_node_templates(islands), islands, graph, spec()
+    )
+    representatives, _, _ = compress(found, graph)
+    assert len(representatives) == 2
+
+    sizes = sorted(len(r.embeddings) for r in representatives)
+    assert sizes == [1, 2], (
+        f"expected X alone and Y with Z, got class sizes {sizes}"
+    )
 
 
 def test_dropping_the_boundary_merges_them() -> None:
@@ -216,16 +232,15 @@ def test_dropping_the_boundary_merges_them() -> None:
 
     `include_boundary=False` is not a mode to plan in; it exists so the oracle
     harness can report the mis-merge as a measured number rather than a worry.
+    Without the boundary all three nodes are the same node.
     """
     cluster = load_toy_cluster("shared_nic_v2")
     profiles = toy_profiles_for(cluster)
     islands = {i.id: i for i in detect_islands(cluster, profiles)}
     graph = build_resource_graph(cluster, profiles)
-    templates = [
-        template([IslandAssignment(island_id=island_named(islands, node), tp_size=2)], node)
-        for node in ("nodeX", "nodeY")
-    ]
-    found, _ = enumerate_embeddings(templates, islands, graph, spec())
+    found, _ = enumerate_embeddings(
+        _three_node_templates(islands), islands, graph, spec()
+    )
     blind = CompressionPolicy(include_boundary=False)
     assert len(compress(found, graph, blind)[0]) == 1
 
