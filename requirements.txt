@@ -20,10 +20,13 @@ numpy
 rich
 msgspec
 
-# NOT pandas: only `planner.predictor.llmservingsim` imports it, and nothing
-# here does. The CI step that runs heteropilot's own tests installs it there.
+# `planner.predictor.llmservingsim` imports pandas, and `adapter.py` imports
+# that module for `compile_to_sim_config` and the compile hook. Not needed
+# before G11 -- which is why the comment here used to say the opposite.
+#
 # Running the real simulator needs far more than any of this; reuse
 # `vendor/heteropilot/.venv` for that (see README).
+pandas
 
 pytest
 ruff
