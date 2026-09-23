@@ -11,14 +11,19 @@ feasible, a ranker that picks four at random has perfect recall. This runs the
 same corpus against `graph-toy-llama31-8b-tight.yaml`, where a quarter of the
 placements meet the TTFT and the TPOT splits the rest on a second axis.
 
-Three arms, one predictor, one oracle:
+Arms, one predictor, one oracle:
 
-    oracle          every placement evaluated. No compression, no bounds,
-                    no top-K. The denominator.
-    heteropilot     `planner.optimizer.exhaustive.search` with its own
-                    `BinnedRooflineRanker` and `top_k in {4, 8, 16}`.
-    graphsearch     `AdaptiveSearch` with the service-margin ranker and
-                    `k_schedule` truncated to the same K.
+    oracle                    every placement evaluated. No compression, no
+                              bounds, no top-K. The denominator.
+    heteropilot               `planner.optimizer.exhaustive.search` with its
+                              own `BinnedRooflineRanker` and `top_k in {4,8,16}`.
+    graphsearch               `AdaptiveSearch` with the `service_margin` ranker
+                              (corrected in G15) and `k_schedule` truncated to
+                              the same K.
+    graphsearch (v1)          the same search with `service_margin_v1`, the
+                              pre-G15 estimate, kept as the baseline. The
+                              "before G15" section at the bottom is this arm,
+                              recomputed rather than pasted so it stays true.
 
 `first_feasible_at_sim` is the ordinal of the simulation that first produced a
 candidate the run ended up calling feasible: 1 means the ranker's first pick
@@ -33,12 +38,16 @@ Crediting it with all of them is the most favourable reading available, and it
 is the reading used here -- the point of the comparison is not to win it on a
 technicality. Where that credit is unearned is exactly what E-G1's shared-NIC
 row now shows separately.
+
+The table-building functions are imported by `e_g2_topk_holdout.py`, which runs
+the same comparison on fixtures the G15 diagnosis never saw.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from graphsearch import paths_root
@@ -65,6 +74,7 @@ from graphsearch.cost import cost_of_devices  # noqa: E402
 from graphsearch.embeddings import enumerate_embeddings  # noqa: E402
 from graphsearch.equivalence import CompressionPolicy, compress  # noqa: E402
 from graphsearch.oracle import bind_predictor, run_oracle  # noqa: E402
+from graphsearch.ranker import DEFAULT_RANKER_VARIANT, RANKER_V1  # noqa: E402
 from graphsearch.schema import build_resource_graph  # noqa: E402
 
 ROOT = paths_root.GRAPHSEARCH_ROOT
@@ -77,7 +87,7 @@ BANNER = (
     "bounds; none of it is a measurement or a simulation of any hardware."
 )
 
-CLUSTERS = {
+CLUSTERS: dict[str, Path] = {
     "graph-toy-abcde": FIXTURES / "clusters/graph-toy-abcde.v2.yaml",
     "graph-toy-shared-nic": FIXTURES / "clusters/graph-toy-shared-nic.v2.yaml",
 }
@@ -118,10 +128,10 @@ def first_feasible(predictor: CountingPredictor, ids) -> int | None:
     return min(ordinals) if ordinals else None
 
 
-def world(path: Path):
-    spec = load_service_spec(SPEC)
+def world(path: Path, spec_path: Path, profiles_root: Path | None = None):
+    spec = load_service_spec(spec_path)
     cluster = load_cluster_spec(path)
-    profiles = load_profiles_for(cluster, ROOT)
+    profiles = load_profiles_for(cluster, profiles_root or ROOT)
     islands = detect_islands(cluster, profiles)
     graph = build_resource_graph(cluster, profiles)
     return spec, cluster, profiles, islands, graph
@@ -141,7 +151,12 @@ def oracle_arm(spec, cluster, profiles, islands, graph, templates):
         spec, cluster, {i.id: i for i in islands}, profiles, predictor,
         graph=graph, templates=templates,
     )
-    costs = [result.cost[i] for i in result.feasible_ids if i in result.cost]
+    # A fixture with an unpriced device yields `None` costs (heterogeneous-lab
+    # carries no `price_per_hour_usd`); regret is then uncomputed, not zero.
+    costs = [
+        result.cost[i] for i in result.feasible_ids
+        if result.cost.get(i) is not None
+    ]
     return result, predictor, (min(costs) if costs else None)
 
 
@@ -161,7 +176,8 @@ def _template_cost(output, oracle, graph) -> float | None:
         for e in oracle.embeddings
         if e.template.id == template_id
     ]
-    return min(costs) if costs else None
+    priced = [c for c in costs if c is not None]
+    return min(priced) if priced else None
 
 
 def _embedding_cost(output, oracle, graph) -> float | None:
@@ -182,7 +198,6 @@ def heteropilot_arm(spec, cluster, profiles, islands, graph, oracle, k: int):
 
     def on_evaluation(result, candidates) -> None:
         captured["feasible"] = [p.candidate.id for p in result.feasible_plans]
-        captured["plans"] = {p.candidate.id: p for p in result.feasible_plans}
 
     output = search(
         spec, cluster, islands, profiles, predictor,
@@ -207,10 +222,12 @@ def heteropilot_arm(spec, cluster, profiles, islands, graph, oracle, k: int):
     }
 
 
-def graphsearch_arm(spec, cluster, profiles, islands, graph, oracle, k: int):
+def graphsearch_arm(
+    spec, cluster, profiles, islands, graph, oracle, k: int, *, variant: str
+):
     predictor = mock()
     by_id = {i.id: i for i in islands}
-    templates = templates_of(spec, cluster, islands, profiles, 2)
+    templates = list({e.template.id: e.template for e in oracle.embeddings}.values())
     embeddings, stats = enumerate_embeddings(templates, by_id, graph, spec)
     representatives, _, report = compress(embeddings, graph, CompressionPolicy())
     verdicts, rejections = prune(
@@ -219,7 +236,9 @@ def graphsearch_arm(spec, cluster, profiles, islands, graph, oracle, k: int):
     search_ = AdaptiveSearch(
         spec, cluster, by_id, profiles, predictor,
         graph=graph, representatives=representatives, verdicts=verdicts,
-        ranker=build_ranker(representatives, spec, graph, by_id, profiles),
+        ranker=build_ranker(
+            representatives, spec, graph, by_id, profiles, variant=variant
+        ),
         config=AdaptiveConfig(k_schedule=(k,)),
         embedding_stats=stats, compression=report, bound_rejections=rejections,
         bind_embeddings=lambda batch: bind_predictor(
@@ -262,8 +281,20 @@ def row(fixture: str, arm: str, k: int, result: dict, oracle, oracle_best) -> di
     }
 
 
-def run(fixture: str, path: Path, limit: int) -> list[dict]:
-    spec, cluster, profiles, islands, graph = world(path)
+ARM_LABEL = {DEFAULT_RANKER_VARIANT: "graphsearch", RANKER_V1: "graphsearch (v1)"}
+
+
+def run(
+    fixture: str,
+    path: Path,
+    spec_path: Path,
+    limit: int,
+    *,
+    variants: Sequence[str] = (DEFAULT_RANKER_VARIANT,),
+    profiles_root: Path | None = None,
+) -> tuple[list[dict], tuple[int, int]]:
+    """Every arm on one fixture. Returns the rows and (feasible, total)."""
+    spec, cluster, profiles, islands, graph = world(path, spec_path, profiles_root)
     templates = templates_of(spec, cluster, islands, profiles, limit)
     oracle, oracle_predictor, oracle_best = oracle_arm(
         spec, cluster, profiles, islands, graph, templates
@@ -289,33 +320,39 @@ def run(fixture: str, path: Path, limit: int) -> list[dict]:
                 oracle, oracle_best,
             )
         )
-        rows.append(
-            row(
-                fixture, "graphsearch", k,
-                graphsearch_arm(spec, cluster, profiles, islands, graph, oracle, k),
-                oracle, oracle_best,
+        for variant in variants:
+            rows.append(
+                row(
+                    fixture, ARM_LABEL[variant], k,
+                    graphsearch_arm(
+                        spec, cluster, profiles, islands, graph, oracle, k,
+                        variant=variant,
+                    ),
+                    oracle, oracle_best,
+                )
             )
-        )
-    return rows
+    return rows, (len(oracle.feasible_ids), len(oracle.embeddings))
 
 
-def markdown(rows: list[dict], feasible_counts: dict[str, tuple[int, int]]) -> str:
-    columns = [
-        "fixture", "arm", "k", "simulations", "feasible_recall",
-        "cost_regret", "first_feasible_at_sim",
-    ]
+COLUMNS = [
+    "fixture", "arm", "k", "simulations", "feasible_recall",
+    "cost_regret", "first_feasible_at_sim",
+]
 
+
+def table(rows: Sequence[Mapping]) -> list[str]:
     def cell(value) -> str:
         return "-" if value is None else str(value)
 
-    out = ["# E-G1b — top-K, against a spec that binds", "", BANNER, ""]
-    out.append("| " + " | ".join(columns) + " |")
-    out.append("| " + " | ".join("---" for _ in columns) + " |")
+    out = ["| " + " | ".join(COLUMNS) + " |"]
+    out.append("| " + " | ".join("---" for _ in COLUMNS) + " |")
     for r in rows:
-        out.append("| " + " | ".join(cell(r.get(c)) for c in columns) + " |")
-    out.append("")
-    out.append("## The corpus")
-    out.append("")
+        out.append("| " + " | ".join(cell(r.get(c)) for c in COLUMNS) + " |")
+    return out
+
+
+def corpus_notes(feasible_counts: Mapping[str, tuple[int, int]]) -> list[str]:
+    out = ["## The corpus", ""]
     for fixture, (feasible, total) in sorted(feasible_counts.items()):
         share = 0.0 if not total else feasible / total
         out.append(
@@ -323,6 +360,43 @@ def markdown(rows: list[dict], feasible_counts: dict[str, tuple[int, int]]) -> s
             f"({share:.1%}). A top-K row is worth reading only because this is "
             f"not 100%."
         )
+    return out
+
+
+def reading_notes() -> list[str]:
+    return [
+        "## Reading the table",
+        "",
+        "`feasible_recall` is over PLACEMENTS in both arms, and the "
+        "heteropilot rows are credited generously: that arm ranks and judges "
+        "templates, so one verdict is allowed to stand for every placement of "
+        "the template. It cannot name a placement, so there is no stricter "
+        "reading that would be fair to it.",
+        "",
+        "`first_feasible_at_sim` is the ordinal of the simulation that first "
+        "produced a candidate the run ended up calling feasible. `1` means the "
+        "ranker's first pick was an answer; `-` means the run never found one. "
+        "The same counting predictor records it in both arms.",
+        "",
+        "A `cost_regret` of `-` means the run recommended nothing, or the "
+        "fixture priced nothing the objective could score. It is not a zero -- "
+        "a regret that cannot be computed is reported as uncomputed.",
+        "",
+        "`simulations` is not comparable to `k` directly: heteropilot "
+        "simulates at most `top_k` TEMPLATES, this search simulates at most "
+        "`k` REPRESENTATIVES, and a representative stands for a class of "
+        "placements whose size is in E-G1's compression column.",
+    ]
+
+
+def markdown(rows: list[dict], feasible_counts: dict[str, tuple[int, int]]) -> str:
+    current = [r for r in rows if r["arm"] != ARM_LABEL[RANKER_V1]]
+    before = [r for r in rows if r["arm"] in ("oracle", "heteropilot", ARM_LABEL[RANKER_V1])]
+
+    out = ["# E-G1b — top-K, against a spec that binds", "", BANNER, ""]
+    out += table(current)
+    out.append("")
+    out += corpus_notes(feasible_counts)
     out.append("")
     out.append("## Reproducing")
     out.append("")
@@ -332,55 +406,38 @@ def markdown(rows: list[dict], feasible_counts: dict[str, tuple[int, int]]) -> s
     out.append("    --out experiments/results/e_g1b_topk.md")
     out.append("```")
     out.append("")
-    out.append("## What the two columns say")
+    out.append("## What the columns say")
     out.append("")
     out.append(
         "**The heteropilot arm plateaus.** Its recall stops at 0.5 on both "
-        "fixtures and does not move between k=8 and k=16, while this search "
-        "reaches 1.0 at k=16. The reason is structural rather than a matter of "
-        "ranking: the arm judges templates, and half the feasible placements "
-        "here belong to templates whose other placements are not feasible. One "
-        "verdict cannot be right about both, and the generous credit this "
-        "table already gives it is what keeps the number as high as 0.5."
+        "fixtures and does not move between k=8 and k=16. The reason is "
+        "structural rather than a matter of ranking: the arm judges templates, "
+        "and half the feasible placements here belong to templates whose other "
+        "placements are not feasible. One verdict cannot be right about both, "
+        "and the generous credit this table already gives it is what keeps the "
+        "number as high as 0.5."
     )
     out.append("")
     out.append(
-        "**And this search loses at k=4, on both fixtures.** It recommends "
-        "nothing: the service-margin ranker's first four representatives are "
-        "all infeasible, while heteropilot's surrogate has an answer in its "
-        "first pick. A small K is where a ranker is actually tested, and this "
-        "one is worse there. The row is in the table for that reason."
+        "**The graphsearch rows are the corrected ranker** (`service_margin`, "
+        "G15). Before the correction this search recommended nothing at k=4 on "
+        "both fixtures; the diagnosis is `e_g2_ranker_diagnosis.md`, the "
+        "holdout check is `e_g2_topk_holdout.md`, and the pre-correction table "
+        "is kept below -- recomputed on every run with `service_margin_v1` "
+        "rather than pasted, so it cannot drift from what that ranker does."
     )
     out.append("")
-    out.append("## Reading the table")
+    out += reading_notes()
     out.append("")
-    out.append(
-        "`feasible_recall` is over PLACEMENTS in both arms, and the "
-        "heteropilot rows are credited generously: that arm ranks and judges "
-        "templates, so one verdict is allowed to stand for every placement of "
-        "the template. It cannot name a placement, so there is no stricter "
-        "reading that would be fair to it."
-    )
+    out.append("## Before G15 — `service_margin_v1`")
     out.append("")
     out.append(
-        "`first_feasible_at_sim` is the ordinal of the simulation that first "
-        "produced a candidate the run ended up calling feasible. `1` means the "
-        "ranker's first pick was an answer; `-` means the run never found one. "
-        "The same counting predictor records it in both arms."
+        "The same oracle and heteropilot rows, with the pre-G15 estimate in "
+        "the graphsearch arm. This is the table E-G1b first shipped with, "
+        "recomputed."
     )
     out.append("")
-    out.append(
-        "A `cost_regret` of `-` means the run recommended nothing, or the "
-        "fixture priced nothing the objective could score. It is not a zero -- "
-        "a regret that cannot be computed is reported as uncomputed."
-    )
-    out.append("")
-    out.append(
-        "`simulations` is not comparable to `k` directly: heteropilot "
-        "simulates at most `top_k` TEMPLATES, this search simulates at most "
-        "`k` REPRESENTATIVES, and a representative stands for a class of "
-        "placements whose size is in E-G1's compression column."
-    )
+    out += table(before)
     return "\n".join(out)
 
 
@@ -397,11 +454,11 @@ def main() -> int:
     for name, path in CLUSTERS.items():
         if args.only and args.only != name:
             continue
-        spec, cluster, profiles, islands, graph = world(path)
-        templates = templates_of(spec, cluster, islands, profiles, args.limit)
-        oracle, _, _ = oracle_arm(spec, cluster, profiles, islands, graph, templates)
-        counts[name] = (len(oracle.feasible_ids), len(oracle.embeddings))
-        rows.extend(run(name, path, args.limit))
+        fixture_rows, counts[name] = run(
+            name, path, SPEC, args.limit,
+            variants=(DEFAULT_RANKER_VARIANT, RANKER_V1),
+        )
+        rows.extend(fixture_rows)
 
     text = markdown(rows, counts)
     out = Path(args.out)
