@@ -282,6 +282,16 @@ def bind(
     bound: dict[str, EmbeddedCandidate] = dict(embeddings_by_candidate_id)
     reports: dict[str, TopologyLossReport] = {}
     transfers: dict[str, dict] = {}
+    # Cumulative across every batch, and never reset by `rebind`. A run that
+    # reports `compile_applied 0` was judging templates, whatever else it
+    # printed, and that is the failure this counter exists to make visible --
+    # `plan` did exactly that until G16 (GS-13). `_seen` counts every
+    # invocation, `_applied` only the ones for a candidate this binder owns.
+    calls: dict[str, int] = {
+        "batches": 0, "bound": 0,
+        "compile_seen": 0, "compile_applied": 0,
+        "result_seen": 0, "result_applied": 0,
+    }
     topology = TopologyGraph(cluster)
 
     def hook(
@@ -290,9 +300,11 @@ def bind(
         hook_islands: Mapping[str, ExecutionIsland],
         hook_profiles: Mapping[str, AcceleratorProfile],
     ):
+        calls["compile_seen"] += 1
         embedding = bound.get(candidate.id)
         if embedding is None:
             return None
+        calls["compile_applied"] += 1
         config, reduction, report = compile_embedded(
             embedding, hook_cluster, hook_islands, hook_profiles,
             graph=graph, topology=topology,
@@ -313,6 +325,7 @@ def bind(
         `evaluate_candidates(pd_transfer=False)` so heteropilot's
         class-default figure is ABSENT rather than subtracted.
         """
+        calls["result_seen"] += 1
         embedding = bound.get(candidate.id)
         if embedding is None or result.metrics is None:
             return result
@@ -321,6 +334,7 @@ def bind(
         )
         if not info:
             return result
+        calls["result_applied"] += 1
         transfers[candidate.id] = info
         return replace(result, metrics=metrics)
 
@@ -328,6 +342,7 @@ def bind(
     predictor.set_result_hook(result_hook)
     predictor.last_loss_reports = reports          # type: ignore[attr-defined]
     predictor.last_pd_transfers = transfers        # type: ignore[attr-defined]
+    predictor.last_hook_calls = calls              # type: ignore[attr-defined]
 
     def rebind(next_batch: Mapping[str, EmbeddedCandidate]) -> None:
         """Point both hooks at the next batch.
@@ -338,6 +353,8 @@ def bind(
         """
         bound.clear()
         bound.update(next_batch)
+        calls["batches"] += 1
+        calls["bound"] += len(next_batch)
         transfers.clear()
         binder = getattr(predictor, "bind_embeddings", None)
         if binder is not None:

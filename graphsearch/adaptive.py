@@ -145,6 +145,18 @@ class SearchAudit:
     feasible_ids: list[str] = field(default_factory=list)
     compression: dict = field(default_factory=dict)
     residual_splits: list[str] = field(default_factory=list)
+    #: How many times each adapter hook fired, and how many of those fired for
+    #: a candidate the binder owned. Empty when no binder was installed, which
+    #: is itself the finding: a search whose compile hook never applied judged
+    #: templates rather than placements (GS-13).
+    hook_calls: dict[str, int] = field(default_factory=dict)
+    #: What the simulator was not told, summarised over every representative
+    #: that was compiled. Two representatives differing only in a dropped
+    #: shared resource get the same simulator input and the same prediction,
+    #: so this is the ceiling on what a simulated comparison can mean.
+    topology_loss: dict = field(default_factory=dict)
+    #: Seconds per stage, filled by the caller that measured them (P1.3).
+    timings: dict[str, float] = field(default_factory=dict)
 
     @property
     def state_total(self) -> int:
@@ -184,6 +196,9 @@ class SearchAudit:
             },
             "compression": self.compression,
             "residual_splits": sorted(self.residual_splits),
+            "hook_calls": dict(sorted(self.hook_calls.items())),
+            "topology_loss": self.topology_loss,
+            "timings": {k: round(v, 6) for k, v in sorted(self.timings.items())},
         }
 
 
@@ -218,6 +233,12 @@ class AdaptiveSearch:
         ranker: SurrogateRanker | None = None,
         config: AdaptiveConfig = DEFAULT_ADAPTIVE_CONFIG,
         cache: EnvelopeCache | None = None,
+        #: Concurrent simulations. The result ASSEMBLY stays sequential in
+        #: candidate order whatever this is, so plan ids and every appended
+        #: list are byte-identical to a serial run -- parallelism only makes it
+        #: faster. That is heteropilot's guarantee and it is why this can be
+        #: raised for a real-simulator run without touching determinism.
+        max_workers: int | None = None,
         embedding_stats: EmbeddingStats | None = None,
         compression: CompressionReport | None = None,
         scope_rejections: Sequence[Rejection] = (),
@@ -243,6 +264,7 @@ class AdaptiveSearch:
         self.ranker = ranker
         self.config = config
         self.cache = cache
+        self.max_workers = max_workers
         self.embedding_stats = embedding_stats
         self.compression = compression
         self.scope_rejections = list(scope_rejections)
@@ -359,6 +381,7 @@ class AdaptiveSearch:
         audit.feasible_ids = sorted({p.candidate.id for p in feasible})
         audit.termination = termination
         audit.certificate = certificate
+        self._record_hook_evidence(audit)
 
         output = self._assemble(
             feasible, infeasible, rejections, notes, pd_transfers, audit, unreached
@@ -366,6 +389,40 @@ class AdaptiveSearch:
         return output, audit
 
     # -- pieces ------------------------------------------------------------
+
+    def _record_hook_evidence(self, audit: SearchAudit) -> None:
+        """Copy the adapter's counters and loss reports onto the audit.
+
+        Read from the predictor rather than threaded through the call chain:
+        `adapter.bind` owns both, and a driver that did not install them has
+        nothing to copy -- which is the state this records rather than hides.
+        """
+        calls = getattr(self.predictor, "last_hook_calls", None)
+        if calls:
+            audit.hook_calls = dict(calls)
+
+        reports = getattr(self.predictor, "last_loss_reports", None)
+        if not reports:
+            return
+        dropped: set[str] = set()
+        analytic: set[str] = set()
+        lossy = 0
+        for report in reports.values():
+            dropped.update(report.dropped_shared_resources)
+            analytic.update(report.flows_priced_analytically)
+            if report.lossy:
+                lossy += 1
+        any_report = next(iter(reports.values()))
+        audit.topology_loss = {
+            "reports": len(reports),
+            "lossy": lossy,
+            "dropped_shared_resources": sorted(dropped),
+            "flows_priced_analytically": sorted(analytic),
+            "contention_model": any_report.contention_model,
+            "contention_modeled": any_report.contention_modeled,
+            "path_aware": any_report.path_aware,
+            "model_level": any_report.model_level,
+        }
 
     def _new_audit(self) -> SearchAudit:
         counts = dict.fromkeys(CandidateStatus, 0)
@@ -433,7 +490,7 @@ class AdaptiveSearch:
         return evaluate_candidates(
             [_candidate_for(r) for r in batch],
             self.spec, self.cluster, self.islands, self.profiles, self.predictor,
-            cache=cache, plan_id_base=plan_id_base,
+            cache=cache, plan_id_base=plan_id_base, max_workers=self.max_workers,
             # heteropilot's class-default transfer cost is ABSENT, not
             # subtracted afterwards (D125): the verdict is taken in here, so a
             # figure corrected later would disagree with it. `adapter.bind`

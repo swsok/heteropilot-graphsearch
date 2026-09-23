@@ -247,9 +247,9 @@ def run_oracle(
     return result
 
 
-def _binder(predictor, graph, spec, cluster, islands, profiles):
+def binder_for(predictor, graph, spec, cluster, islands, profiles):
     """`AdaptiveSearch` wants a binder that returns nothing; `bind_predictor`
-    returns whether it installed the result hook. `_prices_pd_on_the_path`
+    returns whether it installed the result hook. `prices_pd_on_the_path`
     answers the same question up front, so the return value is dropped here
     rather than widening the callback's type."""
 
@@ -263,8 +263,15 @@ def _binder(predictor, graph, spec, cluster, islands, profiles):
     return bind
 
 
-def _prices_pd_on_the_path(predictor: Predictor) -> bool:
-    """Whether `bind_predictor` will install the graph-aware transfer cost."""
+def prices_pd_on_the_path(predictor: Predictor) -> bool:
+    """Whether `bind_predictor` will install the graph-aware transfer cost.
+
+    Public because the CLI needs the same answer the oracle does. They used to
+    differ, and the difference was not visible: `plan` built an `AdaptiveSearch`
+    with no binder at all, so its predictor never learned which devices a
+    candidate ran on and it judged TEMPLATES while `compare` judged placements
+    (GS-13).
+    """
     return hasattr(predictor, "set_result_hook")
 
 
@@ -302,8 +309,8 @@ def run_proposed(
         ),
         config=config or AdaptiveConfig(k_schedule=(len(representatives) or 1,)),
         embedding_stats=stats, compression=report, bound_rejections=rejections,
-        bind_embeddings=_binder(predictor, graph, spec, cluster, islands, profiles),
-        embedded_pd_cost=_prices_pd_on_the_path(predictor),
+        bind_embeddings=binder_for(predictor, graph, spec, cluster, islands, profiles),
+        embedded_pd_cost=prices_pd_on_the_path(predictor),
     )
     output, audit = search.run()
 

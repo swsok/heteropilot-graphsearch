@@ -271,6 +271,50 @@ def test_rebinding_replaces_the_batch(tmp_path) -> None:
     assert hook(second, cluster, islands, profiles) is not None
 
 
+def test_the_hook_counters_separate_seen_from_applied(tmp_path) -> None:
+    """P1.1. `compile_applied == 0` is the signature of a run that judged
+    templates, and the counter is how a smoke test or an audit sees it without
+    reading the metrics and guessing. `seen` counts every invocation -- a hook
+    called for a candidate this binder does not own is not evidence of
+    anything, and merging the two would hide exactly that case."""
+    from planner.predictor import llmservingsim
+
+    cluster, profiles, islands, graph = world("abcde_v2")
+    found = embed(
+        [tp2(islands, "nodeA"), tp2(islands, "nodeB")], islands, graph, spec()
+    )
+    predictor = llmservingsim.LLMServingSimPredictor(
+        trace(tmp_path), work_dir=tmp_path / "w"
+    )
+    rebind = bind(
+        predictor, {found[0].id: found[0]}, graph,
+        cluster=cluster, islands=islands, profiles=profiles, spec=spec(),
+    )
+    calls = predictor.last_hook_calls
+    assert calls == {
+        "batches": 1, "bound": 1,
+        "compile_seen": 0, "compile_applied": 0,
+        "result_seen": 0, "result_applied": 0,
+    }
+
+    hook = predictor._compile_hook
+    assert hook is not None
+    bound_candidate = found[0].template.model_copy(update={"id": found[0].id})
+    unbound = found[1].template.model_copy(update={"id": found[1].id})
+
+    assert hook(bound_candidate, cluster, islands, profiles) is not None
+    assert hook(unbound, cluster, islands, profiles) is None
+    assert calls["compile_seen"] == 2
+    assert calls["compile_applied"] == 1
+
+    # A second batch adds to the counters rather than resetting them: the audit
+    # asks whether the predictor was EVER told, over the whole run.
+    rebind({found[1].id: found[1]})
+    assert calls["batches"] == 2
+    assert calls["bound"] == 2
+    assert calls["compile_seen"] == 2
+
+
 # --- the P/D cost ---------------------------------------------------------
 
 def metrics(**kw) -> PredictedMetrics:
