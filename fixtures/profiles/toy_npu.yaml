@@ -1,0 +1,31 @@
+# Fictional profile with NO `sim_hardware`, on purpose.
+#
+# The §9 example marks every NPU pair "예시 runtime 미지원" - unsupported by the
+# example's runtime contract - and this is how that is expressed without a
+# special case in the search: a profile with no simulator bundle is excluded at
+# the generator's first stage, the same way any unsupported backend is. The
+# 17 of 45 device pairs that involve an NPU therefore never reach compression.
+profile_id: toy-npu
+vendor: TOY
+model: TOYNPU
+backend: ascend
+memory_gb: 64
+memory_bandwidth_gbps: 512
+source: placeholder
+
+price_per_hour_usd: 1.5
+price_source: placeholder
+
+supported_models: []
+
+max_tp_size: 2
+
+runtime_capabilities:
+  collectives: []
+  max_world_size: 1
+  kv_transfer: false
+  source: placeholder
+
+notes: >
+  No sim_hardware and no supported_models: this device cannot host the target
+  model in this example, which is what makes the §9 count 28 rather than 45.

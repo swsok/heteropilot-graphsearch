@@ -1,0 +1,116 @@
+# Fictional cluster, not hardware. Reproduces the example in
+# docs/HeteroPilot_그래프기반_배치탐색_연구설계.md §9: A and B carry two GPUs each
+# behind a 10 GB/s uplink, C and D two each behind 5 GB/s, E two NPUs. A/B and
+# C/D are identical to each other in every attribute that matters, which is what
+# makes the compression in §9 exact rather than approximate.
+# Every number is source: placeholder (absolute rule 3). Do not plan on it.
+cluster_id: graph-toy-abcde
+schema_version: 2
+nodes:
+  - id: nodeA
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    pcie_switches:
+      - {id: pcisw0, upstream: sock0}
+    host_price_per_hour_usd: 1.0
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+  - id: nodeB
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    pcie_switches:
+      - {id: pcisw0, upstream: sock0}
+    host_price_per_hour_usd: 1.0
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+  - id: nodeC
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    pcie_switches:
+      - {id: pcisw0, upstream: sock0}
+    host_price_per_hour_usd: 1.0
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 5}
+  - id: nodeD
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    pcie_switches:
+      - {id: pcisw0, upstream: sock0}
+    host_price_per_hour_usd: 1.0
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.0}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 5}
+  - id: nodeE
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    host_price_per_hour_usd: 1.0
+    accelerators:
+      - {id: npu0, type: NPU, vendor: TOY, model: TOYNPU, backend: ascend, memory_gb: 64,
+         profile: fixtures/profiles/toy_npu.yaml}
+      - {id: npu1, type: NPU, vendor: TOY, model: TOYNPU, backend: ascend, memory_gb: 64,
+         profile: fixtures/profiles/toy_npu.yaml}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+
+net_switches:
+  - {id: sw0, ports: 16}
+
+# The uplink each node's GPUs share on the way out. This is the vertex a
+# v1 file cannot express, and the reason A-B and C-D compress differently.
+shared_resources:
+  - {id: uplink-nodeA, kind: pcie_uplink, capacity: 10.0, unit: "GB/s", node: nodeA, source: placeholder}
+  - {id: uplink-nodeB, kind: pcie_uplink, capacity: 10.0, unit: "GB/s", node: nodeB, source: placeholder}
+  - {id: uplink-nodeC, kind: pcie_uplink, capacity: 5.0, unit: "GB/s", node: nodeC, source: placeholder}
+  - {id: uplink-nodeD, kind: pcie_uplink, capacity: 5.0, unit: "GB/s", node: nodeD, source: placeholder}
+  - {id: uplink-nodeE, kind: pcie_uplink, capacity: 10.0, unit: "GB/s", node: nodeE, source: placeholder}
+
+links:
+  - {id: l-nodeA-pair, src: nodeA/gpu0, dst: nodeA/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-nodeB-pair, src: nodeB/gpu0, dst: nodeB/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-nodeC-pair, src: nodeC/gpu0, dst: nodeC/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-nodeD-pair, src: nodeD/gpu0, dst: nodeD/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-nodeE-pair, src: nodeE/npu0, dst: nodeE/npu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-nodeA-uplink, src: nodeA/gpu0, dst: nodeA/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeA, source: placeholder}
+  - {id: l-nodeA-sw, src: nodeA/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}
+  - {id: l-nodeB-uplink, src: nodeB/gpu0, dst: nodeB/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeB, source: placeholder}
+  - {id: l-nodeB-sw, src: nodeB/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}
+  - {id: l-nodeC-uplink, src: nodeC/gpu0, dst: nodeC/nic0, type: PCIE,
+     bandwidth_gbps: 5.0, latency_ns: 900, shared_resource: uplink-nodeC, source: placeholder}
+  - {id: l-nodeC-sw, src: nodeC/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 5.0, latency_ns: 5000, source: placeholder}
+  - {id: l-nodeD-uplink, src: nodeD/gpu0, dst: nodeD/nic0, type: PCIE,
+     bandwidth_gbps: 5.0, latency_ns: 900, shared_resource: uplink-nodeD, source: placeholder}
+  - {id: l-nodeD-sw, src: nodeD/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 5.0, latency_ns: 5000, source: placeholder}
+  - {id: l-nodeE-uplink, src: nodeE/npu0, dst: nodeE/nic0, type: PCIE,
+     bandwidth_gbps: 10.0, latency_ns: 900, shared_resource: uplink-nodeE, source: placeholder}
+  - {id: l-nodeE-sw, src: nodeE/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 10.0, latency_ns: 5000, source: placeholder}

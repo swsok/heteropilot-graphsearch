@@ -1,0 +1,44 @@
+# Fictional profile. Every number is a placeholder (absolute rule 3) EXCEPT the
+# two that must be real for the mock to run at all:
+#   - `sim_hardware: A5000` reuses heteropilot's measured perf bundle, so a
+#     candidate on this profile compiles and the roofline proxy has something
+#     to read. The DEVICE described here is not an A5000 and nothing measured
+#     about an A5000 may be claimed from a run on this fixture.
+#   - `memory_bandwidth_gbps` feeds the mock predictor's roofline, which must
+#     stay consistent with the bounds or the oracle test fails for reasons that
+#     have nothing to do with the search.
+profile_id: toy-gpu
+vendor: TOY
+model: TOYGPU
+backend: cuda
+memory_gb: 80
+memory_bandwidth_gbps: 768
+sim_hardware: A5000
+source: placeholder
+perf_data: profiler/perf/A5000/
+
+price_per_hour_usd: 2.0
+price_source: placeholder
+
+power:
+  idle_power: 19.0
+  standby_power: 113.3
+  active_power: 227.6
+  standby_duration: 2000000000
+  source: placeholder
+
+supported_models:
+  - pattern: "meta-llama/Llama-3.1-8B"
+    dtypes: [bfloat16]
+
+max_tp_size: 2
+
+runtime_capabilities:
+  collectives: [all_reduce, p2p]
+  max_world_size: 8
+  kv_transfer: true
+  source: placeholder
+
+notes: >
+  Toy GPU for the graph-search fixtures. max_tp_size 2 because the §9 example
+  enumerates two-accelerator TP groups and nothing larger.

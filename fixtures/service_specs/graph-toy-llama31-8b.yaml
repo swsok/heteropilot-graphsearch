@@ -1,0 +1,45 @@
+# The service spec the graph-search fixtures are planned against.
+#
+# Traffic is copied from heteropilot's `examples/service_specs/llama31-8b.yaml`
+# so the model and workload shape are ones the vendored profiles already cover.
+# Two things differ, and both come from the research design's §9 example:
+#
+#   ttft.max_ms: 50   -- §9's "예시 지연 한도가 50 ms". With 0.4 GB of cut
+#                        traffic this is what puts the 5 GB/s cut at 80 ms and
+#                        leaves the 10 GB/s one at 40, which is the filter that
+#                        takes the five representatives down to three.
+#   objective         -- minimize_cost_per_hour, the objective H1 added. The
+#                        toy profiles carry placeholder prices so it can be
+#                        scored; on a cluster with any price missing the
+#                        planner declines to score rather than guessing.
+#
+# Nothing here was measured.
+
+service:
+  model: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  kv_cache_dtype: auto
+
+traffic:
+  arrival_rate_rps: 10
+  input_tokens:
+    p50: 731
+    p95: 2470
+    p99: 2884
+  output_tokens:
+    p50: 632
+    p95: 780
+  burstiness: 1.0
+  prefix_share_ratio: 0.0
+
+slo:
+  ttft:
+    percentile: 99
+    max_ms: 50
+  tpot:
+    percentile: 99
+    max_ms: 50
+
+objective:
+  primary: minimize_cost_per_hour
+  secondary: minimize_active_accelerators

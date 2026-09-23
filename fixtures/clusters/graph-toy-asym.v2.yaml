@@ -1,0 +1,115 @@
+# Fictional. The FAILURE CONDITION, kept as a fixture on purpose.
+#
+# Five nodes, no two alike: every uplink capacity, every reservation and every
+# price differs. Exact equivalence therefore folds nothing -- representatives
+# == embeddings -- and the compression ratio is 1.0, which the research design
+# lists among the ways this approach can fail to pay for itself.
+#
+# It is here so that number gets measured and reported rather than avoided, and
+# so the correctness properties (no false-infeasible, no mis-merge) are checked
+# on a cluster where compression buys nothing. Every number is placeholder.
+cluster_id: graph-toy-asym
+schema_version: 2
+nodes:
+  - id: node0
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    host_price_per_hour_usd: 0.9
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 1.7}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 1.7}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+  - id: node1
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    host_price_per_hour_usd: 1.1
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.1}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.1}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+  - id: node2
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    host_price_per_hour_usd: 1.3
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.4}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 2.4}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+  - id: node3
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    host_price_per_hour_usd: 1.9
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 3.0}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 3.0}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+  - id: node4
+    cpu_sockets:
+      - {id: sock0, numa_node: 0}
+    host_price_per_hour_usd: 2.3
+    accelerators:
+      - {id: gpu0, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 3.6}
+      - {id: gpu1, type: GPU, vendor: TOY, model: TOYGPU, backend: cuda, memory_gb: 80,
+         profile: fixtures/profiles/toy_gpu.yaml, price_per_hour_usd: 3.6}
+    nics:
+      - {id: nic0, type: ethernet, speed_gbps: 10}
+
+net_switches:
+  - {id: sw0, ports: 16}
+
+shared_resources:
+  - {id: uplink-node0, kind: pcie_uplink, capacity: 3.0, unit: "GB/s",
+     reserved: 0.0, node: node0, source: placeholder}
+  - {id: uplink-node1, kind: pcie_uplink, capacity: 5.0, unit: "GB/s",
+     reserved: 1.0, node: node1, source: placeholder}
+  - {id: uplink-node2, kind: pcie_uplink, capacity: 7.0, unit: "GB/s",
+     reserved: 2.5, node: node2, source: placeholder}
+  - {id: uplink-node3, kind: pcie_uplink, capacity: 11.0, unit: "GB/s",
+     reserved: 0.5, node: node3, source: placeholder}
+  - {id: uplink-node4, kind: pcie_uplink, capacity: 13.0, unit: "GB/s",
+     reserved: 4.0, node: node4, source: placeholder}
+
+links:
+  - {id: l-node0-pair, src: node0/gpu0, dst: node0/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-node0-uplink, src: node0/gpu0, dst: node0/nic0, type: PCIE,
+     bandwidth_gbps: 3.0, latency_ns: 900, shared_resource: uplink-node0, source: placeholder}
+  - {id: l-node0-sw, src: node0/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 3.0, latency_ns: 5000, source: placeholder}
+  - {id: l-node1-pair, src: node1/gpu0, dst: node1/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-node1-uplink, src: node1/gpu0, dst: node1/nic0, type: PCIE,
+     bandwidth_gbps: 5.0, latency_ns: 900, shared_resource: uplink-node1, source: placeholder}
+  - {id: l-node1-sw, src: node1/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 5.0, latency_ns: 5000, source: placeholder}
+  - {id: l-node2-pair, src: node2/gpu0, dst: node2/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-node2-uplink, src: node2/gpu0, dst: node2/nic0, type: PCIE,
+     bandwidth_gbps: 7.0, latency_ns: 900, shared_resource: uplink-node2, source: placeholder}
+  - {id: l-node2-sw, src: node2/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 7.0, latency_ns: 5000, source: placeholder}
+  - {id: l-node3-pair, src: node3/gpu0, dst: node3/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-node3-uplink, src: node3/gpu0, dst: node3/nic0, type: PCIE,
+     bandwidth_gbps: 11.0, latency_ns: 900, shared_resource: uplink-node3, source: placeholder}
+  - {id: l-node3-sw, src: node3/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 11.0, latency_ns: 5000, source: placeholder}
+  - {id: l-node4-pair, src: node4/gpu0, dst: node4/gpu1, type: PCIE,
+     bandwidth_gbps: 64.0, latency_ns: 900, source: placeholder}
+  - {id: l-node4-uplink, src: node4/gpu0, dst: node4/nic0, type: PCIE,
+     bandwidth_gbps: 13.0, latency_ns: 900, shared_resource: uplink-node4, source: placeholder}
+  - {id: l-node4-sw, src: node4/nic0, dst: sw0, type: ETHERNET,
+     bandwidth_gbps: 13.0, latency_ns: 5000, source: placeholder}

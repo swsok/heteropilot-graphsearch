@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+# Simulator work dirs and console logs: regenerable, and large. The convention
+# is heteropilot's -- results are committed, the runs that produced them are not.
+outputs/
+experiments/results/**/work/
+*.stdout
+*.stderr

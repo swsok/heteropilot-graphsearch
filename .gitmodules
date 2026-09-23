@@ -1,0 +1,3 @@
+[submodule "vendor/heteropilot"]
+	path = vendor/heteropilot
+	url = https://github.com/swsok/heteropilot.git

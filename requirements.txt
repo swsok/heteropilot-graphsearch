@@ -1,0 +1,14 @@
+# networkx is THIS repo's dependency, never heteropilot's (D123). Its version is
+# recorded in `Signature.tool_version` because a Weisfeiler-Lehman hash is only
+# comparable against itself: the same graph hashed by two releases may differ,
+# and an equivalence class silently re-cut by an upgrade would be invisible.
+networkx>=3.2
+# The rest are what vendor/heteropilot's planner/ needs to import and run
+# against a mock predictor. Running the real simulator needs far more; reuse
+# `vendor/heteropilot/.venv` for that (see README).
+pydantic
+pyyaml
+numpy
+pytest
+ruff
+mypy

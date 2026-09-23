@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # The submodule is private, so the default GITHUB_TOKEN cannot reach it.
+      # HETEROPILOT_TOKEN must be a PAT with read access to swsok/heteropilot.
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.HETEROPILOT_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/vendor/heteropilot
+        run: pytest -q
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Types
+        run: mypy graphsearch/
+
+      # The submodule must be a pristine checkout of the pinned sha. A file
+      # edited under vendor/ would mean the boundary was crossed, and the
+      # golden-output guarantee those tests provide would no longer hold.
+      - name: Submodule is untouched
+        run: |
+          test -z "$(git -C vendor/heteropilot status --porcelain)" \
+            || { git -C vendor/heteropilot status --short; exit 1; }
+
+      # Health check on the pin itself: the subset of heteropilot's suite that
+      # runs without a built simulator. Catches a bump to a broken sha.
+      - name: Vendored planner still passes its own tests
+        working-directory: vendor/heteropilot
+        run: |
+          pip install pandas
+          python -m pytest tests/test_spec.py tests/test_inventory.py \
+                           tests/test_inventory_v2.py tests/test_optimizer.py \
+                           tests/test_spec_contract.py tests/test_search_hooks.py -q
