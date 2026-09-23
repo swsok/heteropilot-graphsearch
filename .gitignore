@@ -10,3 +10,13 @@ outputs/
 experiments/results/**/work/
 *.stdout
 *.stderr
+# Tool configuration is committed to neither repository (CLAUDE.md, "The
+# boundary"). Editor and agent settings live in a global gitignore; these are
+# named here too so a stray `git add .` cannot repeat heteropilot #132/#133.
+.mcp.json
+.ignore
+.claude/
+.cursor/
+.vscode/
+.idea/
+graft/
