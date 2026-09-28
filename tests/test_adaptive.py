@@ -488,3 +488,72 @@ def test_a_warm_cache_keeps_two_boundaries_apart(tmp_path) -> None:
         f"a cached run changed the metrics: cold {cold_ttft}, warm {warm_ttft}. "
         f"Two boundaries collided on one cache key."
     )
+
+
+# --- (P1.3) the timings that make `saving` mean something -----------------
+
+def test_the_search_times_its_own_two_stages() -> None:
+    """`rank` and `sim` are measured here because they happen here.
+
+    Everything else in the `saving` formula happens before an `AdaptiveSearch`
+    exists, so the caller seeds it; a search that measured only itself would
+    charge the compression's cost to nobody.
+    """
+    w = world(spec())
+    _, audit = search(w, config=AdaptiveConfig(k_schedule=(2,))).run()
+    assert audit.timings["sim"] > 0.0
+    assert audit.timings["rank"] > 0.0
+    assert audit.timings["search"] >= audit.timings["sim"]
+
+
+def test_a_seeded_timing_survives_the_run() -> None:
+    """The caller's stages are carried through, not overwritten."""
+    w = world(spec())
+    driver = search(w, config=AdaptiveConfig(k_schedule=(2,)))
+    driver.timings.update({"enumerate": 1.5, "hash": 0.25, "vf2": 0.5, "bounds": 0.75})
+    _, audit = driver.run()
+    assert audit.timings["enumerate"] == 1.5
+    assert audit.timings["hash"] == 0.25
+    assert audit.timings["vf2"] == 0.5
+    assert audit.timings["bounds"] == 0.75
+    assert "sim" in audit.timings
+
+
+def test_run_proposed_fills_every_term_of_the_saving_formula() -> None:
+    """`saving = t_oracle - (t_proposed + t_hash + t_vf2 + t_bounds)`.
+
+    Every one of those terms has to come from a measurement, or the column is
+    an assertion. This is the check that none of them is silently zero.
+    """
+    from graphsearch.oracle import run_proposed
+
+    w = world(spec())
+    generated = CandidateGenerator(
+        w["spec"], w["cluster"], list(w["islands"].values()), w["profiles"],
+        enable_bound_pruning=False,
+    ).generate()
+    templates = [c for c in generated.candidates if c.total_devices <= 2]
+    result = run_proposed(
+        w["spec"], w["cluster"], w["islands"], w["profiles"],
+        GraphAwareMockPredictor(), graph=w["graph"], templates=templates,
+    )
+    timings = result.audit.timings
+    for stage in ("enumerate", "hash", "vf2", "bounds", "sim", "search"):
+        assert stage in timings, f"{stage} was never timed"
+        assert timings[stage] >= 0.0
+    # hash is linear in embeddings and vf2 quadratic inside a bucket; lumping
+    # them would hide which one ate the budget, so they are separate terms.
+    assert timings["hash"] > 0.0
+
+
+def test_the_compression_report_separates_hashing_from_vf2() -> None:
+    w = world(spec())
+    report = w["compression"]
+    assert report.hash_seconds > 0.0
+    assert report.vf2_seconds >= 0.0
+    assert report.as_timings() == {
+        "hash": report.hash_seconds, "vf2": report.vf2_seconds
+    }
+    # Rule 7: no stopwatch in a block that is supposed to be reproducible.
+    assert "vf2_seconds" not in report.as_dict()
+    assert "hash_seconds" not in report.as_dict()

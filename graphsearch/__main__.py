@@ -148,8 +148,25 @@ def _require_the_simulator_venv() -> Path:
     return venv
 
 
-def _sim_environment(args, spec, cluster, islands) -> SimEnvironment:
-    """Trace, envelope cache and simulator predictor, in heteropilot's own shape."""
+def sim_environment(
+    spec,
+    cluster,
+    islands,
+    *,
+    num_requests: int = DEFAULT_TRACE_REQUESTS,
+    seed: int = DEFAULT_TRACE_SEED,
+    cache_dir: str | Path | None = None,
+    work_dir: str | Path | None = None,
+    timeout_s: float = 900.0,
+) -> SimEnvironment:
+    """Trace, envelope cache and simulator predictor, in heteropilot's own shape.
+
+    Public, and taking values rather than an argparse namespace, because the
+    E-G3 harness needs exactly this environment and a second copy of it would
+    be a second convention: the trace digest and the `EnvelopeKey` it feeds are
+    what decide whether a cache entry answers, and two builders that drifted
+    apart would turn every hit into a miss without saying so.
+    """
     _require_the_simulator_venv()
 
     from planner.envelope import EnvelopeCache
@@ -158,22 +175,29 @@ def _sim_environment(args, spec, cluster, islands) -> SimEnvironment:
     from planner.util import provenance as prov
     from planner.util.workload import generate_trace
 
+    # Under `outputs/`, which is gitignored, and not under the repository root:
+    # a default that scatters `gs-sim-*` directories through a working tree
+    # makes `git status` noise out of every simulator run, and one of them
+    # eventually gets committed. heteropilot's own predictor stages into
+    # `outputs/` for the same reason.
+    default_root = paths_root.GRAPHSEARCH_ROOT / "outputs"
+    default_root.mkdir(parents=True, exist_ok=True)
     work_root = (
-        Path(args.work_dir)
-        if args.work_dir
-        else Path(tempfile.mkdtemp(prefix="gs-sim-", dir=paths_root.GRAPHSEARCH_ROOT))
+        Path(work_dir)
+        if work_dir
+        else Path(tempfile.mkdtemp(prefix="gs-sim-", dir=default_root))
     )
     work_root.mkdir(parents=True, exist_ok=True)
     trace = generate_trace(
         spec, work_root / "workload.jsonl",
-        num_requests=args.num_requests, seed=args.seed,
+        num_requests=num_requests, seed=seed,
     )
 
     cache = None
-    if args.cache_dir:
+    if cache_dir:
         reduction = TopologyGraph(cluster).reduce_for_simulator(list(islands.values()))
         cache = EnvelopeCache(
-            Path(args.cache_dir),
+            Path(cache_dir),
             spec,
             accelerator_of={i.id: i.accelerator_model for i in islands.values()},
             link_bw_gbps=reduction.link_bw_gbps,
@@ -184,11 +208,21 @@ def _sim_environment(args, spec, cluster, islands) -> SimEnvironment:
     predictor = LLMServingSimPredictor(
         trace,
         work_dir=work_root / "sims",
-        timeout_s=args.timeout,
+        timeout_s=timeout_s,
     )
     return SimEnvironment(
         predictor=predictor, cache=cache,
         trace_path=Path(trace.path), work_root=work_root,
+    )
+
+
+def _sim_environment(args, spec, cluster, islands) -> SimEnvironment:
+    """`sim_environment` with the CLI's flags unpacked."""
+    return sim_environment(
+        spec, cluster, islands,
+        num_requests=args.num_requests, seed=args.seed,
+        cache_dir=args.cache_dir, work_dir=args.work_dir,
+        timeout_s=args.timeout,
     )
 
 

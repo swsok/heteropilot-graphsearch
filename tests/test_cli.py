@@ -271,7 +271,10 @@ def test_the_audit_carries_what_the_simulator_was_not_told(tmp_path, capsys) -> 
     )
     search = yaml.safe_load(path.read_text())["provenance"]["graph_search"]
     assert "topology_loss" in search
-    assert "timings" in search
+    # `timings` is NOT here: a wall-clock cannot be byte-identical between two
+    # runs, and this block is supposed to be diffable (rule 7). It lives on
+    # the SearchAudit for the caller that measured it.
+    assert "timings" not in search
 
 
 def test_the_trace_defaults_match_heteropilots_own(tmp_path) -> None:
@@ -305,3 +308,38 @@ def test_the_sim_flags_parse_without_a_simulator() -> None:
     assert args.cache_dir == "outputs/cache-eg3"
     assert args.max_workers == 4
     assert args.timeout == 120.0
+
+
+# --- (viii) P1.3: rule 7 reaches the written plan too ---------------------
+
+def test_two_plan_runs_write_byte_identical_yaml(tmp_path, capsys) -> None:
+    """Rule 7, checked where a reader would actually notice it breaking.
+
+    `provenance.compression` carried `vf2_seconds` until G16, so two runs of
+    the same command produced different files for a reason that had nothing to
+    do with the plan. A stopwatch is never reproducible; it lives on the audit
+    object and in E-G3's own results file, not in a block whose whole purpose
+    is that it can be diffed.
+    """
+    argv = [
+        "plan", "--service", SERVICE, "--cluster", SHARED, "--k-schedule", "2",
+    ]
+    first, second = tmp_path / "a.yaml", tmp_path / "b.yaml"
+    run([*argv, "--output", str(first)], capsys)
+    run([*argv, "--output", str(second)], capsys)
+    assert first.read_bytes() == second.read_bytes()
+
+
+def test_the_written_plan_carries_no_wall_clock(tmp_path, capsys) -> None:
+    path = tmp_path / "plan.yaml"
+    run(
+        [
+            "plan", "--service", SERVICE, "--cluster", SHARED,
+            "--k-schedule", "2", "--output", str(path),
+        ],
+        capsys,
+    )
+    provenance = yaml.safe_load(path.read_text())["provenance"]
+    assert "timings" not in provenance["graph_search"]
+    assert "vf2_seconds" not in provenance["compression"]
+    assert "hash_seconds" not in provenance["compression"]

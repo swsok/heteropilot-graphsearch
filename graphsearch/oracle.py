@@ -26,6 +26,7 @@ compression ratio and a wrong answer wearing one.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
@@ -44,11 +45,13 @@ from graphsearch.equivalence import (
     Representative,
     compress,
 )
+from graphsearch.equivalence import signature as embedding_signature
 from graphsearch.ranker import DEFAULT_RANKER_VARIANT
 from graphsearch.schema import ResourceGraph
 
 paths_root.ensure_importable()
 
+from planner.envelope import EnvelopeCache  # noqa: E402
 from planner.inventory import (  # noqa: E402
     AcceleratorProfile,
     ClusterSpecV2,
@@ -65,17 +68,39 @@ class OracleResult:
     """Every embedding, judged, with nothing folded or skipped."""
 
     embeddings: list[EmbeddedCandidate] = field(default_factory=list)
-    #: embedding id -> feasible?
+    #: Seconds per stage, the same shape `SearchAudit.timings` carries. The
+    #: oracle has only two -- `enumerate` and `sim` -- and `sim` is the term
+    #: E-G3's `saving` subtracts from. Never serialised anywhere: a wall-clock
+    #: cannot be byte-identical between two runs (GS-15).
+    timings: dict[str, float] = field(default_factory=dict)
+    #: embedding id -> feasible? **Only placements the simulator actually
+    #: judged appear here.** A simulation that errored is absent, not False.
     feasible: dict[str, bool] = field(default_factory=dict)
     #: embedding id -> objective-relevant cost, None when unpriced.
     cost: dict[str, float | None] = field(default_factory=dict)
     #: embedding id -> the plan, for a caller that wants the metrics.
     plans: dict[str, DeploymentPlan] = field(default_factory=dict)
+    #: embedding id -> why the simulator produced no verdict for it. This is
+    #: `unknown_measurement`, the fourth of the five states, and it is kept
+    #: apart from `feasible=False` because a budget, a crash or a timeout is a
+    #: property of the RUN and never of the placement (work order rule 4).
+    #:
+    #: It is not a hypothetical. The first real-simulator E-G3 run on
+    #: graph-toy-shared-nic had 18 of 288 placements come back SIM_ERROR;
+    #: recording them as infeasible made 96 pairs "disagree" with their own
+    #: equivalence class, and `mismerged_pairs` read 96 when the equivalence
+    #: relation had done nothing wrong.
+    unjudged: dict[str, str] = field(default_factory=dict)
     simulations: int = 0
 
     @property
     def feasible_ids(self) -> set[str]:
         return {k for k, v in self.feasible.items() if v}
+
+    @property
+    def judged_ids(self) -> set[str]:
+        """Placements the simulator reached a verdict on, either way."""
+        return set(self.feasible)
 
     def best_cost(self) -> float | None:
         priced = [
@@ -114,11 +139,31 @@ class OracleComparison:
     proposed_simulations: int = 0
     oracle_feasible: int = 0
     proposed_feasible: int = 0
+    #: Placements the oracle could not judge -- a simulator error, a timeout.
+    #: `unknown_measurement`, never `infeasible`. It does not make a run
+    #: incorrect; it makes it INCOMPLETE, and the difference is the whole of
+    #: work order rule 4.
+    unjudged: list[str] = field(default_factory=list)
+    #: Pairs inside one equivalence class that could not be compared because at
+    #: least one member was unjudged. Excluded from `mismerged_pairs` and
+    #: reported on its own, because "feasible vs no answer" measures the
+    #: simulator, not the equivalence.
+    unjudged_pairs: list[tuple[str, str]] = field(default_factory=list)
 
     @property
     def correct(self) -> bool:
-        """The two numbers that are not allowed to be non-zero."""
+        """The two numbers that are not allowed to be non-zero.
+
+        `unjudged` is deliberately not one of them. A run with unjudged
+        placements has proved less than a complete one and says so through
+        `complete`; it has not proved anything WRONG.
+        """
         return not self.false_infeasible and not self.mismerged_pairs
+
+    @property
+    def complete(self) -> bool:
+        """Whether every placement got a verdict. Reported beside `correct`."""
+        return not self.unjudged
 
     def as_dict(self) -> dict:
         return {
@@ -132,7 +177,10 @@ class OracleComparison:
             "proposed_simulations": self.proposed_simulations,
             "oracle_feasible": self.oracle_feasible,
             "proposed_feasible": self.proposed_feasible,
+            "unjudged": len(self.unjudged),
+            "unjudged_pairs": len(self.unjudged_pairs),
             "correct": self.correct,
+            "complete": self.complete,
         }
 
 
@@ -196,6 +244,31 @@ def bind_predictor(
     return False
 
 
+def _oracle_cache_signature(embedding_id: str, signature, graph: ResourceGraph) -> str:
+    """The envelope-cache signature for one placement, **in the oracle arm**.
+
+    It leads with the EMBEDDING ID, and that is the whole point. Keying the
+    oracle by the graph signature alone -- the way the proposed arm keys it --
+    makes every embedding of one equivalence class share a cache entry, so the
+    second and later members are served the first's metrics and
+    `mismerged_pairs` is 0 by construction. The oracle would then be auditing
+    the compression with the compression's own answer, which is GS-9's mistake
+    one level up.
+
+    Measured, not reasoned: the first real-simulator run of E-G3 on
+    graph-toy-shared-nic reported 288 oracle simulations and wrote 48 cache
+    files. It had simulated 48 placements and copied the rest.
+
+    The graph signature stays in the key beside the id, so an entry cannot
+    answer across a networkx release that hashes the same graph differently
+    (`tool_version`) or across a schema change.
+    """
+    return (
+        f"{embedding_id}:{signature.wl_hash}:{graph.schema_version}:"
+        f"{signature.tool_version}"
+    )
+
+
 def run_oracle(
     spec: ServiceSpec,
     cluster: ClusterSpecV2,
@@ -206,15 +279,34 @@ def run_oracle(
     graph: ResourceGraph,
     templates: Sequence[CandidateConfig],
     policy: EmbeddingPolicy = DEFAULT_EMBEDDING_POLICY,
+    cache: EnvelopeCache | None = None,
+    max_workers: int | None = None,
 ) -> OracleResult:
     """Every embedding, simulated. No compression, no bounds, no top-K.
 
     Slow by design -- the same bargain `planner/optimizer/exhaustive.py`
     strikes. It is the only way to tell a pruning bug from an empty feasible
     set.
+
+    **The cache is keyed per EMBEDDING ID.** Two things would each make this
+    function detect zero mis-merges every time and look like a pass:
+
+    * no signature at all -- `EnvelopeKey` describes parallelism and hardware
+      and cannot describe which shared resources a placement crosses, so every
+      embedding of a template collides on one key and the second is served the
+      first's metrics;
+    * the *graph* signature, which is what the proposed arm uses -- then every
+      embedding of one equivalence class shares an entry, and the oracle
+      audits the compression using the compression's own answer.
+
+    So the oracle's key leads with the embedding id: one placement, one entry,
+    every time. It costs the oracle the simulations the compression would have
+    saved, which is precisely what makes it a baseline.
     """
+    started = time.perf_counter()
     embeddings, _ = enumerate_embeddings(templates, islands, graph, spec, policy)
     result = OracleResult(embeddings=list(embeddings))
+    result.timings["enumerate"] = time.perf_counter() - started
     if not embeddings:
         return result
     embedded_pd = bind_predictor(
@@ -222,11 +314,25 @@ def run_oracle(
         spec=spec, cluster=cluster, islands=islands, profiles=profiles,
     )
 
+    if cache is not None:
+        signatures = {
+            e.id: _oracle_cache_signature(e.id, embedding_signature(e, graph), graph)
+            for e in embeddings
+        }
+        cache = cache.with_signature_of(lambda c: signatures.get(c.id))
+
+    started = time.perf_counter()
     evaluation = evaluate_candidates(
         [_candidate_for(e) for e in embeddings],
         spec, cluster, dict(islands), dict(profiles), predictor,
+        cache=cache, max_workers=max_workers,
         pd_transfer=not embedded_pd,
     )
+    # The term E-G3 compares against. Measured around the evaluation and not
+    # around the whole function, because `saving` subtracts the compression's
+    # cost separately and an `enumerate` counted on both sides would cancel
+    # out of one and not the other.
+    result.timings["sim"] = time.perf_counter() - started
     result.simulations = len(embeddings)
 
     by_devices = {e.id: e.devices for e in embeddings}
@@ -242,8 +348,20 @@ def run_oracle(
         result.cost[plan.candidate.id] = cost_of_devices(
             by_devices[plan.candidate.id], graph
         ).total_usd_per_hour
+    # Whatever is left got no verdict: the simulator errored, timed out, or
+    # the evaluator refused it before simulating. `setdefault(..., False)`
+    # used to live here, and it was rule 4 being broken in one line -- an
+    # unevaluated placement recorded as an infeasible one.
+    judged = set(result.feasible)
+    for rejection in evaluation.rejections:
+        candidate_id = getattr(rejection, "candidate_id", None)
+        if candidate_id is not None and candidate_id not in judged:
+            result.unjudged[candidate_id] = str(
+                getattr(rejection, "stage", "unknown")
+            )
     for embedding in embeddings:
-        result.feasible.setdefault(embedding.id, False)
+        if embedding.id not in judged:
+            result.unjudged.setdefault(embedding.id, "no verdict returned")
     return result
 
 
@@ -289,18 +407,38 @@ def run_proposed(
     bound_policy: BoundPolicy | None = None,
     config: AdaptiveConfig | None = None,
     ranker_variant: str = DEFAULT_RANKER_VARIANT,
+    cache: EnvelopeCache | None = None,
+    max_workers: int | None = None,
 ) -> ProposedResult:
-    """The real pipeline: enumerate, compress, bound, rank, evaluate."""
+    """The real pipeline: enumerate, compress, bound, rank, evaluate.
+
+    Each stage is timed and the seconds are handed to `AdaptiveSearch`, which
+    adds its own `rank` and `sim`. `saving` is then
+    `t_sim_oracle - (t_sim_proposed + t_hash + t_vf2 + t_bounds)` and every
+    term in it was measured rather than assumed (P1.3). `hash` and `vf2` come
+    from the compression report rather than a wall-clock around `compress`,
+    because that call also builds the conflict matrix, which is not a cost of
+    the compression.
+    """
+    timings: dict[str, float] = {}
+
+    started = time.perf_counter()
     embeddings, stats = enumerate_embeddings(
         templates, islands, graph, spec, embedding_policy
     )
+    timings["enumerate"] = time.perf_counter() - started
+
     representatives, _, report = compress(
         embeddings, graph, compression_policy or CompressionPolicy()
     )
+    timings.update(report.as_timings())
+
+    started = time.perf_counter()
     verdicts, rejections = prune(
         representatives, spec, graph, islands, profiles, stats,
         policy=bound_policy or BoundPolicy(),
     )
+    timings["bounds"] = time.perf_counter() - started
     search = AdaptiveSearch(
         spec, cluster, islands, profiles, predictor,
         graph=graph, representatives=representatives, verdicts=verdicts,
@@ -311,6 +449,7 @@ def run_proposed(
         embedding_stats=stats, compression=report, bound_rejections=rejections,
         bind_embeddings=binder_for(predictor, graph, spec, cluster, islands, profiles),
         embedded_pd_cost=prices_pd_on_the_path(predictor),
+        cache=cache, max_workers=max_workers, timings=timings,
     )
     output, audit = search.run()
 
@@ -352,16 +491,24 @@ def compare(oracle: OracleResult, proposed: ProposedResult) -> OracleComparison:
 
     # Two members of one representative the oracle judged differently. An
     # equivalence is wrong.
+    #
+    # **Only members the oracle actually judged.** A placement whose simulation
+    # errored has no verdict, and comparing "feasible" against "no answer"
+    # measures the simulator's reliability, not the equivalence relation. The
+    # pairs it would produce are counted separately as `unjudged_pairs` and
+    # reported; they are a reason to distrust the RUN, not the compression.
+    judged = oracle.judged_ids
     mismerged: list[tuple[str, str]] = []
+    unjudged_pairs: list[tuple[str, str]] = []
     for representative in proposed.representatives:
         members = sorted(e.id for e in representative.embeddings)
-        verdicts = {
-            member: oracle.feasible.get(member) for member in members
-        }
         costs = {member: oracle.cost.get(member) for member in members}
         for index, first in enumerate(members):
             for second in members[index + 1 :]:
-                if verdicts[first] != verdicts[second] or not _close(
+                if first not in judged or second not in judged:
+                    unjudged_pairs.append((first, second))
+                    continue
+                if oracle.feasible[first] != oracle.feasible[second] or not _close(
                     costs[first], costs[second]
                 ):
                     mismerged.append((first, second))
@@ -386,6 +533,8 @@ def compare(oracle: OracleResult, proposed: ProposedResult) -> OracleComparison:
         proposed_simulations=proposed.simulations,
         oracle_feasible=len(oracle_feasible),
         proposed_feasible=len(proposed.feasible_ids),
+        unjudged=sorted(oracle.unjudged),
+        unjudged_pairs=unjudged_pairs,
     )
 
 

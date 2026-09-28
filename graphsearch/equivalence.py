@@ -165,6 +165,12 @@ class CompressionReport:
     hash_only_groups: int = 0
     vf2_calls: int = 0
     vf2_seconds: float = 0.0
+    #: Seconds spent computing signatures and candidate graphs -- the hashing
+    #: half of the compression, as against the VF2 half. Separated because they
+    #: scale differently: hashing is linear in embeddings, VF2 is quadratic
+    #: inside a bucket, and a `saving` that lumped them could not say which one
+    #: ate the budget (P1.3).
+    hash_seconds: float = 0.0
 
     @property
     def ratio(self) -> float | None:
@@ -173,15 +179,27 @@ class CompressionReport:
         return self.representatives_out / self.embeddings_in
 
     def as_dict(self) -> dict:
+        """The provenance block. **No wall-clock seconds in it, on purpose.**
+
+        Rule 7: the same input twice must give byte-identical output. A
+        stopwatch never does, so `vf2_seconds` and `hash_seconds` are not in
+        here -- they are attributes, and `as_timings()` is how a caller that
+        wants them asks. `vf2_seconds` WAS in this dict until G16, which made
+        two runs of `plan` differ in `provenance.compression` for no reason
+        connected to the plan.
+        """
         return {
             "embeddings_in": self.embeddings_in,
             "representatives_out": self.representatives_out,
             "exact_merges": self.exact_merges,
             "hash_only_groups": self.hash_only_groups,
             "vf2_calls": self.vf2_calls,
-            "vf2_seconds": round(self.vf2_seconds, 4),
             "compression_ratio": None if self.ratio is None else round(self.ratio, 6),
         }
+
+    def as_timings(self) -> dict[str, float]:
+        """What the compression cost, in seconds. Never serialised into a plan."""
+        return {"hash": self.hash_seconds, "vf2": self.vf2_seconds}
 
 
 def prediction_key(template) -> str:
@@ -371,6 +389,7 @@ def compress(
     """
     report = CompressionReport(embeddings_in=len(embeddings))
     if not policy.enabled:
+        started = time.perf_counter()
         reps = [
             Representative(
                 rep_id=f"rep-{e.id}", signature=signature(e, graph, policy),
@@ -381,6 +400,7 @@ def compress(
             )
             for e in sorted(embeddings, key=lambda e: e.id)
         ]
+        report.hash_seconds += time.perf_counter() - started
         report.representatives_out = len(reps)
         return reps, conflict_matrix(embeddings, graph), report
 
@@ -390,9 +410,11 @@ def compress(
     budget_spent = 0.0
 
     for embedding in sorted(embeddings, key=lambda e: e.id):
+        hashing_started = time.perf_counter()
         sig = signature(embedding, graph, policy)
         candidate = candidate_graph(embedding, graph, policy)
         key = sig.bucket(prediction_key(embedding.template))
+        report.hash_seconds += time.perf_counter() - hashing_started
         merged = False
 
         for representative in buckets.get(key, []):

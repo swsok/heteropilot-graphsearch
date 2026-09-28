@@ -96,8 +96,9 @@ to clone it; there is no public fallback.
 
 ### Results
 
-All under `experiments/results/`, every one from `--predictor mock` and headed
-by the banner that says so.
+Under `experiments/results/`, each headed by the banner that says what produced
+it: `MOCK` for everything the mock predictor computed, `REAL SIM` for E-G3.
+Neither is a measurement of hardware.
 
 | id | file | what it answers |
 | --- | --- | --- |
@@ -105,20 +106,37 @@ by the banner that says so.
 | E-G1b | `e_g1b_topk.md` | top-K against a spec that binds: heteropilot's surrogate vs this search, with the pre-G15 table kept at the bottom |
 | E-G2 | `e_g2_ranker_diagnosis.md` | why the ranker recommended nothing at k=4 -- confusion matrix, residuals, the four it chose, three hypotheses answered in numbers |
 | E-G2 | `e_g2_topk_holdout.md` | the corrected ranker on two fixtures the diagnosis never saw, before and after in adjacent rows |
+| E-G3 | `e_g3_real_sim_oracle.md` | **the only one not from the mock.** The same correctness check under LLMServingSim, plus the wall time the compression bought and what it cost. Banner `REAL SIM`. |
 
 ### Running against the real simulator
 
 `--predictor sim` needs LLMServingSim and ASTRA-Sim built, which is a much
 larger install (protobuf toolchain, a compiled ASTRA-Sim, a Chakra matching
 `protobuf>=7.35.1`). Reuse the submodule's own environment rather than building
-a second one:
+a second one, and launch through **that** interpreter:
 
 ```bash
-vendor/heteropilot/.venv/bin/python -m graphsearch plan ...
+vendor/heteropilot/.venv/bin/python -m graphsearch plan --predictor sim ...
 ```
 
-Read `vendor/heteropilot/CLAUDE.md` § Environment before attempting it. Every
-step of the current work order runs on CPU with `--predictor mock`.
+It is not a preference. Since heteropilot D27 the Chakra converter runs
+in-process, so the interpreter decides which protobuf converts the trace, and
+`--predictor sim` refuses to run under any other one. `docs/nodes/PREP.md`
+step B is the build, and `experiments/scripts/e_g3_smoke.sh` checks the result
+item by item -- including that the compile hook *applied*, which is what
+separates a search judging placements from one judging templates (GS-13).
+
+Two gotchas the checklist records because both cost a run:
+
+- heteropilot's `.gitignore` names `.venv-rbln/` and friends but not the plain
+  `.venv` its own CLAUDE.md tells you to build, so an untracked one makes
+  `git -C vendor/heteropilot status --porcelain` non-empty and the quality gate
+  red. Exclude it in that clone's `.git/info/exclude`, never by editing the
+  submodule.
+- `scripts/compile.sh` installs Chakra with a bare `pip3`, which misses the
+  venv. Run the two `uv pip install` lines from § Environment afterwards.
+
+Everything except E-G3 runs on CPU with `--predictor mock`.
 
 ## The boundary
 
