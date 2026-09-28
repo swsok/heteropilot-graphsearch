@@ -444,3 +444,38 @@ def test_knobs_are_in_the_bucket_key_though_not_in_the_graph() -> None:
     assert signature(found[0], graph) == signature(found[1], graph)
     assert prediction_key(a) != prediction_key(b)
     assert len(compress(found, graph)[0]) == 2
+
+
+# --- (P4/GS-21) the conflict matrix is opt-out, and says so when it is out ---
+
+def test_opting_out_of_the_conflict_matrix_refuses_rather_than_answering() -> None:
+    """An empty matrix and an uncomputed one are different claims.
+
+    `conflicts` empty reads as "none of these placements clash". A caller
+    acting on that deploys two candidates that cannot coexist -- which is
+    `unevaluated is not infeasible`, one level down. So it raises.
+    """
+    from graphsearch.equivalence import UNCOMPUTED_CONFLICTS
+
+    found, graph = two_device_embeddings()
+    representatives, conflicts, _ = compress(
+        found, graph, CompressionPolicy(conflicts=False)
+    )
+
+    assert conflicts is UNCOMPUTED_CONFLICTS
+    with pytest.raises(RuntimeError) as excinfo:
+        conflicts.conflicting(found[0].id)
+    assert "not computed" in str(excinfo.value)
+    assert "conflicts=True" in str(excinfo.value), "the message must name the fix"
+
+    with pytest.raises(RuntimeError):
+        conflicts.max_concurrent(representatives[0])
+
+
+def test_the_default_still_computes_it() -> None:
+    """No existing caller changes behaviour: the flag defaults to True."""
+    assert CompressionPolicy().conflicts is True
+    found, graph = two_device_embeddings()
+    _, conflicts, _ = compress(found, graph)
+    assert conflicts.conflicting(found[0].id) is not None
+    assert conflicts.conflicts == conflict_matrix(found, graph).conflicts

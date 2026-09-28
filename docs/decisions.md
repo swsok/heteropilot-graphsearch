@@ -893,3 +893,55 @@ re-run byte-identical on this branch.
 **Affects.** `graphsearch/contention.py`, `graphsearch/ranker.py`,
 `graphsearch/adaptive.py`, `graphsearch/adapter.py`, `graphsearch/oracle.py`,
 `graphsearch/__main__.py`, `tests/test_contention.py`, `tests/test_cli.py`.
+
+
+---
+
+## GS-21 — the conflict matrix is not built unless someone asked for it · 2026-09-28
+
+**Measured, on the way to E-G6.** On a synthetic 32-device cluster
+(8 nodes × 4 devices, 9,024 embeddings), `compress` took **52.1 s**, of which:
+
+| | seconds |
+| --- | --- |
+| hashing | 4.0 |
+| VF2 | 3.1 |
+| **`conflict_matrix`** | **32.3** |
+| the rest | ~13 |
+
+`conflict_matrix` is O(n²) over **embeddings** — it produced 4,898,400 pairs
+here — and **the entire search pipeline throws it away**:
+
+```python
+representatives, _, report = compress(embeddings, graph)
+```
+
+in `oracle.run_proposed`, in `__main__.cmd_plan`, in every experiment script.
+The only reader anywhere is `restore.max_concurrent_for`, which takes one as a
+parameter and is not called from the search path.
+
+**Why it matters beyond speed.** E-G6 plots the compression's cost against
+cluster size, and §12's first failure condition is *the isomorphism check
+costing more than the simulation it saves*. Charging a discarded O(n²)
+byproduct to "the compression" would not have made the curve slow — it would
+have made it **wrong**, and wrong in the direction of failing our own
+contribution. At 128 devices the term grows sixteenfold.
+
+**Decision.** `CompressionPolicy.conflicts` (default `True`, so no existing
+caller changes behaviour). `run_proposed` and `cmd_plan` pass `False`.
+
+**Opting out returns `UncomputedConflicts`, not an empty matrix.** An empty
+`conflicts` reads as *"none of these placements clash"*, and a caller acting on
+it would deploy two candidates that cannot coexist. That is
+`unevaluated is not infeasible` one level down, so reading one raises with a
+message naming the flag rather than answering plausibly.
+
+**Result:** 52.1 s → **7.2 s**, and what remains is 4.0 s hashing plus 3.1 s
+VF2 — exactly the two terms E-G3's `saving` formula charges. E-G1 re-runs
+byte-identical, and the full suite passes.
+
+**Affects.** `graphsearch/equivalence.py`, `graphsearch/oracle.py`,
+`graphsearch/__main__.py`.
+
+---
+

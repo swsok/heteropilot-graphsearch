@@ -436,8 +436,12 @@ def run_proposed(
     )
     timings["enumerate"] = time.perf_counter() - started
 
+    # `conflicts=False`: this pipeline discards the matrix, and at scale
+    # building it is most of the compression's wall time (GS-21). Opting out
+    # returns a matrix that REFUSES to be read, never an empty one.
     representatives, _, report = compress(
-        embeddings, graph, compression_policy or CompressionPolicy()
+        embeddings, graph,
+        compression_policy or CompressionPolicy(conflicts=False),
     )
     timings.update(report.as_timings())
 

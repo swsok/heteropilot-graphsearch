@@ -229,7 +229,14 @@ def graphsearch_arm(
     by_id = {i.id: i for i in islands}
     templates = list({e.template.id: e.template for e in oracle.embeddings}.values())
     embeddings, stats = enumerate_embeddings(templates, by_id, graph, spec)
-    representatives, _, report = compress(embeddings, graph, CompressionPolicy())
+    # `conflicts=False`: this arm discards the matrix (note the `_`), and it
+    # is O(n^2) over EMBEDDINGS -- 32.3 s of a 52.1 s compression at 9,024 of
+    # them (GS-21). On the toy corpora here that is noise; on E-G7's 64-device
+    # holdout it was about 520 s per call and this function is called six
+    # times, which is most of an hour spent on a value nobody reads.
+    representatives, _, report = compress(
+        embeddings, graph, CompressionPolicy(conflicts=False)
+    )
     verdicts, rejections = prune(
         representatives, spec, graph, by_id, profiles, stats, policy=BoundPolicy()
     )
