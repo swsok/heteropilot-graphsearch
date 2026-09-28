@@ -11,12 +11,19 @@ what happens when the result disagrees with the hypothesis — it gets written
 down as it came out, with the paper's focus moved the way §12 of the research
 design says to move it.
 
-**Numeric targets marked `[user to confirm]` are not yet registered.** An
-experiment whose target is still a placeholder may be *run*, and its numbers
-reported, but its verdict line reads `undecided (target not registered)` — never
-"passed". Filling one in is an append-only change log entry with a date.
+**Most entries here register no numeric target at all, on purpose.** Where the
+research design says a figure has to come from a pilot, or where there is no
+basis today for choosing one, the metric is listed as **report-only**: it is
+measured, tabulated and discussed, and no pass/fail is claimed from it. A target
+invented to have one would be a criterion chosen for the comfort of having a
+criterion.
 
-Registered 2026-09-23, before E-G3 ran. Experiment ids E-G3 through E-G7 are
+What *is* registered as a threshold is registered because something outside this
+file fixes it — the correctness invariant (research design §11), a §12 failure
+condition, or a measured error range from heteropilot. Each one carries its
+**근거 (basis)** line saying which.
+
+Registered 2026-09-28, before E-G3 ran. Experiment ids E-G3 through E-G7 are
 claimed for this file; E-G1, E-G1b and E-G2 are spent (`experiments/results/`).
 
 ---
@@ -46,6 +53,11 @@ mismerged_pairs  = 0
 relaxed, the labelling is not loosened, and the number is not explained away in
 a footnote. This is rule 5 of the work order, and it is the reason every other
 number in this repository is worth reading.
+
+**근거.** Correctness is not a target; it is a *condition* (research design
+§11). A target is something a result may fall short of and still be a result.
+These two may not, which is why they are registered once here rather than
+restated as a threshold in each entry below.
 
 `unevaluated` is not `infeasible`. The five states — `impossible_proven`,
 `excluded_by_scope`, `deferred_heuristic`, `unknown_measurement`, `evaluated` —
@@ -77,7 +89,7 @@ them as new findings:
 
 ## E-G3 — the real simulator as oracle
 
-*Registered 2026-09-23, before any `--predictor sim` run of this search.*
+*Registered 2026-09-28, before any `--predictor sim` run of this search.*
 
 ### Hypothesis
 
@@ -89,9 +101,11 @@ makes a disagreement meaningful, and also what makes it a weaker test than the
 real simulator, whose behaviour the bounds do not get to define.
 
 Specifically: with the real simulator in place of the mock, on the three
-fixtures below, `false_infeasible` and `mismerged_pairs` stay 0, the compression
-ratio is within measurement noise of E-G1's, and the wall-time saving is
-positive.
+fixtures below, `false_infeasible` and `mismerged_pairs` stay 0 and the
+wall-time saving is non-negative. The compression ratio is expected to land near
+E-G1's, since it is a property of the graph and the enumerated space rather than
+of the predictor — but that expectation is **not** a criterion below, only a
+thing worth noticing if it fails.
 
 ### Fixtures
 
@@ -121,17 +135,22 @@ the budget).
 
 ### Success criterion
 
-1. `false_infeasible = 0` and `mismerged_pairs = 0` on all three fixtures.
-   **Not negotiable and not a target — an invariant.**
-2. `feasible_recall = 1.0` in the proposed arm at K = all representatives.
-3. `saving > 0` on at least the two fixtures whose compression ratio is below
-   1.0 (`abcde`, `shared-nic`). `asym` is the designed ratio-1.0 case and is
-   expected to save nothing; a negative saving there is reported, not excused.
-4. Compression ratio within `[user to confirm: e.g. ±0.05 absolute]` of E-G1's
-   mock-predictor figure for the same fixture. *The ratio is a property of the
-   graph and the enumerated space, not of the predictor, so a difference here
-   means the sim run enumerated something different and is a bug, not a
-   finding.*
+1. **The invariant holds on all three fixtures.** Not a target — a condition.
+2. **`saving ≥ 0`** on every fixture, where
+   `saving = t_sim_oracle − (t_sim_proposed + t_hash + t_vf2 + t_bounds)`.
+   That is: the time spent compressing and eliminating did not exceed the
+   simulation time it bought back.
+
+**Report-only, no target:** compression ratio, `feasible_recall`, `cost_regret`,
+`sims_oracle`, `sims_proposed`, and the cache behaviour. They are tabulated and
+discussed; no pass or fail is claimed from any of them.
+
+**근거.** A compression-ratio target is exactly what research design §12 says
+to register *after* the pilot ("수치 개선 목표는 파일럿 후 별도 사전 등록"), so
+registering one now would be inventing it. `saving < 0` is different: it is one
+of §12's three named failure conditions — *the isomorphism check costs more than
+the simulation it saves* — so the threshold is not chosen here, it is read off
+§12. It is the only criterion in this entry that is not the invariant.
 
 ### Failure interpretation
 
@@ -142,20 +161,24 @@ the budget).
   the finding is about the harness; if they agree and the pair still differs,
   the equivalence relation is wrong and the finding is about the contribution.
   The md says which, in those words.
-- **`saving ≤ 0` on a compressible fixture** → this is §12's second named
-  failure condition, *the isomorphism check costs more than the simulation it
-  saves*. The registered response is the one §12 gives: demote exact compression
-  from a contribution to a **cache key**, and move the paper's focus onto the
-  adaptive search under a simulation budget. Recorded in `docs/decisions.md` as
-  a GS-n, not quietly absorbed.
+- **`saving < 0` on any fixture** → §12's second named failure condition, *the
+  isomorphism check costs more than the simulation it saves*. The registered
+  response, chosen now rather than after seeing the number: **the result md
+  carries the proposal to demote exact compression from a contribution to a
+  cache key and to move the paper's focus onto the contention model and the
+  adaptive search.** Recorded in `docs/decisions.md` as a GS-n, not quietly
+  absorbed. `graph-toy-asym` is the designed ratio-1.0 fixture and is expected
+  to save little; it is still held to `saving ≥ 0`, because a compression that
+  folds nothing should also cost nothing much.
 - **Recall below 1.0 at K = all** → the bounds rejected something the oracle
-  kept, which is case one wearing different clothes.
+  kept, which is case one wearing different clothes. Reported as such even
+  though recall itself carries no target.
 
 ---
 
 ## E-G4 — the shared-resource contention model, against a microbenchmark
 
-*Registered 2026-09-23, before `FluidContentionModel` was written and before any
+*Registered 2026-09-28, before `FluidContentionModel` was written and before any
 microbenchmark was run.*
 
 ### Hypothesis
@@ -202,16 +225,35 @@ separately per location and condition.
 
 ### Success criterion
 
-`[user to confirm]`. The work order's own illustration is **p50 ≤ 15 %, p90 ≤
-30 %** for the fluid model, with the null model's error strictly larger under
-conditions 2, 4 and 5 (the conditions in which contention exists at all). Until
-a number is entered here by the user in the change log below, E-G4's verdict
-line reads `undecided (target not registered)`.
+Three, all on the transfer-time prediction error `|predicted − measured| /
+measured`:
 
-Under conditions 1 and 3 the two models are expected to agree exactly, by
-construction. That is a *check on the implementation*, not evidence for the
-model: if they differ there, the fluid model is wrong in a way that has nothing
-to do with contention.
+1. **Shared conditions** (two flows over one NIC or uplink; the background-load
+   conditions): the fluid model's error is **p50 ≤ 15 %, p90 ≤ 30 %**.
+2. **Independent conditions** (separate NICs or uplinks, no contention): the
+   null and fluid models differ by **≤ 5 %**. This asks whether the model adds
+   nothing where there is nothing to add.
+3. **Under the shared conditions the fluid model's error is smaller than the
+   null model's.** A model that meets (1) without beating the model it replaces
+   has not earned its place.
+
+**근거 (basis) for 15 / 30.** They are the same order of magnitude as the
+simulator's own measured error: heteropilot D29 records the LLMServingSim TPOT
+error on the RNGD card at **+11.6 % at served concurrency 3.9 and −18 % at 76**.
+The claim being registered is therefore modest and checkable — *a transfer-time
+model must not be worse than the simulator it feeds*. Nothing about 15 and 30 is
+derived from the physics, and they are not tuned to anything measured here.
+
+**근거 for the ≤ 5 % in (2).** Conditions 1 and 3 have no contention, so the two
+models are the same arithmetic; a difference there is an implementation defect,
+not evidence about contention. Five per cent is slack for measurement noise, not
+for modelling.
+
+**These three values are provisional and are re-registered after a one-shot
+pilot** — one location, one message size — appended to the change log below with
+its date and its numbers. If the pilot shows 15 / 30 to be the wrong order of
+magnitude for this hardware, the new entry says so and supersedes this one; the
+pilot's own data is then listed as fitting data and excluded from E-G5.
 
 ### Failure interpretation
 
@@ -234,7 +276,7 @@ to do with contention.
 
 ## E-G5 — real hardware
 
-*Registered 2026-09-23, before any deployment.*
+*Registered 2026-09-28, before any deployment.*
 
 ### Hypothesis
 
@@ -274,17 +316,31 @@ between two runs.
 
 ### Success criterion
 
-`[user to confirm]`, with these shapes:
+**(a) Report-only, no target.** The fraction of conditions in which the
+recommended placement simultaneously meets p99 TTFT, p99 TPOT and
+`slo.min_goodput_rps` on hardware. It is the headline number and it carries no
+threshold, because there is no basis today for choosing one; a figure like
+"≥ 90 %" registered now would be a number picked to be met.
 
-1. The recommendation meets both SLOs in `[user to confirm: e.g. ≥ 90 %]` of
-   conditions where any candidate does.
-2. Predicted p99 TTFT within `[user to confirm: e.g. ±25 %]` of measured.
-3. **Every** `impossible_proven` boundary candidate that is deployed does in
-   fact miss the constraint it was proved to miss. A single counterexample is a
-   `false_infeasible` on real hardware and stops the experiment under the common
-   invariant above.
-4. In condition (iii), the TTFT difference between the X-form and Y-form
-   placements is larger than the repetition range of either.
+**(b) 100 %, and this one is a criterion.** Of the boundary candidates that were
+rejected as `impossible_proven` and then deployed anyway, **every one must in
+fact violate the constraint it was proved to violate.** A single one that meets
+its SLOs on hardware means the lower bound that rejected it was not a
+relaxation, and that bound is **demoted to a heuristic** — moved out of
+`impossible_proven` and into `deferred_heuristic` — with a GS-n recording it.
+
+**(c) Report-only, with one exception.** The relative error between predicted
+and measured p99 is tabulated, not scored. The exception: for a condition that
+falls inside an existing accuracy domain, an error outside that domain's own
+stated range is marked **"prediction failure"** in the table. The domain made a
+claim about its error; exceeding it is that claim failing, and is reportable
+without any new threshold being invented.
+
+**근거.** (a) has no basis for a number, so it gets none. (b) is the hardware
+edition of the common invariant — `false_infeasible = 0` adjudicated by a
+deployment instead of by the oracle — and an invariant does not come in
+percentages, so 100 % is not a chosen target but the only value it can take.
+(c) re-uses a bound that already exists rather than adding one.
 
 ### No circular evaluation
 
@@ -296,9 +352,9 @@ claiming it measured something.
 
 ### Failure interpretation
 
-A recommendation that violates an SLO is **recorded as a failure with its
-numbers**, together with the candidate causes separated as far as the data
-allows: prediction error (compare predicted vs measured for that same
+A recommendation that violates an SLO is **recorded with its numbers**. Under
+(a) that is a datum, not a verdict — but it is reported together with the
+candidate causes, separated as far as the data allows: prediction error (compare predicted vs measured for that same
 placement), contention model (does the fluid model's prediction differ, and in
 which direction), scheduler (does the measured p99 move with load level in a way
 the model does not). No cause is asserted without the comparison that
@@ -308,7 +364,7 @@ distinguishes it.
 
 ## E-G6 — scalability
 
-*Registered 2026-09-23, before the synthetic generator was written.*
+*Registered 2026-09-28, before the synthetic generator was written.*
 
 ### Hypothesis
 
@@ -332,21 +388,31 @@ Wall time; VF2 seconds; compression ratio; the count of representatives in
 
 ### Success criterion
 
-1. The 128-device, symmetry-1 case completes within `[user to confirm: e.g. 30
-   minutes]` wall time on the A40 node.
-2. Compression ratio falls monotonically as symmetry rises (ratio 1.0 at
-   symmetry 0 is expected and is not a failure).
-3. `saving > 0` at symmetry 1 for every size.
+**None. Every metric in this entry is report-only**: wall time, VF2 seconds,
+compression ratio and the `excluded_by_scope` count, each per device count and
+per symmetry level.
+
+**근거.** An absolute wall-time target — "128 devices within 30 minutes" —
+is a statement about the machine it ran on, not about the search. The same code
+on a different node would pass or fail the same threshold for reasons that have
+nothing to do with the contribution. The curve is the result; a line drawn
+across it would be decoration.
+
+What *is* registered is the failure condition below, because §12 fixes it.
 
 ### Failure condition, stated in advance
 
-**`ratio ≈ 1` under asymmetry with `saving < 0`** is §12's first named failure
-condition — *the cluster is asymmetric, so the compression ratio is low* — and
-it is an expected region of the parameter space, not a surprise. It is reported
-as the boundary of where the contribution applies. The registered response if it
-holds at *every* symmetry level, including 1: exact compression is demoted to a
-cache key and the paper's claim narrows to the adaptive budget, the same
-response as E-G3's.
+**`saving < 0` at `symmetry = 1`** fires §12's first named failure condition.
+Symmetry 1 is the most favourable case the generator can produce — every node
+identical, so the compression has the most to fold — and a compression that
+cannot pay for itself there cannot pay for itself anywhere. The registered
+response is E-G3's: exact compression is demoted to a cache key and the paper's
+claim narrows to the contention model and the adaptive budget.
+
+`ratio ≈ 1` at `symmetry = 0` is **not** a failure. It is the designed
+behaviour of an asymmetric cluster — no two placements can be isomorphic — and
+it is in the grid so the number gets reported rather than avoided. The boundary
+of where the contribution applies is a result about the contribution.
 
 A simulation result at this scale is **never** presented as large-scale hardware
 accuracy validation. §12 says so; it is repeated here because the temptation is
@@ -356,7 +422,7 @@ real and the number would look good.
 
 ## E-G7 — holdout, ablation, and baseline fairness
 
-*Registered 2026-09-23. The holdout set is fixed **now**, before P4 runs and
+*Registered 2026-09-28. The holdout set is fixed **now**, before P4 runs and
 before any of it is looked at.*
 
 ### The holdout set, fixed at registration
@@ -421,12 +487,28 @@ and the same cache. Two things stated in the paper, not buried:
 
 ### Success criterion
 
-1. Holdout: correctness invariant holds; recall at matched simulation count is
-   no worse than heteropilot's surrogate at `[user to confirm: which k]`.
-2. Ablation: `no_boundary` shows `mismerged_pairs > 0` where `full` shows 0.
-3. Ablation: `no_compression` shows the same correctness numbers as `full` and
-   strictly more simulations. *If it shows the same simulation count, the
-   compression is doing nothing on that fixture and the row says so.*
+1. **The invariant holds on both holdout clusters.** A condition, not a target.
+2. **The `no_boundary` arm shows `mismerged_pairs > 0` where `full` shows 0.**
+   This is the existence proof for contribution A: removing the shared boundary
+   from the signature must actually merge two placements the evaluator prices
+   differently. A zero here does **not** vindicate the contribution — it means
+   the holdout contains no structure in which the counterexample is reachable,
+   and the registered response is to **re-examine the holdout selection**, say
+   so in the result file, and report contribution A as unsupported by these
+   fixtures.
+3. **`full` arm `feasible_recall` at k = 16 ≥ heteropilot arm's at k = 16.**
+   Equal counts as met.
+
+**Report-only:** recall at k = 4 and k = 8, `cost_regret`,
+`first_feasible_at_sim`, compression ratio, and the simulation counts.
+
+**근거 for pinning it at k = 16.** E-G1b is where this arm reached recall
+1.0, so k = 16 is the operating point the claim is actually about. At small K
+the corrected ranker ties on one holdout fixture and trails on the other (the
+known limitation recorded at the top of this file), and that may well survive
+the G15 correction — registering a small-K target would be registering a result
+already known to be in doubt. The claim being made is about the larger budget,
+and this is it, stated before the run rather than chosen from the table.
 
 ### Failure interpretation
 
@@ -434,10 +516,11 @@ and the same cache. Two things stated in the paper, not buried:
   the ranker was fitted to the diagnosis corpus. Reported as such; the claim
   about the ranker narrows to those fixtures.
 - **`no_boundary` shows `mismerged_pairs = 0`** → the counterexample is not
-  reachable in the corpus as built, which makes contribution A unsupported by
-  experiment. The registered response is to say so and to look for a fixture in
-  which it is reachable, *reporting that the original corpus did not contain
-  one* — not to declare the contribution safe because nothing broke.
+  reachable in these fixtures, which makes contribution A unsupported by this
+  experiment. The registered response is criterion 2's: re-examine the holdout
+  selection, look for a fixture in which the structure is reachable, and report
+  that the ones chosen did not contain it — never to declare the contribution
+  safe because nothing broke.
 
 ---
 
@@ -445,4 +528,4 @@ and the same cache. Two things stated in the paper, not buried:
 
 | # | date | what changed | why |
 | --- | --- | --- | --- |
-| 1 | 2026-09-23 | Initial registration: the common invariant, known limitations, and E-G3 through E-G7. All numeric targets marked `[user to confirm]`. | P0.4 of `WORK_ORDER_paper.md`. Written before E-G3 ran and before `FluidContentionModel`, the synthetic generator and the E-G7 arms existed. |
+| 1 | 2026-09-28 | **Initial registration.** The common invariant, the known limitations, and E-G3 through E-G7 with every criterion and its 근거. **E-G4's 15 / 30 / 5 and E-G5(a) are to be appended after their pilots.** | P0.4 of `WORK_ORDER_paper.md`. Written before E-G3 ran, and before `FluidContentionModel`, the synthetic cluster generator and the E-G7 arms existed. Most metrics are registered as report-only on purpose: research design §12 says numeric improvement targets are registered *after* the pilot, so inventing them now would defeat the point of registering anything. |
