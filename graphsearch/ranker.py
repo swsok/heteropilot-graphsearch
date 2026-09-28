@@ -52,6 +52,7 @@ from dataclasses import dataclass, field
 
 from graphsearch import paths_root
 from graphsearch.bounds import GPU_MEMORY_UTILIZATION
+from graphsearch.contention import DEFAULT_CONTENTION_MODEL, ContentionModel
 from graphsearch.demand import CommFlow, FlowKind
 from graphsearch.embeddings import EmbeddedCandidate
 from graphsearch.equivalence import Representative
@@ -126,23 +127,26 @@ class DiversityQuota:
 # --- features -------------------------------------------------------------
 
 def _flow_seconds(
-    flow: CommFlow, graph: ResourceGraph, *, per_request: bool
-) -> float:
-    """Wire time for one flow over its best path, reservations subtracted.
+    flows: Sequence[CommFlow],
+    graph: ResourceGraph,
+    contention: ContentionModel,
+) -> dict[str, float]:
+    """flow_id -> wire seconds for one event, under the chosen model.
 
-    G11 routes this through `ContentionModel`; until then the null model --
-    latency plus bytes over the bottleneck -- is what it would compute anyway.
+    **Priced together, not one at a time** (P2.5). Under `null` that is the
+    same arithmetic the inlined version did -- latency plus bytes over the
+    bottleneck with reservations subtracted -- so the default path is
+    unchanged. Under `fluid` these flows are a candidate's own concurrent
+    transfers and they share what they cross, which is the entire point: a
+    per-flow call could never see that.
+
+    A flow with no path at all scores 0 rather than infinity, as before: it
+    carries no traffic a latency target charges for, and an infinity here
+    would make every candidate containing one unrankable.
     """
-    if not flow.allowed_paths:
-        return 0.0
-    best = flow.allowed_paths[0].best
-    if best is None:
-        return float("inf")
-    capacity = effective_bottleneck_bytes_per_s(graph, best)
-    if capacity <= 0:
-        return float("inf")
-    payload = flow.bytes_per_request if per_request else flow.bytes_per_event
-    return best.latency_ns / 1e9 + payload / capacity
+    priced = [f for f in flows if f.allowed_paths]
+    times = contention.transfer_times_ns(priced, graph) if priced else {}
+    return {f.flow_id: times.get(f.flow_id, 0.0) / 1e9 for f in flows}
 
 
 def _memory_report(
@@ -256,6 +260,7 @@ def features_for(
     cost_per_hour: float | None = None,
     domain_root=None,
     variant: str = DEFAULT_RANKER_VARIANT,
+    contention: ContentionModel = DEFAULT_CONTENTION_MODEL,
 ) -> RankFeatures:
     """Read one representative's exemplar into the numbers the ordering uses.
 
@@ -272,11 +277,16 @@ def features_for(
     embedding = representative.exemplar
     template = embedding.template
 
-    ttft_ms = 1e3 * sum(
-        _flow_seconds(f, graph, per_request=False)
+    # The TTFT flows are priced as one set so they can contend with each
+    # other; the TPOT flow is priced on its own because an all-reduce during
+    # decode does not overlap the prefill handoff it follows.
+    ttft_flows = [
+        f
         for f in embedding.flows
         if f.kind in (FlowKind.PD_KV_TRANSFER, FlowKind.PP_ACTIVATION)
-    )
+    ]
+    ttft_seconds = _flow_seconds(ttft_flows, graph, contention)
+    ttft_ms = 1e3 * sum(ttft_seconds.values())
     if corrected:
         ttft_ms += prefill_roofline_ms(
             template, spec, islands, profiles, utilization=gpu_memory_utilization
@@ -287,13 +297,14 @@ def features_for(
         template, spec, dict(islands), dict(profiles),
         gpu_memory_utilization=gpu_memory_utilization,
     )
+    tp_flows = [f for f in embedding.flows if f.kind is FlowKind.TP_ALLREDUCE]
+    tp_seconds = _flow_seconds(tp_flows, graph, contention)
     tp_ms = max(
         (
-            _flow_seconds(f, graph, per_request=False) * 1e3
+            tp_seconds[f.flow_id] * 1e3
             * f.events_per_request
             / max(1, spec.traffic.output_tokens.p50)
-            for f in embedding.flows
-            if f.kind is FlowKind.TP_ALLREDUCE
+            for f in tp_flows
         ),
         default=0.0,
     )

@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from graphsearch import paths_root
 from graphsearch.adaptive import AdaptiveConfig, AdaptiveSearch, build_ranker
 from graphsearch.bounds import BoundPolicy, CandidateStatus, prune
+from graphsearch.contention import DEFAULT_CONTENTION_MODEL, ContentionModel
 from graphsearch.cost import cost_of_devices
 from graphsearch.embeddings import (
     DEFAULT_EMBEDDING_POLICY,
@@ -197,6 +198,7 @@ def bind_predictor(
     cluster: ClusterSpecV2 | None = None,
     islands: Mapping[str, ExecutionIsland] | None = None,
     profiles: Mapping[str, AcceleratorProfile] | None = None,
+    contention: ContentionModel = DEFAULT_CONTENTION_MODEL,
 ) -> bool:
     """Let the predictor see WHICH devices each candidate runs on.
 
@@ -231,6 +233,7 @@ def bind_predictor(
             islands=islands,                         # type: ignore[arg-type]
             profiles=profiles,                       # type: ignore[arg-type]
             spec=spec,                               # type: ignore[arg-type]
+            contention=contention,
         )
         return True
 
@@ -365,7 +368,10 @@ def run_oracle(
     return result
 
 
-def binder_for(predictor, graph, spec, cluster, islands, profiles):
+def binder_for(
+    predictor, graph, spec, cluster, islands, profiles,
+    contention: ContentionModel = DEFAULT_CONTENTION_MODEL,
+):
     """`AdaptiveSearch` wants a binder that returns nothing; `bind_predictor`
     returns whether it installed the result hook. `prices_pd_on_the_path`
     answers the same question up front, so the return value is dropped here
@@ -376,6 +382,7 @@ def binder_for(predictor, graph, spec, cluster, islands, profiles):
             predictor,
             [e for e in batch.values() if isinstance(e, EmbeddedCandidate)],
             graph, spec=spec, cluster=cluster, islands=islands, profiles=profiles,
+            contention=contention,
         )
 
     return bind
@@ -409,6 +416,7 @@ def run_proposed(
     ranker_variant: str = DEFAULT_RANKER_VARIANT,
     cache: EnvelopeCache | None = None,
     max_workers: int | None = None,
+    contention: ContentionModel = DEFAULT_CONTENTION_MODEL,
 ) -> ProposedResult:
     """The real pipeline: enumerate, compress, bound, rank, evaluate.
 
@@ -443,11 +451,14 @@ def run_proposed(
         spec, cluster, islands, profiles, predictor,
         graph=graph, representatives=representatives, verdicts=verdicts,
         ranker=build_ranker(
-            representatives, spec, graph, islands, profiles, variant=ranker_variant
+            representatives, spec, graph, islands, profiles,
+            variant=ranker_variant, contention=contention,
         ),
         config=config or AdaptiveConfig(k_schedule=(len(representatives) or 1,)),
         embedding_stats=stats, compression=report, bound_rejections=rejections,
-        bind_embeddings=binder_for(predictor, graph, spec, cluster, islands, profiles),
+        bind_embeddings=binder_for(
+            predictor, graph, spec, cluster, islands, profiles, contention
+        ),
         embedded_pd_cost=prices_pd_on_the_path(predictor),
         cache=cache, max_workers=max_workers, timings=timings,
     )

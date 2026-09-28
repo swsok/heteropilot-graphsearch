@@ -272,6 +272,7 @@ def bind(
     spec: ServiceSpec,
     gpu_memory_utilization: float = 0.90,
     activation_reserve_gb: float = 0.0,
+    contention: ContentionModel = DEFAULT_CONTENTION_MODEL,
 ) -> Callable[[Mapping[str, EmbeddedCandidate]], None]:
     """Install the compile hook, and return a rebinder for the next batch.
 
@@ -330,7 +331,7 @@ def bind(
         if embedding is None or result.metrics is None:
             return result
         metrics, info = apply_pd_transfer_cost_embedded(
-            embedding, result.metrics, spec, graph
+            embedding, result.metrics, spec, graph, contention=contention
         )
         if not info:
             return result

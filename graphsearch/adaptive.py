@@ -47,6 +47,7 @@ from graphsearch.bounds import (
     CandidateStatus,
     prune,
 )
+from graphsearch.contention import DEFAULT_CONTENTION_MODEL, ContentionModel
 from graphsearch.cost import cost_of_devices
 from graphsearch.embeddings import EmbeddingStats
 from graphsearch.equivalence import CompressionReport, Representative
@@ -745,6 +746,7 @@ def build_ranker(
     quota: DiversityQuota | None = None,
     k_hint: int | None = None,
     variant: str = DEFAULT_RANKER_VARIANT,
+    contention: ContentionModel = DEFAULT_CONTENTION_MODEL,
 ) -> ServiceMarginRanker:
     """A `ServiceMarginRanker` keyed by embedding id, ready for the driver.
 
@@ -764,6 +766,7 @@ def build_ranker(
         table[representative.exemplar.id] = features_for(
             representative, spec, graph, islands, profiles,
             cost_per_hour=breakdown.total_usd_per_hour, variant=variant,
+            contention=contention,
         )
     return ServiceMarginRanker(table, quota=quota, k_hint=k_hint)
 
