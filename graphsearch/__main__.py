@@ -42,6 +42,10 @@ from graphsearch.adaptive import (  # noqa: E402
     build_ranker,
 )
 from graphsearch.bounds import ALL_CHECKS, BoundPolicy, prune  # noqa: E402
+from graphsearch.contention import (  # noqa: E402
+    CONTENTION_MODELS,
+    contention_model,
+)
 from graphsearch.embeddings import EmbeddingPolicy, enumerate_embeddings  # noqa: E402
 from graphsearch.equivalence import CompressionPolicy, compress  # noqa: E402
 from graphsearch.oracle import (  # noqa: E402
@@ -304,6 +308,7 @@ def cmd_plan(args) -> int:
         representatives, spec, graph, by_id, profiles, stats,
         policy=_bound_policy(args.bounds),
     )
+    contention = contention_model(args.contention)
     quota = DiversityQuota() if args.diversity else None
     search = AdaptiveSearch(
         spec, cluster, by_id, profiles, predictor,
@@ -311,6 +316,7 @@ def cmd_plan(args) -> int:
         ranker=build_ranker(
             representatives, spec, graph, by_id, profiles, quota=quota,
             k_hint=args.k_schedule[-1] if quota else None, variant=args.ranker,
+            contention=contention,
         ),
         config=AdaptiveConfig(
             k_schedule=args.k_schedule,
@@ -328,7 +334,7 @@ def cmd_plan(args) -> int:
         # `plan` did not, and the audit's `hook_calls` is now the evidence
         # either way (GS-13).
         bind_embeddings=binder_for(
-            predictor, graph, spec, cluster, by_id, profiles
+            predictor, graph, spec, cluster, by_id, profiles, contention
         ),
         embedded_pd_cost=prices_pd_on_the_path(predictor),
         max_workers=args.max_workers,
@@ -398,7 +404,7 @@ def cmd_compare(args) -> int:
     )
     proposed = run_proposed(
         spec, cluster, by_id, profiles, predictor, graph=graph, templates=templates,
-        ranker_variant=args.ranker,
+        ranker_variant=args.ranker, contention=contention_model(args.contention),
     )
     comparison = compare(oracle, proposed)
     if args.predictor == "mock":
@@ -440,6 +446,14 @@ def build_parser() -> argparse.ArgumentParser:
                        help="seconds per simulation before it is abandoned")
         p.add_argument("--max-workers", type=int, default=None,
                        help="concurrent simulations; assembly stays sequential")
+        # `null` stays the default, so the path every result up to E-G3 was
+        # computed under is the one you get without asking. The BOUNDS use
+        # null whatever this says: a pruning stage may reject only on the most
+        # optimistic arithmetic, and fluid is never the faster of the two.
+        p.add_argument(
+            "--contention", choices=sorted(CONTENTION_MODELS), default="null",
+            help="how flows sharing a resource are priced (default null)",
+        )
 
     plan = sub.add_parser("plan", help="search, and print what the search did")
     common(plan)

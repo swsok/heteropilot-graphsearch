@@ -809,3 +809,87 @@ corpus, and that no such pair shares a signature.
 **Affects.** `experiments/scripts/e_g3_cache_check.py`,
 `tests/test_cache_keying.py`,
 `experiments/results/e_g3_real_sim_oracle.md`.
+
+
+---
+
+## GS-20 — the contention model is fluid, not packet-level, and candidates do not contend with each other · 2026-09-28
+
+**What `FluidContentionModel` is.** Processor sharing over shared resources: at
+any instant the active flows on a resource split `capacity - reserved` equally,
+and a flow's rate is the minimum over the resources on its path, its own link
+bottleneck included. Event-driven — rates are recomputed whenever a flow starts
+or finishes — and **not packet-level**: no queue, no window, no loss, no burst.
+Named in every record, because a result computed under it may not be compared
+against one computed under `null` without saying so.
+
+**What contends with what.** Two things, and deliberately not a third:
+
+1. an **external reservation**, treated as a permanently active flow and taken
+   off capacity before anything else;
+2. **flows inside one candidate** that overlap in time — the several P/D
+   transfers of a `dp > 1` deployment.
+
+**Candidates do not contend with each other.** They are alternatives; the search
+evaluates many and deploys one. Pricing two as if both were running would model
+a cluster nobody is going to build.
+
+**It is not max-min fair, and that is a choice rather than an oversight.** A
+flow held back elsewhere on its path does not return its unused share: each
+resource splits flatly, `available / active`. Max-min fairness would give the
+unbottlenecked flow more, so this model is the pessimistic of the two. Stated
+rather than silently improved, because it is the model E-G4's numbers will be
+produced under.
+
+**A bound may never use it.** A pruning stage rejects only when the most
+optimistic arithmetic already misses the constraint, and fluid is by
+construction never faster than null — sharing a resource cannot speed a flow
+up. `null` stays the bounds' model, and
+`test_fluid_is_never_faster_than_null` pins the direction rather than a
+docstring asserting it.
+
+---
+
+### Where the work order and the code disagree, and the code wins
+
+**P2.5 asks for a test** that the `X -> Z` and `Y -> Z` representatives of
+`graph-toy-shared-nic` differ in TTFT under `fluid` and **agree under `null`**.
+
+**They differ under both, and the contention model is not why.** X's uplink has
+6 of its 10 GB/s held by something outside the deployment.
+`effective_bottleneck_bytes_per_s` subtracts that, and *both* models use it —
+the reservation has been subtracted since G3 and is D124, not P2.5. The two
+representatives were never going to agree under `null`.
+
+What `fluid` actually changes is the case the same paragraph of the work order
+names and the test sentence does not: **a candidate whose own flows overlap on
+one resource.** That needs `dp > 1`, and therefore more than two devices, which
+is why the two-device corpus shows no difference at all. Measured, on
+`graph-toy-shared-nic` at `total_devices <= 4`, a `dp = 2` P/D candidate whose
+two KV transfers cross the same uplinks:
+
+| | TTFT ratio |
+| --- | --- |
+| `null` | 1.379346 |
+| `fluid` | 2.337483 |
+
+Twelve such representatives, every one of them slower under `fluid`.
+
+So the tests assert what is true instead of what was asked:
+
+- `test_two_concurrent_transfers_contend_under_fluid_and_not_under_null` — the
+  property the model exists for, on the real pipeline;
+- `test_one_transfer_alone_is_priced_the_same_by_both` — why most of the corpus
+  is untouched, so a run that changed everywhere would read as a bug;
+- `test_the_reservation_separates_the_counterexample_under_both_models` — the
+  X/Y difference pinned to the reservation, so a later reader cannot
+  re-attribute it to contention.
+
+**The default path is unchanged**, which is the other half of P2.5. `--contention`
+defaults to `null`; `--contention null` is byte-identical to passing nothing
+(`test_selecting_null_explicitly_changes_nothing`), and E-G1 and E-G1b both
+re-run byte-identical on this branch.
+
+**Affects.** `graphsearch/contention.py`, `graphsearch/ranker.py`,
+`graphsearch/adaptive.py`, `graphsearch/adapter.py`, `graphsearch/oracle.py`,
+`graphsearch/__main__.py`, `tests/test_contention.py`, `tests/test_cli.py`.

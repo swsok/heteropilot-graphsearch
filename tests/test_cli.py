@@ -343,3 +343,52 @@ def test_the_written_plan_carries_no_wall_clock(tmp_path, capsys) -> None:
     assert "timings" not in provenance["graph_search"]
     assert "vf2_seconds" not in provenance["compression"]
     assert "hash_seconds" not in provenance["compression"]
+
+
+# --- (ix) P2.5: the contention model is selectable, and null is the default ---
+
+def test_the_default_contention_model_is_null() -> None:
+    args = build_parser().parse_args(
+        ["plan", "--service", SERVICE, "--cluster", CLUSTER]
+    )
+    assert args.contention == "null", (
+        "every result up to E-G3 was computed under null; changing the default "
+        "would silently make new runs incomparable with them"
+    )
+
+
+def test_an_unknown_contention_model_is_refused() -> None:
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(
+            [
+                "plan", "--service", SERVICE, "--cluster", CLUSTER,
+                "--contention", "packet",
+            ]
+        )
+
+
+def test_selecting_null_explicitly_changes_nothing(tmp_path, capsys) -> None:
+    """`--contention null` must be the same run as no flag at all.
+
+    Not a tautology: the flag threads a model object through `build_ranker`,
+    `binder_for` and the adapter, and any of those could have picked up a
+    different default on the way.
+    """
+    argv = ["plan", "--service", SERVICE, "--cluster", SHARED, "--k-schedule", "2"]
+    implicit, explicit = tmp_path / "a.yaml", tmp_path / "b.yaml"
+    run([*argv, "--output", str(implicit)], capsys)
+    run([*argv, "--contention", "null", "--output", str(explicit)], capsys)
+    assert implicit.read_bytes() == explicit.read_bytes()
+
+
+def test_fluid_is_accepted_and_reaches_the_run(tmp_path, capsys) -> None:
+    path = tmp_path / "plan.yaml"
+    code, _ = run(
+        [
+            "plan", "--service", SERVICE, "--cluster", SHARED,
+            "--k-schedule", "2", "--contention", "fluid", "--output", str(path),
+        ],
+        capsys,
+    )
+    assert code == 0
+    assert path.exists()
