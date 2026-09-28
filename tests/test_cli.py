@@ -227,3 +227,81 @@ def test_a_missing_spec_fails_with_the_loader_s_message() -> None:
 def test_the_parser_requires_a_subcommand() -> None:
     with pytest.raises(SystemExit):
         build_parser().parse_args([])
+
+
+# --- (vii) P1.1: the plan path binds the predictor, and says that it did ---
+
+def test_plan_binds_the_predictor_to_the_placements(tmp_path, capsys) -> None:
+    """GS-13. `compare` bound the predictor from the start and `plan` did not.
+
+    Without the binder the predictor never learns which devices a candidate
+    runs on, so it answers per TEMPLATE -- and two placements differing only in
+    which contended uplink they cross come back identical, which is the one
+    distinction this whole search exists to keep. The bug was invisible because
+    nothing printed it; `hook_calls` is what makes it visible.
+    """
+    path = tmp_path / "plan.yaml"
+    _, out = run(
+        [
+            "plan", "--service", SERVICE, "--cluster", SHARED,
+            "--k-schedule", "2", "--output", str(path),
+        ],
+        capsys,
+    )
+    calls = yaml.safe_load(path.read_text())["provenance"]["graph_search"]["hook_calls"]
+    assert calls["bound"] >= 2, calls
+    assert calls["batches"] >= 1, calls
+    assert "hooks: bound" in out
+
+
+def test_the_audit_carries_what_the_simulator_was_not_told(tmp_path, capsys) -> None:
+    """`topology_loss` is a key of the provenance, present even when empty.
+
+    Empty is a real answer -- the mock compiles no simulator config, so there
+    is nothing it could fail to express -- and an absent key would be
+    indistinguishable from a run that dropped a shared resource silently.
+    """
+    path = tmp_path / "plan.yaml"
+    run(
+        [
+            "plan", "--service", SERVICE, "--cluster", SHARED,
+            "--k-schedule", "2", "--output", str(path),
+        ],
+        capsys,
+    )
+    search = yaml.safe_load(path.read_text())["provenance"]["graph_search"]
+    assert "topology_loss" in search
+    assert "timings" in search
+
+
+def test_the_trace_defaults_match_heteropilots_own(tmp_path) -> None:
+    """A cache directory is shared with heteropilot's `plan`, so the trace that
+    keys it must be generated the same way. Two defaults that drifted apart
+    would produce two trace digests and every cache hit would be a miss."""
+    import re
+
+    from graphsearch.__main__ import DEFAULT_TRACE_REQUESTS, DEFAULT_TRACE_SEED
+
+    source = (paths_root.HETEROPILOT_ROOT / "planner" / "__main__.py").read_text()
+    requests = re.search(r"^DEFAULT_TRACE_REQUESTS = (\d+)", source, re.M)
+    assert requests is not None, "heteropilot no longer defines DEFAULT_TRACE_REQUESTS"
+    assert int(requests.group(1)) == DEFAULT_TRACE_REQUESTS
+    seed = re.search(r"^DEFAULT_SEED = (\d+)", source, re.M)
+    assert seed is not None, "heteropilot no longer defines DEFAULT_SEED"
+    assert int(seed.group(1)) == DEFAULT_TRACE_SEED
+
+
+def test_the_sim_flags_parse_without_a_simulator() -> None:
+    """Parsing must not need the venv: a typo should be reported before a build."""
+    args = build_parser().parse_args(
+        [
+            "plan", "--service", SERVICE, "--cluster", CLUSTER,
+            "--predictor", "sim", "--num-requests", "50",
+            "--cache-dir", "outputs/cache-eg3", "--max-workers", "4",
+            "--timeout", "120",
+        ]
+    )
+    assert args.num_requests == 50
+    assert args.cache_dir == "outputs/cache-eg3"
+    assert args.max_workers == 4
+    assert args.timeout == 120.0

@@ -77,6 +77,10 @@ four numbers, exiting non-zero when either correctness number is not zero.
 | `--ranker service_margin\|service_margin_v1` | `service_margin_v1` is the pre-G15 estimate, kept as the baseline every claim about the correction is measured against (E-G2) |
 | `--oracle` | evaluate every embedding: no compression, no bounds, no top-K |
 | `--predictor mock\|sim` | `mock` is the default and prints a banner on every run |
+| `--num-requests N`, `--seed S` | the trace `--predictor sim` generates; defaults are heteropilot's own 300 and 42 so a cache directory is shared, not forked |
+| `--cache-dir DIR` | heteropilot's `PerformanceEnvelope` cache, keyed per representative so two that differ only in a shared resource do not collide |
+| `--work-dir DIR`, `--timeout S` | where the trace and simulator inputs are staged, and how long one simulation may take |
+| `--max-workers N` | concurrent simulations; result assembly stays sequential, so the output is byte-identical to a serial run |
 
 **`--predictor mock` numbers are fictional.** The mock respects the same physics
 as the bounds -- which is what makes an oracle disagreement mean something --
