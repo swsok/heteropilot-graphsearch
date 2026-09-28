@@ -1,0 +1,5 @@
+Raw probe output lands here, one directory per (date, node serial):
+    raw/<YYYY-MM-DD>-<accel-serials-prefix>/<label>.json
+
+Committed, because it is the evidence the `LinkMeasurement` entries point at
+with their `raw:` field. The JSON is the evidence; the YAML is the claim.
