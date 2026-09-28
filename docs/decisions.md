@@ -752,3 +752,60 @@ whole reason so the flags are not "cleaned up" by someone who has not hit it.
 
 **Affects.** `experiments/scripts/e_g3_oracle_run.sh`,
 `experiments/scripts/e_g3_real_sim_oracle.py`.
+
+
+---
+
+## GS-19 — a full cache hit is the wrong target when simulations fail · 2026-09-28
+
+**What the work order asks.** P1.4: re-run the same command and check
+`cache_hits == simulations_run`, and that the number of cache files equals the
+number of representatives evaluated.
+
+**Neither identity holds, and neither is a defect.** `EnvelopeCache.put`
+returns early on a result that is not `ok`, so a placement whose simulation
+errored is never written and misses again on every re-run. A corpus containing
+`SIM_ERROR`s can never be fully warm. The identities that do hold, and that the
+report states so a reader can do the arithmetic:
+
+```
+cache_hits == simulations_run - failures_in_that_arm
+files      == placements_simulated - unjudged
+```
+
+Both reconcile exactly on the E-G3 corpus:
+
+```
+proposed  186 simulated -  24 failed   = 162 cached  ->  162 files
+oracle    930 placements - 66 unjudged = 864 judged  ->  864 files
+```
+
+with 864 distinct `candidate_id` owners across 864 oracle files and **zero
+files claimed twice**. A file claimed twice is a placement served another's
+metrics, which is GS-16 reappearing, so it is counted rather than assumed.
+
+**The check that matters is the third one.** `EnvelopeKey` carries model,
+dtype, the per-island `accelerator|role|tp|pp|ep|dp` segments, the scheduler
+config, the network class and the workload bucket. It carries **no island id
+and no shared resource**. Two placements on different nodes with the same
+accelerator and knobs therefore collide on one key, and the graph signature
+(D126) is the only thing separating their cache entries. Verified on all three
+fixtures, from the cache files themselves rather than by recomputing a key:
+every file records the `candidate_id` that wrote it, so a placement that
+simulated successfully and owns no file was overwritten by another.
+
+**The pair is found, not hard-coded** — a fixture edit that removed the
+counterexample would otherwise leave the check passing against a pair that no
+longer has the property. Which made a real bug visible: the finder first
+grouped by `template_id` and reported *"no such pair"* for
+`graph-toy-shared-nic`, the fixture where the property holds by construction.
+Two placements on different nodes are different templates; the *key* does not
+know that, and grouping by template id asks a narrower question and answers the
+wrong one. Grouped by the `EnvelopeKey` digest, all three fixtures produce a
+pair, and shared-nic's is `nodeX` against `nodeY` — the counterexample itself.
+`tests/test_cache_keying.py` pins both halves: that the condition exists in the
+corpus, and that no such pair shares a signature.
+
+**Affects.** `experiments/scripts/e_g3_cache_check.py`,
+`tests/test_cache_keying.py`,
+`experiments/results/e_g3_real_sim_oracle.md`.
