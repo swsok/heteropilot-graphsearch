@@ -58,3 +58,47 @@ It wraps the run in `livelock_watch.sh` with `-g 0 -s 0 -t`, which asks for a wa
 `compression_ratio`, `feasible_recall` and `cost_regret` are **report-only** under the pre-registration: they are tabulated and discussed and no pass or fail is claimed from them. The registered criteria are the invariant and `saving >= 0`.
 
 A non-zero `mismerged_pairs` is diagnosed, not explained: `--diagnose-pair a b` re-simulates each placement twice under the same node ordering and says whether the pair is simulator non-determinism or an equivalence defect. The verdict goes in this file, in those words.
+
+## The cache, verified (P1.4)
+
+The cold run above filled the cache; this is the same command run a second time against it.
+
+| fixture | simulations | cache_hits | re-simulated | wall s |
+| --- | --- | --- | --- | --- |
+| graph-toy-abcde | 78 | 66 | 12 | 6.1 |
+| graph-toy-shared-nic | 60 | 48 | 12 | 6.7 |
+| heterogeneous-lab | 48 | 48 | 0 | 0.9 |
+
+**`cache_hits == simulations_run` is not the identity to expect, and the difference is not a defect.** `EnvelopeCache.put` skips a result that is not `ok`, so a placement whose simulation errored is never written and misses again on every re-run. A corpus containing `SIM_ERROR`s can never be fully warm. `re-simulated` is that set, and the identity that must hold is `cache_hits == simulations_run - failures_in_that_arm`. A shortfall beyond it is a cache that is not answering.
+
+Both arms reconcile exactly, which is the check:
+
+```
+proposed  186 simulated - 24 never cached (failed) = 162 cached  ->  162 files
+oracle    930 placements - 66 unjudged = 864 judged  ->  864 files
+```
+
+The `unjudged` column in the correctness table is the ORACLE arm's, which is why it does not match `re-simulated` row by row: the two arms simulate different populations and fail independently.
+
+### One file, one placement
+
+The arms share one directory each across all three fixtures, so these are totals for the corpus and not per-fixture figures.
+
+| directory | files | distinct owners | files claimed twice |
+| --- | --- | --- | --- |
+| `oracle/` | 864 | 864 | 0 |
+| `proposed/` | 162 | 162 | — |
+
+Every cache file records the `candidate_id` that wrote it. `distinct owners` below `files` would mean a file was overwritten by a second placement -- and a shared file is a shared verdict, which is the mis-merge the compression exists to prevent reappearing one layer down in the cache (GS-16).
+
+### Two placements that differ only in their boundary
+
+| fixture | pair | verdict |
+| --- | --- | --- |
+| graph-toy-abcde | `cuda-toygpu-nodeA-tp1-dp1-s128-t2048@5b5d48e8d6b6`<br>`cuda-toygpu-nodeC-tp1-dp1-s128-t2048@693a423f1a60` | distinct files |
+| graph-toy-shared-nic | `cuda-toygpu-nodeX-tp1-dp1-s128-t2048@7d36012c2000`<br>`cuda-toygpu-nodeY-tp1-dp1-s128-t2048@8a5235922f1b` | distinct files |
+| heterogeneous-lab | `cuda-rtxpro6000-node1-tp1-dp1-s128-t2048@b5df10418062`<br>`cuda-rtxpro6000-node1-tp1-dp1-s128-t2048@bc6c20ff1980` | distinct files |
+
+This is D126 and the reason the search exists. On `graph-toy-shared-nic`, `P on X -> D on Z` and `P on Y -> D on Z` are identical in every local attribute and differ only in that X's uplink already has 6 of its 10 GB/s held. `EnvelopeKey` describes parallelism and hardware and cannot express that; without the graph signature extending the key the two would collide on one file and the second would silently read the first's TTFT.
+
+The pair is **found**, not hard-coded: a fixture edit that removed the counterexample would otherwise leave this check passing against a pair that no longer has the property.
