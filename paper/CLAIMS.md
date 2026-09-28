@@ -17,6 +17,13 @@ support the claim; the row stays, with the file, and the paper says so.
 `Retracted` — a claim that was made and withdrawn; it stays here so the draft
 cannot quietly reacquire it.
 
+**A status may be qualified, and the qualification travels with the claim.**
+E-G3's correctness row reads "Established, for the placements the simulator
+judged" because `complete` is False on all three fixtures: 6–8 % of placements
+came back `SIM_ERROR` and have no verdict either way. Dropping the clause would
+turn a bounded result into an unbounded one, which is the failure this file
+exists to prevent.
+
 ---
 
 ## The claims
@@ -32,8 +39,10 @@ cannot quietly reacquire it.
 | The ranker's goodput term must divide by a knob-aware throughput estimate, not by the elimination bound's optimistic ceiling | `experiments/results/e_g2_ranker_diagnosis.md` | mock | Established |
 | The correction generalises to fixtures the diagnosis never saw | `experiments/results/e_g2_topk_holdout.md` | mock | Established |
 | A ranker change cannot move either correctness number | `tests/test_oracle_agreement.py` | — (test) | Established |
-| The correctness result survives replacing the mock with LLMServingSim | — (E-G3) | real-sim | Pending |
-| The compression's own cost is smaller than the simulation time it saves | — (E-G3, `saving` column) | real-sim | Pending |
+| The correctness result survives replacing the mock with LLMServingSim | `experiments/results/e_g3_real_sim_oracle.md` | real-sim | Established, **for the placements the simulator judged** |
+| The compression's own cost is smaller than the simulation time it saves | `experiments/results/e_g3_real_sim_oracle.md` (`saving_s`) | real-sim | Established |
+| The compression ratio is a property of the graph, not of the predictor | `e_g1_toy_pilot.md` and `e_g3_real_sim_oracle.md` agree to four decimals on all three shared fixtures | mock + real-sim | Established |
+| 6–8 % of placements fail to simulate at all (`SIM_ERROR`), and are reported as `unknown_measurement` rather than infeasible | `experiments/results/e_g3_real_sim_oracle.md` (`unjudged`, `complete`) | real-sim | Established as a limitation; cause **not** established |
 | A processor-sharing contention model predicts measured transfer time better than pricing each flow alone | — (E-G4) | hardware | Pending |
 | The recommended placement meets its SLOs on real hardware | — (E-G5) | hardware | Pending |
 | A candidate proved impossible really does miss the constraint it was proved to miss, on hardware | — (E-G5, boundary alternative) | hardware | Pending |

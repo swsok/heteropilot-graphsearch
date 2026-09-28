@@ -198,8 +198,13 @@ class SearchAudit:
             "residual_splits": sorted(self.residual_splits),
             "hook_calls": dict(sorted(self.hook_calls.items())),
             "topology_loss": self.topology_loss,
-            "timings": {k: round(v, 6) for k, v in sorted(self.timings.items())},
         }
+
+    # `timings` is deliberately NOT in `as_provenance`. Rule 7 says the same
+    # input twice gives byte-identical output, and a wall-clock never does.
+    # They live on the audit for the in-process caller that measured them --
+    # E-G3's harness writes them into its own results file, where a number
+    # that changes between runs is the point rather than a defect.
 
 
 def _candidate_for(representative: Representative):
@@ -239,6 +244,12 @@ class AdaptiveSearch:
         #: faster. That is heteropilot's guarantee and it is why this can be
         #: raised for a real-simulator run without touching determinism.
         max_workers: int | None = None,
+        #: Seconds already spent by the caller on stages this class does not
+        #: run -- enumerate, hash, vf2, bounds. Seeded rather than measured
+        #: here because they happen before an `AdaptiveSearch` exists, and a
+        #: `saving` that omitted them would be charging the compression's cost
+        #: to nobody (P1.3).
+        timings: Mapping[str, float] | None = None,
         embedding_stats: EmbeddingStats | None = None,
         compression: CompressionReport | None = None,
         scope_rejections: Sequence[Rejection] = (),
@@ -265,6 +276,7 @@ class AdaptiveSearch:
         self.config = config
         self.cache = cache
         self.max_workers = max_workers
+        self.timings: dict[str, float] = dict(timings or {})
         self.embedding_stats = embedding_stats
         self.compression = compression
         self.scope_rejections = list(scope_rejections)
@@ -329,7 +341,11 @@ class AdaptiveSearch:
                 break
 
             batch = [by_id[rep_id] for rep_id in batch_ids]
+            evaluate_started = time.perf_counter()
             result = self._evaluate(batch, len(evaluated))
+            self.timings["sim"] = (
+                self.timings.get("sim", 0.0) + time.perf_counter() - evaluate_started
+            )
 
             audit.simulations_run += len(batch)
             audit.cache_hits += len(result.cache_hits)
@@ -382,6 +398,8 @@ class AdaptiveSearch:
         audit.termination = termination
         audit.certificate = certificate
         self._record_hook_evidence(audit)
+        self.timings["search"] = time.perf_counter() - started
+        audit.timings = dict(self.timings)
 
         output = self._assemble(
             feasible, infeasible, rejections, notes, pd_transfers, audit, unreached
@@ -458,8 +476,12 @@ class AdaptiveSearch:
             return chosen + rest[: want - len(chosen)]
 
         candidates = [_candidate_for(by_id[rep_id]) for rep_id in rest]
+        rank_started = time.perf_counter()
         ordered = self.ranker.order(
             candidates, self.spec, self.islands, self.profiles
+        )
+        self.timings["rank"] = (
+            self.timings.get("rank", 0.0) + time.perf_counter() - rank_started
         )
         embedding_to_rep = {by_id[r].exemplar.id: r for r in rest}
         chosen.extend(

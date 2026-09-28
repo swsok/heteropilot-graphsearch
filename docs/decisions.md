@@ -539,3 +539,216 @@ in this repository to use it.
 
 **Affects.** `graphsearch/__main__.py`, `graphsearch/adaptive.py`
 (`max_workers`), `tests/test_cli.py`.
+
+
+---
+
+## GS-15 — the stages are timed, and no stopwatch reaches a provenance block · 2026-09-28
+
+**Why timings at all.** E-G3's registered criterion is `saving >= 0`, where
+
+```
+saving = t_sim_oracle - (t_sim_proposed + t_hash + t_vf2 + t_bounds)
+```
+
+Every term has to be measured or the column is an assertion. The compression's
+own cost is charged to the compression; a saving counting only the simulations
+that were skipped would be the compression ratio wearing a stopwatch.
+
+**Who measures what.** `enumerate` and `bounds` are wall-clocked by
+`run_proposed`, which runs them. `hash` and `vf2` come from
+`CompressionReport.as_timings()` rather than a clock around `compress`, because
+that call also builds the conflict matrix and that is not a cost of the
+compression. `rank` and `sim` are measured by `AdaptiveSearch`, which runs
+them. The caller seeds its four into the search, the search adds its two, and
+`SearchAudit.timings` carries all six plus `search`.
+
+`hash` and `vf2` are separate terms and stay separate: hashing is linear in
+embeddings and VF2 is quadratic inside a bucket, so a lumped number could not
+say which one ate the budget — which is the first question `saving < 0` raises.
+
+**And none of it is serialised.** Rule 7 says the same input twice must give
+byte-identical output. A wall-clock never does. So `timings` is an attribute of
+`SearchAudit` and is **not** in `as_provenance()`, and E-G3's harness — which
+holds the audit in-process — writes them into its own results file, where a
+number that changes between runs is the point.
+
+**This removed an existing hole rather than only avoiding a new one.**
+`CompressionReport.as_dict()` carried `vf2_seconds`, and `as_dict()` is what
+`plan --output` writes into `provenance.compression`. Two runs of the same
+command therefore produced different files, for a reason unconnected to the
+plan. The seconds left that dict; `as_timings()` is how a caller asks for them,
+and `tests/test_cli.py::test_two_plan_runs_write_byte_identical_yaml` pins the
+property where a reader would notice it breaking.
+
+**Affects.** `graphsearch/equivalence.py`, `graphsearch/adaptive.py`,
+`graphsearch/oracle.py`, `tests/test_adaptive.py`, `tests/test_cli.py`.
+
+
+---
+
+## GS-16 — the oracle's cache is keyed per embedding id, or it audits the compression with the compression's answer · 2026-09-28
+
+**What was wrong, and it was measured rather than reasoned.** The first
+real-simulator run of E-G3 on `graph-toy-shared-nic` reported **288 oracle
+simulations and left 48 files in its cache directory**. It had simulated 48
+placements and copied the other 240.
+
+`EnvelopeKey` describes parallelism and hardware; it cannot describe which
+shared resources a placement crosses, so the oracle arm needs a signature or
+every embedding of a template collides on one key. The signature it was first
+given was the graph signature — the one the *proposed* arm uses, and the one
+`compress` folds by. Consequence: every embedding of one equivalence class
+shared a cache entry, the second and later members were handed the first's
+metrics, and **`mismerged_pairs` could not have been anything but 0**. The
+oracle was auditing the compression using the compression's own answer. That is
+GS-9's mistake one level up, and it would have read as a pass.
+
+The wall time said so too, which is what prompted the look: `t_oracle` 240.7 s
+for "288" simulations against `t_proposed` 253.6 s for 60, a 5x difference in
+seconds-per-simulation that no stage of the pipeline could explain.
+
+**Decision.** `run_oracle`'s cache key leads with the **embedding id**:
+`f"{embedding_id}:{wl_hash}:{schema_version}:{tool_version}"`. One placement,
+one entry, every time. It costs the oracle exactly the simulations the
+compression would have saved — which is what makes it a baseline rather than a
+second copy of the thing under test. The graph signature stays beside the id so
+an entry still cannot answer across a networkx release that hashes the same
+graph differently, or across a schema change.
+
+The proposed arm is unchanged: there, one representative is one simulation by
+construction, and sharing an entry between two representatives that really are
+isomorphic is the saving being claimed rather than a leak.
+
+`tests/test_oracle_agreement.py::test_the_oracle_cache_gives_every_placement_its_own_entry`
+pins it by counting files against placements on the counterexample fixture, and
+asserts first that the fixture folds something — a fixture that folds nothing
+cannot test the property and would pass vacuously.
+
+**No published result was affected.** E-G1, E-G1b and E-G2 run without a cache
+at all. The only run that had this defect is the first E-G3 rehearsal, whose
+numbers were discarded and never committed.
+
+**Affects.** `graphsearch/oracle.py`, `tests/test_oracle_agreement.py`,
+`experiments/scripts/e_g3_real_sim_oracle.py`.
+
+
+---
+
+## GS-17 — a simulator error is `unknown_measurement`, not an infeasible verdict · 2026-09-28
+
+**What was wrong.** `run_oracle` ended with
+
+```python
+for embedding in embeddings:
+    result.feasible.setdefault(embedding.id, False)
+```
+
+One line, and it is work order rule 4 — *unevaluated is not infeasible* —
+being broken in the one place the whole correctness argument is taken. Any
+placement the evaluator did not classify was recorded as **infeasible**: a
+`SIM_ERROR`, a timeout, a crash. The mock never fails, so nothing caught it
+until the real simulator ran.
+
+**What it cost, measured.** The first complete `--predictor sim` E-G3 on
+`graph-toy-shared-nic`: 288 placements, **18 came back `SIM_ERROR`**. Recorded
+as infeasible, they disagreed with the feasible members of their own
+equivalence classes, and `compare` reported
+
+```
+mismerged_pairs = 96      correct = False
+```
+
+The equivalence relation had done nothing wrong. Ninety-six pairs of
+"the compression merged two placements the oracle judged differently" were
+ninety-six pairs of *one placement judged and one placement crashed*. Under
+rule 5 that is a stop-and-report, and the report would have been about the
+wrong thing.
+
+**Decision.** `OracleResult` gains `unjudged: dict[str, str]` — embedding id to
+the reason there is no verdict — and `feasible` now contains **only** the
+placements the simulator actually judged. `compare` skips any pair with an
+unjudged member, counts those separately as `unjudged_pairs`, and reports
+`unjudged` and a new `complete` flag beside `correct`:
+
+- **`correct`** is still `false_infeasible == 0 and mismerged_pairs == 0`. It
+  is about whether anything is WRONG.
+- **`complete`** is `unjudged == 0`. It is about whether the run proved as much
+  as it set out to.
+
+They are separate because the responses are separate. An incorrect run means a
+bound or an equivalence is defective. An incomplete run means the simulator
+fell over, which is a fact about this run and about LLMServingSim, and is
+reported as such rather than laundered into a verdict about placements.
+
+After the fix, the same fixture, same cache, same 18 failures:
+
+```
+false_infeasible = 0   mismerged_pairs = 0   correct = True
+unjudged = 18          unjudged_pairs = 6    complete = False
+```
+
+**The 18 failures are not explained yet, and are not claimed to be.** They are
+reported, per fixture, in `experiments/results/e_g3_real_sim_oracle.md`, and
+E-G3's correctness claim covers the placements that were judged — the row says
+how many that was.
+
+**Affects.** `graphsearch/oracle.py`,
+`experiments/scripts/e_g3_real_sim_oracle.py`, `tests/test_oracle_agreement.py`.
+
+
+---
+
+## GS-18 — `livelock_watch` guards one simulation, not a driver that spawns many · 2026-09-28
+
+**What happened.** The work order says to wrap E-G3's oracle harness in
+heteropilot's `livelock_watch.sh`. Wrapped the obvious way, it **killed a
+healthy run at 901 seconds**:
+
+```
+livelock_watch: NO PROGRESS -- not one progress line in 900s.
+livelock_watch: the run never started reporting.
+```
+
+Sixty-six simulations had already completed and eight more were running at that
+moment.
+
+**Why.** The D23 detector reads `Running Instance[...]` lines from the wrapped
+command's **own stdout**. Those lines belong to `python -m serving`. This
+harness does not print them: it calls `LLMServingSimPredictor`, which starts
+each simulation as a subprocess and captures its output into that simulation's
+own log. So the watchdog watches a driver that never speaks, and `-g`'s grace
+timer fires with a verdict that says the opposite of what is happening.
+
+Left on, it does not protect the run. It ends it, and it mislabels a working
+harness as a dead one — which is worse than no watchdog, because the exit code
+means "harness finding" and a reader would go looking for a bug that is not
+there.
+
+**Decision.** The wrapper uses `livelock_watch.sh -g 0 -s 0 -t "$CEILING"`,
+asking it for the one thing it can still do here and nothing it cannot:
+
+- **the wall-clock ceiling** (`-t`, exit 124, `timeout`'s own code), and
+- **the process-group kill**, which is why it is still `livelock_watch` and not
+  a bare `timeout`: it launches under `setsid`, so a kill reaches the
+  `python -m serving` children as well as the driver. A bare `timeout` would
+  orphan them.
+
+What protects an individual simulation is the predictor's own `timeout_s`
+(`--timeout`, heteropilot's default 900 s **per simulation**). That is the
+right layer: one hung simulation is abandoned and the other 287 continue,
+which is exactly the behaviour a 288-placement oracle arm needs.
+
+And a long run is no longer silent. The harness prints a progress line per
+fixture and per arm to stderr — loading, templates, each arm's finish with its
+simulation count and wall time, the correctness verdict. A human watching the
+log can now make the judgement the watchdog cannot.
+
+**Not a change to heteropilot.** `livelock_watch.sh` is correct for what it was
+written for — a single simulator run whose ticks reach stdout — and is used
+unmodified. What changed is this repository's understanding of where it
+applies. The header of `experiments/scripts/e_g3_oracle_run.sh` carries the
+whole reason so the flags are not "cleaned up" by someone who has not hit it.
+
+**Affects.** `experiments/scripts/e_g3_oracle_run.sh`,
+`experiments/scripts/e_g3_real_sim_oracle.py`.

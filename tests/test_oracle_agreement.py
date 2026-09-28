@@ -397,3 +397,92 @@ def test_the_comparison_reports_rather_than_asserts() -> None:
     comparison = compare(oracle, proposed)
     assert isinstance(comparison.as_dict(), dict)
     assert comparison.oracle_simulations >= comparison.proposed_simulations
+
+
+# --- (P1.2) the oracle's cache may not do the compression's job -----------
+
+def test_the_oracle_cache_gives_every_placement_its_own_entry(tmp_path) -> None:
+    """Otherwise `mismerged_pairs` is 0 by construction, not by measurement.
+
+    Keyed by the graph signature -- the key the PROPOSED arm uses -- every
+    embedding of one equivalence class shares a cache entry, so the second and
+    later members are handed the first's metrics and can never disagree with
+    it. The oracle would be auditing the compression with the compression's
+    own answer, which is GS-9's mistake one level up.
+
+    Measured rather than reasoned: the first real-simulator E-G3 run on
+    graph-toy-shared-nic reported 288 oracle simulations and left 48 files in
+    its cache directory. It had simulated 48 placements and copied the rest.
+    """
+    from planner.envelope import EnvelopeCache
+
+    from graphsearch.embeddings import enumerate_embeddings
+    from graphsearch.equivalence import compress
+
+    service = spec()
+    cluster, profiles, islands, graph, templates = world("shared_nic_v2", service)
+    embeddings, _ = enumerate_embeddings(templates, islands, graph, service)
+    representatives, _, _ = compress(embeddings, graph)
+    assert len(representatives) < len(embeddings), (
+        "this fixture folds nothing, so it cannot test the property"
+    )
+
+    cache = EnvelopeCache(
+        tmp_path, service,
+        accelerator_of={i: isl.accelerator_model for i, isl in islands.items()},
+        link_bw_gbps=64.0,
+    )
+    result = run_oracle(
+        service, cluster, islands, profiles, GraphAwareMockPredictor(),
+        graph=graph, templates=templates, cache=cache,
+    )
+    files = list(tmp_path.glob("*.json"))
+    assert len(files) == len(result.embeddings), (
+        f"{len(result.embeddings)} placements simulated but {len(files)} cache "
+        f"entries: the oracle is reusing one placement's metrics for another"
+    )
+
+
+def test_a_simulator_error_is_not_an_infeasible_verdict() -> None:
+    """Work order rule 4, at the one place the correctness argument is taken.
+
+    `run_oracle` used to end with `result.feasible.setdefault(id, False)`, so a
+    placement the evaluator never classified -- a SIM_ERROR, a timeout -- was
+    recorded as infeasible. It then disagreed with the feasible members of its
+    own equivalence class, and `compare` reported a mis-merge that the
+    equivalence relation had nothing to do with. The first complete
+    real-simulator E-G3 run turned 18 SIM_ERRORs into 96 mis-merged pairs.
+
+    Built here rather than waiting for a simulator: the mock never fails, so a
+    fixture cannot produce the condition and it has to be constructed.
+    """
+    from graphsearch.oracle import OracleComparison, OracleResult, compare
+
+    service = spec()
+    cluster, profiles, islands, graph, templates = world("shared_nic_v2", service)
+    proposed = run_proposed(
+        service, cluster, islands, profiles, GraphAwareMockPredictor(),
+        graph=graph, templates=templates,
+    )
+    representative = next(
+        r for r in proposed.representatives if len(r.embeddings) >= 2
+    )
+    members = sorted(e.id for e in representative.embeddings)
+
+    # One judged feasible, one never judged at all.
+    oracle = OracleResult(
+        embeddings=[e for r in proposed.representatives for e in r.embeddings],
+        feasible={members[0]: True},
+        cost={members[0]: 1.0},
+        unjudged={members[1]: "RejectionStage.SIM_ERROR"},
+        simulations=1,
+    )
+    comparison = compare(oracle, proposed)
+    assert isinstance(comparison, OracleComparison)
+    assert comparison.mismerged_pairs == [], (
+        "a crashed simulation was counted as a disagreement about feasibility"
+    )
+    assert (members[0], members[1]) in comparison.unjudged_pairs
+    assert comparison.correct, "nothing here is WRONG"
+    assert not comparison.complete, "but the run proved less than it set out to"
+    assert comparison.as_dict()["unjudged"] == 1
