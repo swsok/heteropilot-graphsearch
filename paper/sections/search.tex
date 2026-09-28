@@ -1,0 +1,20 @@
+%% Research design sections 6 and 7 -- elimination that is safe, ranking that
+%% is only ranking, and an adaptive K.
+%%
+%% Contributions B and C. The rule that binds this section: a pruning stage is
+%% a RELAXATION of the feasibility test and may reject only when the most
+%% optimistic arithmetic already misses a declared constraint. The throughput
+%% bound exists only because H1 added slo.min_goodput_rps and must not run at
+%% all when that field is unset.
+%%
+%% The five states never merge, and the section says why: impossible_proven,
+%% excluded_by_scope, deferred_heuristic, unknown_measurement, evaluated. A
+%% budget is a property of the search, not of the hardware.
+%%
+%% GS-12 goes here as "the initial hypothesis was ..., and the measurement said
+%% otherwise": the ranker's goodput term divided by the bound's optimistic
+%% ceiling, which admitted four false positives per fixture.
+%%
+%% Numbers: tables/e_g1b_topk.tex, tables/e_g2_topk_holdout.tex,
+%% tables/e_g7_holdout.tex.
+\section{Safe elimination and an adaptive budget}

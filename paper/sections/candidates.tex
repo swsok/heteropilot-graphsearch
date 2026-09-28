@@ -1,0 +1,14 @@
+%% Research design sections 4 and 5 -- generating placement structures instead
+%% of subsets, and the exact conditions under which two candidates may be
+%% folded.
+%%
+%% Contribution A lives here. The counterexample of section 5 is the load-bearing
+%% part: P on X -> D on Z and P on Y -> D on Z are identical in every local
+%% attribute and differ only in that X's uplink is already 6 of 10 GB/s taken.
+%% Exact equivalence (VF2, never hash alone) keeps them apart; include_boundary
+%% = False folds them and the oracle then prices them differently.
+%%
+%% Numbers: tables/e_g1_toy_pilot.tex (compression ratio, both correctness
+%% numbers), tables/e_g7_ablation.tex (the no_boundary arm) and its appendix
+%% pair.
+\section{Candidate generation and exact compression}

@@ -1,0 +1,62 @@
+%% Graph-based placement search over a heterogeneous accelerator cluster.
+%%
+%% TEMPORARY CLASS. `sigconf` with `nonacm` because no venue has been chosen
+%% yet (P7.3 chooses it, and adjusting the template is a Claude Code task once
+%% it has). `nonacm` suppresses the copyright block and the DOI/ISBN machinery
+%% that an unsubmitted draft has no values for; removing it is the first edit
+%% after a venue exists.
+%%
+%% BUILD: `make paper` from this directory. Do not run pdflatex by hand -- the
+%% tables under tables/ are generated from experiments/results/*.md by
+%% `make tables`, and a hand build silently compiles whatever was there last.
+\documentclass[sigconf,nonacm]{acmart}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+%% Generated tables are \input by name from sections/eval.tex. The search path
+%% is set here so a section says \input{e_g1_toy_pilot} and not a relative path
+%% that breaks when a section is moved.
+\makeatletter
+\providecommand\input@path{}
+\g@addto@macro\input@path{{tables/}{figures/}}
+\makeatother
+
+\begin{document}
+
+\title{Graph-Based Placement Search for Heterogeneous LLM Serving Clusters}
+
+%% Placeholder. Replaced when the venue and the author list are settled (P7.3).
+\author{Anonymous}
+\affiliation{%
+  \institution{Anonymous Institution}
+  \country{}
+}
+\email{anonymous@example.org}
+
+\begin{abstract}
+%% Written last, from paper/CLAIMS.md, and no sentence of it may assert
+%% anything CLAIMS.md does not carry a source file for.
+\end{abstract}
+
+\maketitle
+
+\input{sections/intro}
+\input{sections/background}
+\input{sections/problem}
+\input{sections/graph}
+\input{sections/candidates}
+\input{sections/search}
+\input{sections/adapter}
+\input{sections/eval}
+\input{sections/related}
+\input{sections/limits}
+\input{sections/conclusion}
+
+\bibliographystyle{ACM-Reference-Format}
+%% No .bib yet -- P6.4 builds it from research design section 13 plus a fresh
+%% search. \bibliography is deliberately absent rather than pointing at a file
+%% that does not exist, which would fail the build for a reason unrelated to
+%% the draft.
+
+\end{document}
