@@ -945,3 +945,111 @@ byte-identical, and the full suite passes.
 
 ---
 
+## GS-22 — E-G4 falsified a topology declaration, not the contention model · 2026-09-28
+
+**Decision.** The registered E-G4 verdict on this node is **FAIL**, and the
+correction is to `fixtures/clusters/*.v2.yaml`, not to
+`graphsearch/contention.py`. No line of the fluid model changes.
+
+**Why.** `experiments/microbench/PLAN.md` fixed, before anything was measured,
+that GPU0-2 and GPU1-3 "share one PCIe host bridge — this is the shared
+uplink". Measured (`experiments/results/e_g4_microbench.md`), two concurrent
+copies over those two pairs each got **25.11 GB/s** against **25.12 GB/s** for
+the same copy alone. No contention at any size in the grid. A third process
+saturating 1-3 at a measured duty cycle of 0.60 did not move the 0-2 figure
+either. 25.1 GB/s is a PCIe 4.0 x16 running out of lanes: the bottleneck is the
+**endpoint's own x16 port**, and two copies between disjoint device pairs share
+nothing.
+
+Run on that declaration the fluid model is 93.1 % out at the median. Run on the
+declaration the data supports it is 1.8 % out, **with no change to the model** —
+and on `bidirectional`, where the pairs really do share endpoints, it is within
+0.1 to 2.5 % of the wire from 4 to 64 MiB against 48-50 % for null. A model
+that predicts contention correctly wherever contention exists has not been
+falsified by a case where the contention was declared in the wrong place.
+
+The distinction is the decision. "Fluid: 100 % error" would have invited a
+rewrite of the model; what the data asks for is one line of YAML. Collapsing
+the two would have produced either a model bent to fit a topology error or a
+topology quietly edited to save a model, and the log would have recorded
+neither.
+
+**What it affects.** `experiments/results/e_g4_microbench.md` reports both
+declarations side by side and judges on the registered one. Every A40 cluster
+fixture declaring a per-bridge `shared_resource` for peer traffic is wrong in
+the same way and must declare per-endpoint ports instead. The
+`as_measured` declaration is **fitted** on the eight raw files listed in that
+result and in `docs/preregistration.md`, and is excluded from P3's validation
+set (work order P2.4).
+
+---
+
+## GS-23 — the fluid model's accuracy domain stops at 128 MiB bidirectional · 2026-09-28
+
+**Decision.** Record the band above 128 MiB as the boundary of the fluid
+model's measured accuracy. Do not fit a capacity to cover it.
+
+**Why.** 0→2 and 2→0 concurrently contend by exactly the processor-sharing
+factor from 4 to 64 MiB — fluid within 0.1 to 2.5 %. At 128 MiB and above the
+pair reaches 16.7 GB/s per direction, an aggregate of 33.4 GB/s over a path
+carrying 25.1 GB/s one way: **1.33x a single direction where everything below
+gives 1.0x**, and fluid is then a third high. This measurement does not
+establish what starts overlapping the two directions at large transfers, and
+naming a cause would be inventing one.
+
+A shared resource declared at 33.4 GB/s would make the table read clean. It
+would also be a capacity chosen because it reproduces the answer, which is not
+a measurement of anything, and the next node's prediction would be wrong
+silently. `unknown_measurement` and `evaluated` do not merge (work order rule
+4), and "outside the domain" is the first of those.
+
+**What it affects.** The band table in `e_g4_microbench.md`. Any P/D KV
+transfer above 128 MiB over a shared endpoint pair is predicted conservatively
+(too slow) rather than accurately, and that is stated wherever the number is
+used.
+
+---
+
+## GS-24 — four defects in the harness, all found by running it · 2026-09-28
+
+**Decision.** Record what the microbenchmark harness got wrong before it
+produced a single usable number, because three of the four would have produced
+output that looked fine.
+
+1. **`occupancy_stable` was False on every run.** The `after` snapshot was
+   taken while this process still held a CUDA context on every device it
+   touched, so the run always found *itself* in `after` and never in `before`.
+   The analysis is specified to refuse a run whose occupancy changed
+   mid-flight; it would have refused every run ever taken on a perfectly quiet
+   node. Fixed by excluding our own pid and comparing sets.
+2. **The `numa_pinned` claim could not be checked on the memory half, and
+   PLAN.md said to check it in a place where it never shows.**
+   `Mems_allowed_list` is the *cpuset* allowance; `--membind` installs a
+   *mempolicy*. Under `numactl --cpunodebind=0 --membind=0` this node reports
+   `Mems_allowed_list: 0-1` and `numactl --show` reports `membind: 0`. The
+   harness now reads `/proc/self/numa_maps` and **refuses** `numa_pinned` when
+   it says `default` — the "pin both halves or neither" mistake now fails
+   loudly instead of mislabelling a figure.
+3. **`--condition collective` ran peer copies.** It was in `CONDITIONS`, so
+   argparse accepted it, and `measure()` has no branch for it: the file would
+   have carried p2p timings under `condition_means: "all-reduce, varying world
+   size"`. It now refuses and names `run_collective.sh`.
+4. **The background load reported `wall_s: 0.0` and
+   `achieved_duty_cycle: null` for every size.** `as_dict()` was called
+   *inside* the `with`, and `wall_s` is assigned only when the generator thread
+   leaves its loop, which `__exit__` is what causes. The correct call below it
+   was guarded by `background is None`, which the dead value had already made
+   false. The record's own note says the analysis "uses achieved_duty_cycle and
+   never target_util" — so all three background conditions carried a target
+   nobody could check instead of a measurement. After the fix the generator
+   reports a sustained duty cycle of 0.585 to 0.600 against its 0.6 target.
+
+**Why record it.** The same pattern as GS-16, GS-17 and the `diagnose_pair`
+bug: a check that cannot fail and a check that cannot pass are both worthless,
+and neither announces itself. Defects 1 and 4 were invisible in the console
+output; defect 3 would have been invisible in the result file. All four were
+found by running the harness, not by reading it.
+
+**What it affects.** `experiments/microbench/run_pair.py`, `PLAN.md`'s
+verification recipe, and the three `bg60` raw files, which were re-measured
+after the fix.

@@ -46,6 +46,103 @@ NIC.** Until an A5000 or RNGD node is reachable over that NIC with the same
 environment built, location (b) is **not runnable**, and the result file will
 say `not run` rather than leaving the row blank. A blank reads as zero.
 
+### NUMA, measured 2026-09-28
+
+```
+node 0 cpus: 0-15, 32-47    257 GB     <- GPU0-3
+node 1 cpus: 16-31, 48-63   258 GB     <- GPU4-7
+node distances:  0->0: 10,  0->1: 32   (a remote access is 3.2x the local cost)
+```
+
+The GPU-to-node mapping is `nvidia-smi topo -m`'s own `CPU Affinity` column and
+agrees with `numactl --hardware`. It is the reason GPU0-3 and GPU4-7 are not
+interchangeable for anything that touches host memory.
+
+**Where the tenant actually sits.** The four `pretrain_gpt.py` ranks hold GPU4,
+GPU5, GPU6 and GPU7 — one each — and their threads run almost entirely on
+`16-31` and `48-63`, which is **NUMA 1: the node their GPUs are attached to**.
+Correctly placed, in other words, and not by explicit pinning:
+
+```
+Cpus_allowed_list: 0-63      <- every CPU permitted
+Mems_allowed_list: 0-1       <- both nodes permitted
+```
+
+Nothing is pinned; the scheduler converged there on its own, and a handful of
+threads were observed on the far node (CPUs 1, 5, 40, 45) while the rest sat on
+NUMA 1. So the tenant's placement is **a tendency, not a guarantee**, and it can
+move when its load changes.
+
+**Which is the second reason to prefer GPU0-3.** The first was that GPU4-7 are
+busy. The second is that GPU0-3 are on **NUMA 0**, so a probe there shares
+neither CPUs nor memory controllers with the tenant. Running on GPU4-7 would
+contend on both, and `load average` — the only thing this repository records
+automatically — cannot tell those two cases apart.
+
+### Pinning, and what it lets a measurement claim
+
+`LinkMeasurement.binding` takes `numa_pinned`, `unpinned` or `unknown`, and they
+are three different claims. **`unknown` is compared against nothing.** A figure
+recorded as `unknown` cannot later be used to refuse a deployment, which is the
+whole point of the field — so a run that could have been pinned and was not has
+thrown away most of the number's value.
+
+To earn `numa_pinned` on GPU0-3:
+
+```bash
+numactl --cpunodebind=0 --membind=0 \
+    <torch-venv>/bin/python experiments/microbench/run_pair.py \
+    --condition two-same --pairs 0-2,1-3 --share same \
+    --binding numa_pinned --label a40-same-bridge-numa0
+```
+
+`--binding` is **recorded, never inferred**: the script has no way to know
+whether you meant to pin, and a field that guessed would be the one field in
+`LinkMeasurement` that is not a statement about the run. Pass `numa_pinned`
+only when the command was actually wrapped in `numactl`, and check it:
+
+```bash
+grep Cpus_allowed_list /proc/<pid>/status    # the CPU half
+#   Cpus_allowed_list: 0-15,32-47
+head -1 /proc/<pid>/numa_maps                # the MEMORY half
+#   ... bind:0 ...          <- pinned;  `default` means it is not
+```
+
+**`Mems_allowed_list` cannot see `--membind`, and an earlier draft of this page
+said to check it there.** Measured on this node 2026-09-28: under
+`numactl --cpunodebind=0 --membind=0`, `numactl --show` reports `membind: 0`
+while `/proc/self/status` still reports `Mems_allowed_list: 0-1`. They are
+different mechanisms — `Mems_allowed_list` is the *cpuset* allowance, and
+`--membind` installs a NUMA *mempolicy*. An operator following the old recipe
+would have read a correct pin as a failed one. `/proc/<pid>/numa_maps` is where
+the mempolicy shows: `bind:0` against every mapping with `--membind=0`,
+`default` without it.
+
+**Pin both halves or neither.** `--cpunodebind` without `--membind` leaves the
+buffers free to land on the far node, which is the case that produces a
+plausible number under a label that does not describe it. `run_pair.py` now
+**refuses** `--binding numa_pinned` when `numa_maps` says `default`, so that
+mistake fails loudly instead of producing a mislabelled figure.
+
+### Pinning is not automatically the faster configuration, and that is measured
+
+heteropilot's `docs/nodes/a40.md` records, for **host↔GPU bulk transfers** on
+this node kind, that spreading a group across both NUMA nodes *beat* packing it
+onto one — 80.0 GB/s cross-node against 70.5 same-node on four GPUs — because
+two memory controllers beat one and host buffers are not NUMA-bound.
+
+That finding is about a different transfer than this plan's. Conditions 1-4
+here are **device-to-device peer copies**, which do not go through host memory
+at all, so there is no reason to expect the same ordering and no reason to
+assume the opposite either. Pinning is required here for **reproducibility**,
+not for speed: the same file also records that host buffer NUMA placement is
+fixed at allocation, uncontrolled, and that two runs of a single parallel trial
+disagreed by 38 %.
+
+So: pin, record that you pinned, and do not present `numa_pinned` as the
+optimal configuration. It is the *stated* configuration, which is a different
+and more useful thing.
+
 ### The node is shared, and a measurement taken while it is shared says so
 
 Observed 2026-09-28: GPUs 4–7 at 99 % with ~8.8 GB each, held by `root` running

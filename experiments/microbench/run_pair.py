@@ -39,6 +39,7 @@ import contextlib
 import importlib.util
 import json
 import os
+import pathlib
 import subprocess
 import sys
 import threading
@@ -85,13 +86,21 @@ def load_probe():
 
 # --- who else is on this node -------------------------------------------
 
-def gpu_occupancy() -> list[dict]:
-    """Every compute process on every GPU, with its owner.
+def gpu_occupancy(exclude_pid: int | None = None) -> list[dict]:
+    """Every compute process on every GPU **except this one**, with its owner.
 
     Not a nicety. `docs/nodes/PREP.md` and PLAN.md both say a figure measured
     beside another tenant holds under a condition the banner does not state,
     and the only way that survives into the analysis is if the raw file carries
     it. Returns [] when nvidia-smi is absent, which is itself recorded.
+
+    **`exclude_pid` is the whole reason this takes an argument.** The `after`
+    snapshot is taken while this process still holds a CUDA context on every
+    device it touched, so without it the run always finds itself in `after`
+    and never in `before`, `occupancy_stable` is False on every run, and the
+    analysis refuses data that was measured on a perfectly quiet node. A check
+    that can never pass is worse than no check: it reads as vigilance and
+    throws away good measurements.
     """
     try:
         out = subprocess.run(
@@ -110,6 +119,8 @@ def gpu_occupancy() -> list[dict]:
         if len(parts) < 3:
             continue
         pid = parts[0]
+        if exclude_pid is not None and pid == str(exclude_pid):
+            continue
         owner = ""
         with contextlib.suppress(OSError, subprocess.SubprocessError):
             owner = subprocess.run(
@@ -120,6 +131,64 @@ def gpu_occupancy() -> list[dict]:
             {"pid": pid, "process": parts[1], "used_mib": parts[2], "user": owner}
         )
     return processes
+
+
+def observed_affinity() -> dict:
+    """The CPU and memory nodes this process is ACTUALLY allowed to use.
+
+    `--binding` is what the operator claims; this is what the kernel says. They
+    are recorded side by side so a `numa_pinned` label can be checked rather
+    than trusted -- the mistake PLAN.md warns about is passing
+    `--binding numa_pinned` without having wrapped the command in `numactl`,
+    and a claim nobody can check is the one that survives longest.
+    """
+    out: dict = {}
+    try:
+        for line in pathlib.Path("/proc/self/status").read_text().splitlines():
+            for field in ("Cpus_allowed_list", "Mems_allowed_list"):
+                if line.startswith(field):
+                    out[field] = line.split(":", 1)[1].strip()
+    except OSError:                                  # pragma: no cover
+        return {"available": False}
+    out["available"] = bool(out)
+    total = os.cpu_count() or 0
+    # An unrestricted list is the signature of "not pinned". Compared against
+    # the CPU count rather than parsed, because the formats vary (`0-63`,
+    # `0-15,32-47`) and a parser that got it subtly wrong would be worse than
+    # this.
+    out["looks_unrestricted"] = bool(total) and out.get(
+        "Cpus_allowed_list"
+    ) == f"0-{total - 1}"
+    out["mempolicy"] = mempolicy()
+    out["mem_is_bound"] = out["mempolicy"].startswith(("bind:", "prefer:"))
+    return out
+
+
+def mempolicy() -> str:
+    """The NUMA memory policy, read where `numactl --membind` actually lands.
+
+    **`Mems_allowed_list` cannot see `--membind`** and PLAN.md's first
+    verification recipe said to check it there. The two are different
+    mechanisms: `Mems_allowed_list` is the *cpuset* allowance, while
+    `--membind` installs a *mempolicy*. Under
+    `numactl --cpunodebind=0 --membind=0` on this node the kernel still
+    reports `Mems_allowed_list: 0-1`, so an operator following that recipe
+    would conclude the pin failed when it had not.
+
+    `/proc/self/numa_maps` is where it shows: `bind:0` against every mapping
+    under `--membind=0`, `default` without it. The first mapping's policy is
+    the process policy for anything allocated afterwards, which is what a
+    transfer buffer is.
+
+    Returns `"unknown"` when the file cannot be read, which is not the same
+    claim as `default`.
+    """
+    try:
+        with open("/proc/self/numa_maps") as handle:
+            first = handle.readline().split()
+    except OSError:                                  # pragma: no cover
+        return "unknown"
+    return first[1] if len(first) > 1 else "unknown"
 
 
 def node_serials() -> str:
@@ -271,9 +340,15 @@ def measure(probe, args, pairs: list[tuple[int, int]]) -> dict:
         )
         with load:
             samples = _copy_many(probe, pairs, nbytes, args.iters)
-            if args.background_util > 0:
-                background = load.as_dict()
-        if args.background_util > 0 and background is None:
+        if args.background_util > 0:
+            # **After** the `with`, never inside it. `wall_s` is assigned when
+            # the generator thread leaves its loop, which `__exit__` is what
+            # causes; a snapshot taken inside reads `wall_s = 0.0`, and
+            # `achieved_duty_cycle` is then None for every size in the grid.
+            # That is the one field the analysis is told to use -- the note in
+            # the record says "uses achieved_duty_cycle and never
+            # target_util" -- so the background conditions would have carried
+            # a target nobody could check instead of a measurement.
             background = load.as_dict()
 
         per_pair = {}
@@ -380,14 +455,63 @@ def main() -> int:
             f"visible. CUDA_VISIBLE_DEVICES may be narrowing it."
         )
 
+    if args.condition == "collective":
+        # argparse accepted it because it is in CONDITIONS, and nothing below
+        # implements it: `measure()` runs peer COPIES whatever the condition
+        # says. Left as it was, this would have written p2p timings into a
+        # file whose `condition_means` reads "all-reduce, varying world size"
+        # -- a mislabelled measurement, which is the one failure this harness
+        # exists to prevent. Condition 5 is a different instrument.
+        raise SystemExit(
+            "--condition collective is not run by this script. It needs "
+            "NCCL ranks under torchrun, not peer copies:\n"
+            "    bash experiments/microbench/run_collective.sh\n"
+            "which drives heteropilot's own "
+            "experiments/p2_evidence/link_probe.py (busbw, world 2 and 4)."
+        )
+
     probe = load_probe()
     serials = node_serials()
-    before = gpu_occupancy()
+    affinity = observed_affinity()
+    if args.binding == "numa_pinned" and not affinity.get("mem_is_bound"):
+        # PLAN.md: "pin both halves or neither". `--cpunodebind` without
+        # `--membind` leaves the buffers free to land on the far node, and
+        # that is the case that produces a plausible number under a label
+        # that does not describe it. The CPU half is visible in
+        # `Cpus_allowed_list`; the memory half is only visible here.
+        raise SystemExit(
+            "--binding numa_pinned, but this process has no NUMA memory "
+            f"policy (numa_maps says `{affinity.get('mempolicy')}`, not "
+            "`bind:N`).\n"
+            f"    Cpus_allowed_list: {affinity.get('Cpus_allowed_list')}\n"
+            "Add `--membind=N` -- PLAN.md: pin both halves or neither. "
+            "`Mems_allowed_list` cannot show this: it is the cpuset "
+            "allowance, and --membind sets a mempolicy.\n"
+            "Or pass --binding unpinned."
+        )
+    if args.binding == "numa_pinned" and affinity.get("looks_unrestricted"):
+        raise SystemExit(
+            "--binding numa_pinned, but this process may use every CPU:\n"
+            f"    Cpus_allowed_list: {affinity.get('Cpus_allowed_list')}\n"
+            f"    mempolicy: {affinity.get('mempolicy')}\n"
+            "Wrap the command in `numactl --cpunodebind=N --membind=N`, or "
+            "pass --binding unpinned. A figure labelled numa_pinned that was "
+            "not pinned answers for a condition it was never measured under "
+            "(PLAN.md, 'Pinning, and what it lets a measurement claim')."
+        )
+    before = gpu_occupancy(exclude_pid=os.getpid())
+    load_before = os.getloadavg()
 
     print(f"condition : {args.condition} -- {CONDITIONS[args.condition]}")
     print(f"pairs     : {pairs}   share={args.share or 'unrecorded'}")
     print(f"background: util {args.background_util} on {args.background_pair}")
     print(f"serials   : {serials}")
+    print(
+        f"binding   : claimed {args.binding}; kernel says cpus "
+        f"{affinity.get('Cpus_allowed_list')} mempolicy "
+        f"{affinity.get('mempolicy')}"
+    )
+    print(f"loadavg   : {load_before[0]:.2f} (1 min)")
     print(f"others on the GPUs: {len(before)} process(es)")
     for process in before:
         print(f"   {process['user']:8} {process['pid']:>8}  {process['process']}")
@@ -395,7 +519,8 @@ def main() -> int:
 
     started = time.time()
     results = measure(probe, args, pairs)
-    after = gpu_occupancy()
+    after = gpu_occupancy(exclude_pid=os.getpid())
+    load_after = os.getloadavg()
 
     payload = {
         "label": args.label,
@@ -417,12 +542,30 @@ def main() -> int:
             f"{args.condition} --share {args.share} "
             f"--background-util {args.background_util}"
         ),
+        "binding_observed": affinity,
+        # The claim and the kernel's own answer, side by side. A
+        # `numa_pinned` label whose process can use every CPU is not a
+        # measurement of a pinned run, whatever the flag said.
+        "binding_claim_is_consistent": args.binding != "numa_pinned" or (
+            not affinity.get("looks_unrestricted")
+            and bool(affinity.get("mem_is_bound"))
+        ),
         "gpu_occupancy_before": before,
         "gpu_occupancy_after": after,
         # The analysis refuses a run whose occupancy changed mid-flight: a
         # tenant that started or stopped halfway makes the p50 and the p90
         # answers to two different questions.
-        "occupancy_stable": [p["pid"] for p in before] == [p["pid"] for p in after],
+        # Sets, and self already excluded: nvidia-smi lists one row per
+        # (process, device), so a two-pair run shows the same neighbour pid
+        # twice and a list comparison would call that a change.
+        "occupancy_stable": (
+            {p["pid"] for p in before} == {p["pid"] for p in after}
+        ),
+        # What E-G6's grid had to learn: contamination that is recorded
+        # labels itself, and contamination that is only remembered does not.
+        # This box idles near 1.0 with no tenant and near 9 with one.
+        "loadavg_before": [round(x, 2) for x in load_before],
+        "loadavg_after": [round(x, 2) for x in load_after],
         "wall_s": round(time.time() - started, 2),
         "sizes": results,
         "banner": (
