@@ -47,6 +47,7 @@ import shlex
 import subprocess
 import sys
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -158,7 +159,10 @@ def preconditions(args) -> dict:
 
 # --- stage 1: the plan ----------------------------------------------------
 
-def service_spec(model: str, pattern: str, level: str, rps: float, out: Path) -> Path:
+def service_spec(
+    model: str, pattern: str, level: str, rps: float, out: Path,
+    ttft_max_ms: float, tpot_max_ms: float, min_goodput_rps: float,
+) -> Path:
     """One spec per (model, pattern, level). Generated, never hand-edited."""
     info = C.MODELS[model]
     text = f"""\
@@ -171,8 +175,27 @@ def service_spec(model: str, pattern: str, level: str, rps: float, out: Path) ->
 # level's multiple of this model's measured knee, so the axis means the same
 # thing for both models.
 #
-# The SLO limits are the ones the planner is asked to meet. They are NOT
-# measurements and nothing here calibrates them.
+# ---- the SLO is DERIVED from measurement, with stated headroom ----------
+#
+# An earlier version of this file used round numbers (2000 ms / 50 ms) chosen
+# by nobody in particular. They did not bind: the bounds eliminated 0 of 1302
+# representatives, so there was no `impossible_proven` candidate and therefore
+# no real-hardware test of `false_infeasible` at all. A bound can only reject
+# when the most optimistic arithmetic already misses, so a loose SLO produces
+# exactly that.
+#
+#   ttft  {ttft_max_ms} ms  = T1's measured p99 at the knee x 1.5. T1-class
+#                     placements (365.2 ms) clear it; T2-class (2793.3 ms)
+#                     do not. This is the axis the placement question lives on.
+#   tpot  {tpot_max_ms} ms  = about 10 % above the measured 50.95-55.06 ms band,
+#                     deliberately NOT a deciding axis: both placements pass,
+#                     so a verdict cannot come from it by accident.
+#   goodput {min_goodput_rps} rps = chosen inside the registered interval; see
+#                     `docs/preregistration.md` entry 4.
+#
+# The runs it was derived from are named in that entry and are EXCLUDED from
+# E-G5's validation set: a limit fitted on a measurement cannot also be tested
+# by it.
 service:
   model: {info['planner_id']}
   dtype: bfloat16
@@ -193,10 +216,11 @@ traffic:
 slo:
   ttft:
     percentile: 99
-    max_ms: 2000
+    max_ms: {ttft_max_ms}
   tpot:
     percentile: 99
-    max_ms: 50
+    max_ms: {tpot_max_ms}
+  min_goodput_rps: {min_goodput_rps}
 
 objective:
   primary: minimize_active_accelerators
@@ -274,33 +298,226 @@ def candidates_of_size(objects, devices: int) -> list:
     return out
 
 
-def boundary_alternative(objects) -> tuple[object | None, str]:
-    """The second deployment, and the kind of question it asks.
+#: Bound stages whose rejection is worth putting on hardware.
+#:
+#: **`MEMORY_INFEASIBLE` is deliberately not here.** Memory is an exact check --
+#: the weights either fit in the device or they do not -- so deploying a
+#: memory-rejected candidate tells you nothing about whether the *lower bound*
+#: is safe. It tells you that arithmetic is arithmetic. The stages below reject
+#: on an optimistic estimate, which is where a bound can be wrong, and that is
+#: what `false_infeasible` is about.
+TESTABLE_STAGES = ("throughput_upper_bound", "topology_infeasible",
+                   "analytical_lower_bound")
 
-    `MATRIX.md` §2. The tightest `impossible_proven` is preferred when one
-    exists, because it is the real-hardware test of `false_infeasible`: deploy
-    the candidate the lower bound rejected by the smallest margin, and if it
-    meets the SLO then the bound rejected something that worked. The registered
-    response to that is to stop and report, never to relax the test.
+
+def plan_for(entry, spec):
+    """A `DeploymentPlan` for anything the selection can return.
+
+    The recommendation arrives as a `ScoredPlan` and already has one. The two
+    boundary alternatives do not: A is a `RankFeatures` and B a
+    `Representative`, and **neither was ever simulated** -- A was ranked below
+    the recommendation and B was rejected by a bound before any predictor saw
+    it. There is therefore no predicted metric for them, and this fills
+    `predicted` with the SLO targets themselves rather than with a guess, so
+    that a reader of the raw file cannot mistake the field for a prediction.
+
+    That is the whole point of deploying them: B in particular is a candidate
+    the planner said **cannot** work, and the measurement decides whether the
+    bound was right.
     """
-    rejections = list(getattr(objects, "rejections", []) or [])
-    proven = [
-        r for r in rejections
-        if getattr(r, "state", None) == "impossible_proven"
-        and getattr(r, "margin", None) is not None
-    ]
-    if proven:
-        return min(proven, key=lambda r: abs(r.margin)), "impossible_proven (tightest)"
+    from planner.plan import DeploymentPlan, PredictedMetrics
 
-    alternatives = list(getattr(objects.output, "alternatives", []) or [])
-    if alternatives:
-        return alternatives[0], "feasible-marginal (Pareto alternative)"
-    return None, "none available"
+    if isinstance(entry, DeploymentPlan):
+        return entry
+    existing = getattr(entry, "plan", None)
+    if existing is not None:
+        return existing
+
+    template = entry.exemplar.template
+    ttft = spec.slo.ttft.max_ms
+    tpot = spec.slo.tpot.max_ms
+    return DeploymentPlan(
+        plan_id=f"boundary-{template.id}",
+        model=spec.service.model,
+        candidate=template,
+        # NOT a prediction. These are the spec's own targets, written here so
+        # the field is filled with something whose provenance is obvious. The
+        # raw record says `predicted_is_slo_target: true` beside it.
+        predicted=PredictedMetrics(
+            p50_ttft_ms=ttft, p95_ttft_ms=ttft, p99_ttft_ms=ttft,
+            p50_tpot_ms=tpot, p95_tpot_ms=tpot, p99_tpot_ms=tpot,
+            throughput_tps=0.0,
+            slo_goodput_rps=spec.slo.min_goodput_rps or 0.0,
+            slo_attainment=0.0,
+            completed_requests=0, completed_tokens=0,
+        ),
+    )
+
+
+def sim_risk(plan, spec) -> float:
+    """The binding constraint, from the SIMULATOR's p99s rather than a proxy.
+
+        max(p99_ttft / ttft_max, p99_tpot / tpot_max, goodput_floor / goodput)
+
+    The ranker's `risk_proxy` is an estimate built to ORDER candidates cheaply,
+    and on this cluster it tied **280 feasible candidates at exactly 0.6137** --
+    its goodput term does not vary with placement, so it cannot separate them.
+    That is an observation about the ranker, recorded in the result file and
+    left for a G15 follow-up; it is not fixed here. But it makes the proxy
+    useless for picking "the one that only just works", so the marginal
+    alternative is chosen on what the simulator actually predicted.
+    """
+    predicted = plan.predicted
+    ratios = [
+        predicted.p99_ttft_ms / spec.slo.ttft.max_ms,
+        predicted.p99_tpot_ms / spec.slo.tpot.max_ms,
+    ]
+    floor = spec.slo.min_goodput_rps
+    if floor and predicted.slo_goodput_rps > 0:
+        ratios.append(floor / predicted.slo_goodput_rps)
+    return max(ratios)
+
+
+def feasible_marginal(objects, spec, devices: int, exclude: str | None):
+    """Alternative A: the evaluated candidate the simulator put closest to 1.
+
+    Drawn from `audit.feasible_plans` -- every candidate the evaluator judged
+    feasible, with its predicted metrics -- not from `output.alternatives`,
+    which is the Pareto frontier and was a single point here.
+
+    Deploying it asks whether the ORDER is real: if the thing ranked below the
+    recommendation does as well on hardware, the ordering was not carrying
+    information.
+    """
+    plans = [
+        plan for plan in getattr(objects.audit, "feasible_plans", [])
+        if plan.candidate.total_devices == devices
+        and plan.candidate.id != exclude
+    ]
+    if not plans:
+        return None, (
+            f"no evaluated feasible candidate of {devices} devices below the "
+            f"recommendation (the search evaluated "
+            f"{objects.audit.evaluated} representative(s) and found "
+            f"{len(objects.audit.feasible_ids)} feasible overall)"
+        )
+    scored = [(abs(sim_risk(plan, spec) - 1.0), plan) for plan in plans]
+    _, best = min(scored, key=lambda t: (t[0], t[1].candidate.id))
+    risk = sim_risk(best, spec)
+    return best, (
+        f"feasible-marginal on SIMULATED p99 (risk {risk:.4f}, closest to 1 "
+        f"of {len(plans)} evaluated feasible at this size)"
+    )
+
+
+def tightest_eliminated(objects, devices: int):
+    """Alternative B: the candidate an OPTIMISTIC bound rejected by the least.
+
+    **This reads `BoundVerdict.eliminated` and `BoundProof.bound_value` /
+    `.threshold`, because those are the fields that exist.** An earlier version
+    looked for `.state == "impossible_proven"` and `.margin`; `Rejection`
+    carries `candidate_id`, `stage`, `reason` and `BoundVerdict` carries
+    `status`, `stage`, `proofs`. Neither has either attribute, so the branch
+    was dead -- it answered "none available" whatever the search found, and
+    would have kept doing so after a bound started rejecting things. A
+    `getattr(x, "margin", None)` against a field that does not exist fails
+    silently and forever.
+
+    Memory rejections are skipped (see `TESTABLE_STAGES`). The margin is the
+    smallest relative gap over the candidate's proofs: how close the most
+    optimistic arithmetic came to clearing the threshold it missed. Deploying
+    the tightest one and measuring its goodput against the declared floor is
+    `false_infeasible`'s real-hardware test.
+    """
+    best = None
+    for rep in objects.representatives:
+        verdict = objects.verdicts.get(rep.rep_id)
+        if verdict is None or not verdict.eliminated:
+            continue
+        template = rep.exemplar.template
+        # **Not filtered to the topology's device count.** B asks about the
+        # BOUND, not about placement: the question is whether a candidate the
+        # arithmetic called impossible in fact works, and that candidate is
+        # whichever the bound rejected by the least. Forcing it to the
+        # topology's size picked tp1-dp4 (margin 30.6 %) over tp2-dp1
+        # (margin 1.0 %), which is a far weaker test of the same bound.
+        #
+        # It must however be LAUNCHABLE: `VllmCudaBackend.launch` refuses
+        # `dp_replicas > 1` and `pp_size > 1` outright (multi-engine needs a
+        # router, out of scope). A tightest rejection that cannot be started
+        # is not a test, so those are skipped and the skip is reported.
+        if any(a.dp_replicas != 1 or a.pp_size != 1 for a in template.assignments):
+            continue
+        if template.total_devices > devices:
+            continue
+        stage = verdict.stage.value if verdict.stage else ""
+        if stage not in TESTABLE_STAGES:
+            continue
+        margins = [
+            (abs(pr.bound_value - pr.threshold) / abs(pr.threshold), pr)
+            for pr in verdict.proofs if pr.threshold
+        ]
+        if not margins:
+            continue
+        margin, proof = min(margins, key=lambda m: m[0])
+        if best is None or margin < best[0]:
+            best = (margin, rep, verdict, proof)
+    return best
+
+
+def boundary_alternatives(objects, spec, devices: int, recommended_id):
+    """Both kinds, because they ask different questions (MATRIX.md section 2).
+
+    A returns a candidate the search called feasible; B returns one a bound
+    called impossible. Reporting only whichever happens to exist would let a
+    row answer a question the column heading does not name.
+    """
+    out = {}
+    marginal, why_a = feasible_marginal(objects, spec, devices, recommended_id)
+    out["feasible_marginal"] = {
+        # Already a DeploymentPlan, carrying the predictions it was chosen on.
+        "representative": marginal,
+        "why": why_a,
+        "sim_risk": None if marginal is None else sim_risk(marginal, spec),
+        "candidate_id": None if marginal is None else marginal.candidate.id,
+        "predicted": None if marginal is None else {
+            "p99_ttft_ms": marginal.predicted.p99_ttft_ms,
+            "p99_tpot_ms": marginal.predicted.p99_tpot_ms,
+            "slo_goodput_rps": marginal.predicted.slo_goodput_rps,
+        },
+    }
+
+    tightest = tightest_eliminated(objects, devices)
+    if tightest is None:
+        eliminated = sum(1 for v in objects.verdicts.values() if v.eliminated)
+        out["impossible_proven"] = {"features": None, "why": (
+            f"no candidate of {devices} devices was eliminated by an "
+            f"optimistic bound ({eliminated} of {len(objects.verdicts)} "
+            f"eliminated overall; memory rejections are excluded on purpose "
+            f"-- an exact check's rejection says nothing about a bound's "
+            f"safety)"
+        )}
+    else:
+        margin, rep, verdict, proof = tightest
+        out["impossible_proven"] = {
+            "representative": rep,
+            "why": (
+                f"impossible_proven, tightest: stage {verdict.stage.value}, "
+                f"margin {margin:.4f}, bound {proof.bound_value:.3f} "
+                f"{proof.unit} against a ceiling of {proof.threshold:.3f}"
+            ),
+            "margin": margin,
+            "stage": verdict.stage.value,
+            "bound_value": proof.bound_value,
+            "ceiling": proof.threshold,
+        }
+    return out
 
 
 # --- stage 2: the deployment ---------------------------------------------
 
-def serve_command(plan_obj, islands, topo: C.Topology, port: int):
+def serve_command(plan_obj, islands, topo: C.Topology, port: int,
+                  model_weights: str | None = None):
     """heteropilot's own builder, then the placement override.
 
     `build_serve_command` is imported and called unmodified; only the env it
@@ -313,8 +530,22 @@ def serve_command(plan_obj, islands, topo: C.Topology, port: int):
     assignment = plan_obj.candidate.assignments[0]
     island = islands[assignment.island_id]
     command = build_serve_command(plan_obj, assignment, island, port=port)
+    argv = list(command.argv)
+    # `build_serve_command` serves `plan.model`, which is the id heteropilot's
+    # PROFILES name: `meta-llama/Llama-3.1-8B`. That repository is gated and
+    # its weights are not on this node; what is cached is the ungated
+    # NousResearch mirror of the same weights. The planner must keep the id it
+    # has a profile for, and the engine must be given the one it can load, so
+    # the substitution happens here and both ids are recorded. Left unapplied,
+    # vLLM exits with "ensure the presence of a 'config.json'" -- which is
+    # exactly what the first hardware attempt did.
+    served = model_weights or plan_obj.model
+    if served != plan_obj.model and plan_obj.model in argv:
+        argv[argv.index(plan_obj.model)] = served
     placed = ",".join(str(d) for d in topo.devices)
     override = {
+        "planner_model": plan_obj.model,
+        "served_model": served,
         "heteropilot_would_use": command.env.get("CUDA_VISIBLE_DEVICES", ""),
         "this_harness_uses": placed,
         "why": (
@@ -324,7 +555,7 @@ def serve_command(plan_obj, islands, topo: C.Topology, port: int):
             f"{topo.key} is the placement under test: {topo.link}."
         ),
     }
-    return list(command.argv), dict(command.env, CUDA_VISIBLE_DEVICES=placed), override
+    return argv, dict(command.env, CUDA_VISIBLE_DEVICES=placed), override
 
 
 def wait_for_health(port: int, timeout: float, process) -> bool:
@@ -382,6 +613,11 @@ def run_bench(model: str, workload: Path, out_dir: Path, topo: C.Topology,
         "--output-dir", str(out_dir),
         "--tensor-parallel-size", str(topo.tp),
         "--seed", str(seed),
+        # The SAME count the simulator replayed. `min_goodput_rps` is
+        # `completed / elapsed` and the drain tail is a larger share of a
+        # short trace, so two different counts make the floor two different
+        # constraints.
+        "--num-reqs", str(C.REQUESTS_PER_RUN),
     ]
     (out_dir.parent / "bench.cmd").write_text(
         " ".join(shlex.quote(a) for a in argv) + "\n"
@@ -405,7 +641,8 @@ def deploy_and_measure(objects, plan_obj, label: str, topo: C.Topology,
     """One deployment: serve, wait, load, tear down. Always tears down."""
     out_dir.mkdir(parents=True, exist_ok=True)
     argv, env, override = serve_command(
-        plan_obj, objects.islands_by_id, topo, args.port
+        plan_obj, objects.islands_by_id, topo, args.port,
+        model_weights=C.MODELS[model]["hf_id"],
     )
     (out_dir / "serve.cmd").write_text(
         " ".join(f"{k}={v}" for k, v in sorted(env.items()))
@@ -419,12 +656,32 @@ def deploy_and_measure(objects, plan_obj, label: str, topo: C.Topology,
 
     say(f"{label}: serving on devices {override['this_harness_uses']}")
     log = (out_dir / "vllm.log").open("w")
-    background = background_load(topo, args)
-    process = subprocess.Popen(
-        argv, cwd=HETEROPILOT, env=dict(os.environ, **env),
-        stdout=log, stderr=subprocess.STDOUT,
-    )
+    background = None
+    process = None
+    # heteropilot's `build_serve_command` emits argv starting with the bare
+    # name `vllm`, which is correct for it -- it assumes the caller is inside
+    # the serving environment. This harness is not: it runs under the
+    # SIMULATOR's interpreter (GS-14 requires that for `--predictor sim`) and
+    # launches vLLM as a subprocess. So the serving venv's `bin` goes on PATH
+    # rather than argv[0] being rewritten: rewriting it would diverge from the
+    # command the raw file records, and `vllm` spawns helpers that need the
+    # same PATH anyway.
+    env = dict(env)
+    env["PATH"] = f"{VLLM_PY.parent}:{os.environ.get('PATH', '')}"
+    env.setdefault("HF_HUB_OFFLINE", "1")
+    # **Everything that can hold a GPU starts INSIDE the try.** The background
+    # generator used to start before it, and the first time the serve `Popen`
+    # raised -- `vllm` was not on PATH -- the `finally` was never entered and
+    # the generator held four GPUs for eleven minutes. The next run's own
+    # precondition then refused, correctly, because it cannot know an orphan
+    # is ours. A cleanup that only runs on the paths you anticipated is not
+    # cleanup.
     try:
+        background = background_load(topo, args)
+        process = subprocess.Popen(
+            argv, cwd=HETEROPILOT, env=dict(os.environ, **env),
+            stdout=log, stderr=subprocess.STDOUT,
+        )
         healthy = wait_for_health(args.port, args.health_timeout, process)
         record["healthy"] = healthy
         if not healthy:
@@ -439,13 +696,18 @@ def deploy_and_measure(objects, plan_obj, label: str, topo: C.Topology,
             model, workload, out_dir / "bench", topo, args.rep, args.port, args
         )
     finally:
-        process.terminate()
-        try:
-            process.wait(timeout=120)
-        except subprocess.TimeoutExpired:
-            process.kill()
+        if process is not None:
+            process.terminate()
+            try:
+                process.wait(timeout=120)
+            except subprocess.TimeoutExpired:
+                process.kill()
         if background is not None:
             background.terminate()
+            try:
+                background.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                background.kill()
         log.close()
     return record
 
@@ -466,9 +728,17 @@ def main(argv: list[str] | None = None) -> int:
                              "--rps is given: there is no defensible default, "
                              "and a guessed one would put every level's label "
                              "on the wrong load.")
+    parser.add_argument("--ttft-max-ms", type=float, default=550.0,
+                        help="DERIVED: T1's measured p99 at the knee x 1.5")
+    parser.add_argument("--tpot-max-ms", type=float, default=60.0,
+                        help="DERIVED: ~10 %% above the measured band, so this "
+                             "axis does not decide")
+    parser.add_argument("--min-goodput-rps", type=float, default=43.0,
+                        help="DERIVED: inside the registered interval "
+                             "(10.527, 101.081); see preregistration entry 4")
     parser.add_argument("--workload", type=Path, default=None)
     parser.add_argument("--predictor", choices=("mock", "sim"), default="sim")
-    parser.add_argument("--num-requests", type=int, default=30)
+    parser.add_argument("--num-requests", type=int, default=C.REQUESTS_PER_RUN)
     parser.add_argument("--max-workers", type=int, default=16)
     parser.add_argument("--budget-sims", type=int, default=16)
     parser.add_argument("--sim-timeout", type=float, default=1800)
@@ -521,11 +791,28 @@ def main(argv: list[str] | None = None) -> int:
         say("(dry run) would refuse: " + problem.splitlines()[0])
 
     rps = args.rps if args.rps is not None else args.knee_rps * C.LEVELS[level]
-    spec_path = service_spec(model, pattern, level, rps, work / "service.yaml")
+    # Two specs, two questions. See `conditions.SPECS`.
+    service = C.SPECS["service"]
+    stress = C.SPECS["bound_stress"]
 
-    say(f"planning ({args.predictor}) at {rps:.2f} rps")
+    spec_path = service_spec(
+        model, pattern, level, rps, work / "service.yaml",
+        ttft_max_ms=service["ttft_max_ms"], tpot_max_ms=service["tpot_max_ms"],
+        min_goodput_rps=service["min_goodput_rps"],
+    )
+    stress_path = service_spec(
+        model, pattern, level, stress["arrival_rate_rps"],
+        work / "bound-stress.yaml",
+        ttft_max_ms=stress["ttft_max_ms"], tpot_max_ms=stress["tpot_max_ms"],
+        min_goodput_rps=stress["min_goodput_rps"],
+    )
+
+    say(f"planning S ({args.predictor}) at {rps:.2f} rps, "
+        f"goodput floor {service['min_goodput_rps']}")
     objects = run_plan(spec_path, work, args)
-    alternative, alternative_kind = boundary_alternative(objects)
+    say(f"planning B (bound-stress) at {stress['arrival_rate_rps']} rps, "
+        f"goodput floor {stress['min_goodput_rps']}")
+    stress_objects = run_plan(stress_path, work / "stress", args)
 
     workload = args.workload or (
         HETEROPILOT / "workloads" /
@@ -535,19 +822,35 @@ def main(argv: list[str] | None = None) -> int:
 
     # The condition names a placement, so only candidates with that many
     # devices can carry it. See `candidates_of_size`.
-    sized = candidates_of_size(objects, len(topo.devices))
-    chosen = [
-        ("recommendation", sized[0] if sized else None),
-        ("boundary", alternative if alternative in sized else
-                     (sized[1] if len(sized) > 1 else None)),
-    ]
+    devices = len(topo.devices)
+    sized = candidates_of_size(objects, devices)
+    recommended_id = (
+        getattr(sized[0], "plan", sized[0]).candidate.id if sized else None
+    )
+    # A from S (the service question), B from the bound-stress spec.
+    alternatives = boundary_alternatives(objects, objects.spec, devices,
+                                         recommended_id)
+    stress_alt = boundary_alternatives(
+        stress_objects, stress_objects.spec, devices, None
+    )
+    alternatives["impossible_proven"] = stress_alt["impossible_proven"]
+    alternative_kind = "; ".join(
+        f"{k}: {v['why']}" for k, v in sorted(alternatives.items())
+    )
+    chosen = [("recommendation", sized[0] if sized else None)]
+    for kind in ("feasible_marginal", "impossible_proven"):
+        entry = alternatives[kind]
+        rep = entry.get("representative")
+        chosen.append((f"boundary:{kind}", rep))
 
     deployments = []
     for label, entry in chosen:
         if entry is None:
+            kind = label.split(":", 1)[-1]
             deployments.append({
                 "label": label,
                 "state": "not applicable to this topology",
+                "detail": alternatives.get(kind, {}).get("why"),
                 "why": (
                     f"{topo.key} places {len(topo.devices)} devices, and the "
                     f"search returned no candidate of that size for the "
@@ -559,15 +862,23 @@ def main(argv: list[str] | None = None) -> int:
                 "boundary_kind": alternative_kind if label == "boundary" else None,
             })
             continue
-        plan_obj = getattr(entry, "plan", entry)
-        assignment = plan_obj.candidate.assignments[0]
-        if assignment.total_devices != len(topo.devices):   # pragma: no cover
+        source = stress_objects if label.endswith("impossible_proven") else objects
+        plan_obj = plan_for(entry, source.spec)
+        need = plan_obj.candidate.total_devices
+        if need > len(topo.devices):                        # pragma: no cover
             raise SystemExit(
-                f"internal: selected a {assignment.total_devices}-device "
-                f"candidate for {topo.key}, which places {len(topo.devices)}"
+                f"internal: selected a {need}-device candidate for "
+                f"{topo.key}, which places {len(topo.devices)}"
             )
+        # B may be smaller than the condition's placement, because its size is
+        # decided by which rejection is tightest, not by the topology. It takes
+        # the first `need` of the condition's devices so it still runs on the
+        # wires the condition names.
+        placed = topo if need == len(topo.devices) else replace(
+            topo, devices=tuple(topo.devices[:need])
+        )
         deployments.append(deploy_and_measure(
-            objects, plan_obj, label, topo, model, workload,
+            source, plan_obj, label, placed, model, workload,
             out_dir / label, args,
         ))
 

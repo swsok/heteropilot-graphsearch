@@ -1,0 +1,63 @@
+{
+  "gpu_tenants_before": [
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "260 MiB",
+      "user": "swsok"
+    },
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "260 MiB",
+      "user": "swsok"
+    },
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "260 MiB",
+      "user": "swsok"
+    },
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "260 MiB",
+      "user": "swsok"
+    },
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "260 MiB",
+      "user": "swsok"
+    },
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "816 MiB",
+      "user": "swsok"
+    },
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "260 MiB",
+      "user": "swsok"
+    },
+    {
+      "pid": "2758765",
+      "process": "/home/swsok/heteropilot/.venv-vllm/bin/python",
+      "used_mib": "772 MiB",
+      "user": "swsok"
+    }
+  ],
+  "loadavg_before": [
+    4.72,
+    3.69,
+    2.59
+  ],
+  "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
+  "submodule_pristine": true,
+  "checked_at": "2026-09-29T07:33:59.848305+00:00",
+  "problems": [
+    "another tenant holds a GPU: swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (260 MiB); swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (260 MiB); swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (260 MiB); swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (260 MiB); swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (260 MiB); swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (816 MiB); swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (260 MiB); swsok pid 2758765 /home/swsok/heteropilot/.venv-vllm/bin/python (772 MiB). A figure measured beside it is measured under a condition the REAL HARDWARE banner does not state. Wait, or pass --allow-tenants and accept that every row of this run is labelled contaminated."
+  ]
+}

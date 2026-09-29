@@ -1,0 +1,224 @@
+{
+  "arrival_rate_rps": 4.0,
+  "banner": "REAL HARDWARE -- node serials in `preconditions`.",
+  "boundary_alternative_kind": "feasible_marginal: feasible-marginal on SIMULATED p99 (risk 0.7689, closest to 1 of 15 evaluated feasible at this size); impossible_proven: impossible_proven, tightest: stage throughput_upper_bound, margin 0.0104, bound 55.000 requests/s against a ceiling of 54.433",
+  "calibration": "existing a40.accuracy.yaml only; no new domain may be created from this run",
+  "condition": "llama31-8b__normal__T3__knee",
+  "deployments": [
+    {
+      "bench": {
+        "argv": [
+          "/home/swsok/heteropilot/.venv-vllm/bin/python",
+          "-m",
+          "bench",
+          "run",
+          "--model",
+          "NousResearch/Meta-Llama-3.1-8B",
+          "--dataset",
+          "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+          "--output-dir",
+          "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__knee/42/recommendation/bench",
+          "--tensor-parallel-size",
+          "4",
+          "--seed",
+          "42",
+          "--num-reqs",
+          "150"
+        ],
+        "returncode": 1
+      },
+      "healthy": true,
+      "label": "recommendation",
+      "placement_override": {
+        "heteropilot_would_use": "0,1,2,3,4,5,6,7",
+        "planner_model": "meta-llama/Llama-3.1-8B",
+        "served_model": "NousResearch/Meta-Llama-3.1-8B",
+        "this_harness_uses": "0,1,2,3",
+        "why": "planner/deploy/base.py::resolve_devices maps an island to ALL of its accelerator ids, so heteropilot names a TEMPLATE and cannot name a PLACEMENT. T3 is the placement under test: TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2."
+      },
+      "serve_argv": [
+        "vllm",
+        "serve",
+        "NousResearch/Meta-Llama-3.1-8B",
+        "--tensor-parallel-size",
+        "4",
+        "--dtype",
+        "bfloat16",
+        "--kv-cache-dtype",
+        "auto",
+        "--block-size",
+        "16",
+        "--max-num-seqs",
+        "128",
+        "--max-num-batched-tokens",
+        "2048",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--no-enable-prefix-caching",
+        "--enable-chunked-prefill"
+      ]
+    },
+    {
+      "bench": {
+        "argv": [
+          "/home/swsok/heteropilot/.venv-vllm/bin/python",
+          "-m",
+          "bench",
+          "run",
+          "--model",
+          "NousResearch/Meta-Llama-3.1-8B",
+          "--dataset",
+          "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+          "--output-dir",
+          "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__knee/42/boundary:feasible_marginal/bench",
+          "--tensor-parallel-size",
+          "4",
+          "--seed",
+          "42",
+          "--num-reqs",
+          "150"
+        ],
+        "returncode": 1
+      },
+      "healthy": true,
+      "label": "boundary:feasible_marginal",
+      "placement_override": {
+        "heteropilot_would_use": "0,1,2,3,4,5,6,7",
+        "planner_model": "meta-llama/Llama-3.1-8B",
+        "served_model": "NousResearch/Meta-Llama-3.1-8B",
+        "this_harness_uses": "0,1,2,3",
+        "why": "planner/deploy/base.py::resolve_devices maps an island to ALL of its accelerator ids, so heteropilot names a TEMPLATE and cannot name a PLACEMENT. T3 is the placement under test: TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2."
+      },
+      "serve_argv": [
+        "vllm",
+        "serve",
+        "NousResearch/Meta-Llama-3.1-8B",
+        "--tensor-parallel-size",
+        "4",
+        "--dtype",
+        "bfloat16",
+        "--kv-cache-dtype",
+        "auto",
+        "--block-size",
+        "16",
+        "--max-num-seqs",
+        "128",
+        "--max-num-batched-tokens",
+        "2048",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--no-enable-prefix-caching",
+        "--enable-chunked-prefill"
+      ]
+    },
+    {
+      "bench": {
+        "argv": [
+          "/home/swsok/heteropilot/.venv-vllm/bin/python",
+          "-m",
+          "bench",
+          "run",
+          "--model",
+          "NousResearch/Meta-Llama-3.1-8B",
+          "--dataset",
+          "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+          "--output-dir",
+          "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__knee/42/boundary:impossible_proven/bench",
+          "--tensor-parallel-size",
+          "4",
+          "--seed",
+          "42",
+          "--num-reqs",
+          "150"
+        ],
+        "returncode": 1
+      },
+      "healthy": true,
+      "label": "boundary:impossible_proven",
+      "placement_override": {
+        "heteropilot_would_use": "0,1,2,3,4,5,6,7",
+        "planner_model": "meta-llama/Llama-3.1-8B",
+        "served_model": "NousResearch/Meta-Llama-3.1-8B",
+        "this_harness_uses": "0,1",
+        "why": "planner/deploy/base.py::resolve_devices maps an island to ALL of its accelerator ids, so heteropilot names a TEMPLATE and cannot name a PLACEMENT. T3 is the placement under test: TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2."
+      },
+      "serve_argv": [
+        "vllm",
+        "serve",
+        "NousResearch/Meta-Llama-3.1-8B",
+        "--tensor-parallel-size",
+        "2",
+        "--dtype",
+        "bfloat16",
+        "--kv-cache-dtype",
+        "auto",
+        "--block-size",
+        "16",
+        "--max-num-seqs",
+        "128",
+        "--max-num-batched-tokens",
+        "2048",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--no-enable-prefix-caching",
+        "--enable-chunked-prefill"
+      ]
+    }
+  ],
+  "dry_run": false,
+  "gpu_tenants_after": [],
+  "has_accuracy_domain": true,
+  "hf_model": "NousResearch/Meta-Llama-3.1-8B",
+  "level": "knee",
+  "loadavg_after": [
+    7.23,
+    7.05,
+    5.5
+  ],
+  "model": "llama31-8b",
+  "model_substitution_note": "the planner is given the gated `meta-llama/...` id that heteropilot's profiles name; the engine serves the ungated NousResearch mirror of the same weights",
+  "pattern": "normal",
+  "planner_model": "meta-llama/Llama-3.1-8B",
+  "preconditions": {
+    "checked_at": "2026-09-29T07:53:19.602332+00:00",
+    "gpu_tenants_before": [],
+    "loadavg_before": [
+      1.24,
+      1.93,
+      2.32
+    ],
+    "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
+    "problems": [],
+    "submodule_pristine": true
+  },
+  "rep": 42,
+  "scope_cut": {
+    "max_devices": 4,
+    "state": "excluded_by_scope",
+    "why": "the topology condition places this many devices, so the planner was asked for the best plan of that size. Larger plans were not considered -- not considered and rejected (GS-27)."
+  },
+  "topology": {
+    "background_pair": [
+      5,
+      7
+    ],
+    "devices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "key": "T3",
+    "link": "TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2",
+    "substitutes": "inter-node P/D, shared uplink + 60 % background load",
+    "tp": 4
+  },
+  "topology_key": "T3",
+  "written_at": "2026-09-29T08:06:30.610613+00:00"
+}

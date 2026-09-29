@@ -120,3 +120,58 @@ def parse(condition: str) -> tuple[str, str, str, str]:
     if level not in LEVELS:
         raise SystemExit(f"unknown level {level!r}; have {sorted(LEVELS)}")
     return model, pattern, topo, level
+
+
+#: **Two specs, because one cannot ask both questions.**
+#:
+#: Achieved goodput can never exceed offered load, so a `min_goodput_rps` high
+#: enough to make `throughput_capacity` reject anything is a floor no candidate
+#: can meet at the arrival rate it was measured under. Trying to verify the
+#: recommendation and the lower bound with one spec made `recommended` None:
+#: not a search failure, an arithmetic contradiction in the spec.
+#:
+#: So the recommendation and the marginal alternative are verified under S, and
+#: the bound's rejection under B. Every row says which spec produced it.
+SPECS = {
+    "service": {
+        # `min_goodput_rps` is 95 % of the MEASURED achieved goodput, not of
+        # the offered rate. On a finite trace the decode tail drains after
+        # arrivals stop -- 150 requests offered at 4.0 rps over 36.5 s of
+        # arrivals complete over 58-61 s -- so achieved is 2.47-2.59 rps and a
+        # floor of 95 % of *offered* (3.8) is unreachable by construction. It
+        # made every candidate infeasible on goodput while TTFT and TPOT
+        # passed comfortably. See preregistration entry 4.
+        "ttft_max_ms": 550.0,
+        "tpot_max_ms": 60.0,
+        "arrival_rate_rps": 4.0,
+        "min_goodput_rps": 2.3,
+        "purpose": "recommendation and the feasible-marginal alternative (A)",
+        "recommendation_column": "measured",
+    },
+    "bound_stress": {
+        # Chosen so THROUGHPUT_UPPER_BOUND rejects tp1-dp1 (ceiling 10.527),
+        # tp1-dp4 (42.106) and tp2-dp1 (54.433), leaving tp4-dp1 (101.081).
+        # The tightest rejection is then tp2-dp1 at a margin of 1.0 %, and it
+        # is dp=1, so `VllmCudaBackend.launch` can actually start it.
+        "ttft_max_ms": 550.0,
+        "tpot_max_ms": 60.0,
+        "arrival_rate_rps": 55.0,
+        "min_goodput_rps": 55.0,
+        "purpose": "the impossible_proven alternative (B) only",
+        # 55 rps is 14x the measured knee of 4 rps, so the recommendation
+        # cannot meet it on hardware either -- and that is not this spec's
+        # question. Saying so is not a failure being excused; it is the column
+        # naming what it does not measure.
+        "recommendation_column": "not applicable (bound verification only)",
+    },
+}
+
+#: The measured knee, from `experiments/e_g5/raw/pilot/`. `deploy_and_bench.py`
+#: refuses a guessed one.
+KNEE_RPS = 4.0
+
+#: Requests per replay. **The simulator and the hardware must use the same
+#: number**, or `min_goodput_rps` means two different things: goodput is
+#: `completed / elapsed` and the drain tail is a larger share of a short trace.
+#: At 30 the simulator reported 1.96 rps where the hardware's 150 gave 2.47.
+REQUESTS_PER_RUN = 150
