@@ -411,3 +411,247 @@ def test_section_9_counts_45_physical_pairs_down_to_28() -> None:
     assert not any(
         "npu" in device for pair in pairs for device in pair
     ), "an NPU pair reached enumeration; the runtime contract stopped working"
+
+
+# --- GS-25: the closed form is the count, and enumeration is its test ------
+#
+# GS-3 enumerated every replica ordering and folded them with the canonical
+# key, so that `skipped_symmetric` would be a measured number rather than a
+# structural zero. The premise was wrong: R interchangeable replicas give each
+# canonical partition exactly R! orderings, so the figure is a closed form.
+# These tests are what makes that claim checkable -- the slow enumeration is
+# kept solely to be the formula's evidence.
+
+def _enumerated_symmetry(templates, islands, graph, spec):
+    """What GS-3's path counted: complete placements minus distinct keys."""
+    from graphsearch.embeddings import _canonical_key, _enumerate_all_orderings
+
+    total = distinct = 0
+    for tmpl in templates:
+        seen: set[str] = set()
+
+        def walk(index, used, acc, tmpl=tmpl, seen=seen):
+            nonlocal total, distinct
+            if index == len(tmpl.assignments):
+                total += 1
+                key = _canonical_key(tuple(acc))
+                if key not in seen:
+                    seen.add(key)
+                    distinct += 1
+                return
+            assignment = tmpl.assignments[index]
+            island = islands[assignment.island_id]
+            free = [
+                f"{island.node_id}/{a}"
+                for a in sorted(island.accelerator_ids)
+                if f"{island.node_id}/{a}" not in used
+            ]
+            need = assignment.total_devices
+            if len(free) < need:
+                return
+            import itertools
+
+            from graphsearch.embeddings import RankPlacement
+            for chosen in itertools.combinations(free, need):
+                for groups in _enumerate_all_orderings(
+                    list(chosen), assignment.dp_replicas,
+                    assignment.devices_per_replica,
+                ):
+                    flat = frozenset(d for g in groups for d in g)
+                    walk(
+                        index + 1, used | flat,
+                        acc + [
+                            RankPlacement(assignment_index=index, replica=r, ranks=g)
+                            for r, g in enumerate(groups)
+                        ],
+                    )
+
+        walk(0, frozenset(), [])
+    return total - distinct
+
+
+@pytest.mark.parametrize("devices,tp,dp", [(4, 1, 2), (4, 2, 2), (6, 1, 3), (6, 2, 2)])
+def test_the_closed_form_equals_the_enumerated_count(devices, tp, dp) -> None:
+    """`skipped_symmetric` from the formula == from enumerating the orderings.
+
+    This is the whole of GS-25's argument, checked rather than asserted. If the
+    two ever disagree, the formula is wrong and the enumeration is right.
+    """
+    islands, graph = n_gpu(devices)
+    island_id = next(iter(islands))
+    tmpl = template([
+        IslandAssignment(
+            island_id=island_id, tp_size=tp, pp_size=1, dp_replicas=dp,
+        )
+    ])
+    spec = load_service_spec(FIXTURES / "service_specs/graph-toy-llama31-8b.yaml")
+
+    _, stats = enumerate_embeddings([tmpl], islands, graph, spec)
+    assert stats.skipped_symmetric == _enumerated_symmetry(
+        [tmpl], islands, graph, spec
+    )
+
+
+@pytest.mark.parametrize("devices,tp,dp", [(4, 1, 2), (4, 2, 2), (6, 1, 3)])
+def test_collapsing_keeps_exactly_the_same_placements(devices, tp, dp) -> None:
+    """The canonical generator must keep the SAME embeddings, not merely as many.
+
+    `_locality_score` sorts its ranks, so every ordering of one partition ties
+    and `groups` breaks the tie lexicographically -- which is the ordering the
+    canonical generator emits. That is why the published tables reproduce byte
+    for byte, and this is the test that keeps it true.
+    """
+    islands, graph = n_gpu(devices)
+    island_id = next(iter(islands))
+    tmpl = template([
+        IslandAssignment(
+            island_id=island_id, tp_size=tp, pp_size=1, dp_replicas=dp,
+        )
+    ])
+    spec = load_service_spec(FIXTURES / "service_specs/graph-toy-llama31-8b.yaml")
+
+    canonical, _ = enumerate_embeddings([tmpl], islands, graph, spec)
+    every, _ = enumerate_embeddings(
+        [tmpl], islands, graph, spec,
+        EmbeddingPolicy(canonical_only=True, hierarchical=True),
+    )
+    assert [e.embedding_key for e in canonical] == [e.embedding_key for e in every]
+    assert [sorted(e.devices) for e in canonical] == [sorted(e.devices) for e in every]
+
+
+def test_a_budget_now_bounds_the_walk_and_not_just_the_output(monkeypatch) -> None:
+    """A cap must make the WALK shorter, not just the output.
+
+    The budget was checked AFTER the duplicate test, so a re-ordering returned
+    early without ever reaching it: the cap bounded the output while the walk
+    ran on. Measured on the seven-device real cluster before the fix, `cap=8`
+    took 57.0 s against 50.9 s uncapped -- a cap that cost more than no cap.
+
+    Asserted on **work done, not wall time**. An earlier version of this test
+    timed the two runs, which the `path_set` memo then made meaningless: the
+    uncapped run warms the cache the capped run reads, so the second is fast
+    for a reason that has nothing to do with the budget. Counting the complete
+    placements the walk reaches is deterministic and is the thing the fix is
+    actually about.
+    """
+    import graphsearch.embeddings as E
+
+    islands, graph = n_gpu(8)
+    island_id = next(iter(islands))
+    tmpl = template([
+        IslandAssignment(
+            island_id=island_id, tp_size=1, pp_size=1, dp_replicas=3,
+        )
+    ])
+    spec = load_service_spec(FIXTURES / "service_specs/graph-toy-llama31-8b.yaml")
+
+    def counting_key(original):
+        def wrapper(placements):
+            wrapper.calls += 1
+            return original(placements)
+        wrapper.calls = 0
+        return wrapper
+
+    original = E._canonical_key
+    counter = counting_key(original)
+    monkeypatch.setattr(E, "_canonical_key", counter)
+    uncapped, _ = enumerate_embeddings([tmpl], islands, graph, spec)
+    reached_uncapped = counter.calls
+
+    counter = counting_key(original)
+    monkeypatch.setattr(E, "_canonical_key", counter)
+    capped, stats = enumerate_embeddings(
+        [tmpl], islands, graph, spec,
+        EmbeddingPolicy(max_embeddings_per_template=4),
+    )
+    reached_capped = counter.calls
+
+    assert len(capped) == 4 < len(uncapped)
+    # `truncated_by_policy` counts the EMBEDDINGS the budget dropped, not the
+    # templates it truncated, and the template is named so G7 can report them
+    # as `excluded_by_scope` rather than as infeasible.
+    assert stats.truncated_by_policy == len(uncapped) - 4
+    assert stats.truncated_template_ids == ["t"]
+    assert reached_capped < reached_uncapped, (
+        f"the capped walk reached {reached_capped} complete placements and "
+        f"the uncapped one {reached_uncapped}; the budget is not stopping the "
+        f"walk"
+    )
+
+
+def test_the_multiplier_is_the_product_over_assignments() -> None:
+    """Assignments are independent, so their R! multiply.
+
+    A P/D template with two replicas of prefill and three of decode folds
+    2! * 3! = 12 orderings into each canonical placement, not 2! + 3!.
+    """
+    from graphsearch.embeddings import _symmetry_multiplier
+
+    islands, _ = n_gpu(8)
+    island_id = next(iter(islands))
+    assert _symmetry_multiplier(template([
+        IslandAssignment(island_id=island_id, tp_size=1, pp_size=1, dp_replicas=2),
+        IslandAssignment(island_id=island_id, tp_size=1, pp_size=1, dp_replicas=3),
+    ])) == 12
+    assert _symmetry_multiplier(template([
+        IslandAssignment(island_id=island_id, tp_size=1, pp_size=1, dp_replicas=1),
+    ])) == 1
+
+
+@pytest.mark.slow
+def test_the_closed_form_on_the_real_cluster_seven_devices() -> None:
+    """81,432 re-orderings on `real-a40x8` cut to seven devices.
+
+    The case GS-25 was written for. Seven devices was the largest where the
+    enumerate-every-ordering path still finished (50.9 s); at eight it did not
+    finish in three minutes, which is why the closed form had to exist.
+
+    Marked slow because it runs that path on purpose. Skipping it leaves the
+    formula checked by the toy fixtures above; it does not leave it unchecked.
+    """
+    import json
+    import tempfile
+
+    from planner.inventory import load_cluster_spec
+
+    real = FIXTURES / "clusters" / "real-a40x8.v2.yaml"
+    if not real.exists():                            # pragma: no cover
+        pytest.skip("real-a40x8.v2.yaml is not present")
+
+    cut = json.loads(
+        json.dumps(load_cluster_spec(real).model_dump(mode="json"))
+    )
+    keep = {f"gpu{i}" for i in range(7)}
+    cut["cluster_id"] = "real-a40x7"
+    cut["nodes"][0]["accelerators"] = [
+        a for a in cut["nodes"][0]["accelerators"] if a["id"] in keep
+    ]
+    cut["links"] = [
+        link for link in cut["links"]
+        if link["src"].split("/")[-1] in keep and link["dst"].split("/")[-1] in keep
+    ]
+    cut["shared_resources"] = [
+        r for r in cut["shared_resources"] if r["id"].replace("port-", "") in keep
+    ]
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+        yaml.safe_dump(cut, handle)
+        path = handle.name
+
+    cluster = load_cluster_spec(path)
+    profiles = load_profiles_for(cluster, GS_ROOT)
+    islands = {i.id: i for i in detect_islands(cluster, profiles)}
+    graph = build_resource_graph(cluster, profiles)
+    spec = load_service_spec(
+        FIXTURES / "service_specs/graph-toy-llama31-8b-tight.yaml"
+    )
+    templates = CandidateGenerator(
+        spec, cluster, list(islands.values()), profiles,
+        enable_bound_pruning=False, enable_pd=True,
+    ).generate().candidates
+
+    found, stats = enumerate_embeddings(templates, islands, graph, spec)
+    assert len(found) == 768
+    assert stats.skipped_symmetric == 81432
+    assert stats.skipped_symmetric == _enumerated_symmetry(
+        templates, islands, graph, spec
+    )

@@ -77,6 +77,11 @@ reproducibility claim.
 
 ## GS-3 — replica symmetry is folded by the canonical key, not by construction · 2026-09-23
 
+> **Superseded by GS-25 (2026-09-29).** The premise below — that a counter
+> collapsed by construction is "structurally zero" — is wrong: the figure is a
+> closed form and can be computed. Kept as written, because a superseded
+> decision that has been edited is not a record of what was decided.
+
 **Decision.** `_ordered_groupings` enumerates replica orderings and lets
 `canonical_only` collapse them, rather than emitting each partition once by
 fixing the lowest device into the first group.
@@ -1053,3 +1058,112 @@ found by running the harness, not by reading it.
 **What it affects.** `experiments/microbench/run_pair.py`, `PLAN.md`'s
 verification recipe, and the three `bg60` raw files, which were re-measured
 after the fix.
+
+---
+
+## GS-25 — the symmetry counter is a closed form; enumeration is its test · 2026-09-29
+
+**Supersedes GS-3.**
+
+**Decision.** `_ordered_groupings` emits one ordering per set partition (the
+lowest remaining device fixes the next group). `EmbeddingStats.skipped_symmetric`
+is filled from `_symmetry_multiplier` — `produced x (prod_a R_a! - 1)` — and is
+the same number the enumerate-then-fold path produced. The old generator
+survives as `_enumerate_all_orderings`, serving `canonical_only=False` and
+standing as the formula's evidence in `tests/test_embeddings.py`.
+
+**Why GS-3 was wrong.** Its premise was that collapsing by construction makes
+the counter "structurally zero", so "a counter that cannot move is not evidence
+that symmetry was removed". The first half is the mistake: the counter is
+structurally zero only if you decline to compute it. R interchangeable replicas
+give each canonical partition exactly R! orderings, and assignments are
+independent, so a template's complete placements fold in groups of
+`prod_a R_a!`. That is not an estimate of the enumerated figure — it is the
+same figure, and it can be had where enumeration does not finish.
+
+The demand behind GS-3 was right and is kept: the number must be checkable.
+It is now checked rather than performed. `tests/test_embeddings.py` asserts
+formula == enumeration on four toy shapes on every run, and on the
+seven-device cut of `real-a40x8` — **81,432 re-orderings over 768 placements**
+— under `pytest -m slow`.
+
+**What forced it.** Measured 2026-09-29 on `fixtures/clusters/real-a40x8.v2.yaml`:
+
+| devices | kept | re-orderings | enumerate-then-fold | canonical |
+| --- | --- | --- | --- | --- |
+| 5 | 192 | 1,764 | 0.34 s | 0.10 s |
+| 6 | 1,014 | 12,138 | 9.14 s | 5.57 s |
+| 7 | 768 | 81,432 | 50.97 s | 5.78 s |
+| 8 | — | — | **did not finish in 180 s** | see below |
+
+The ratio of discarded to kept reaches **106:1** at seven devices: the walk
+spent about ninety-nine percent of its work building placements it then threw
+away. `replicas!` was "the cheap side of this pipeline by orders of magnitude"
+on fixtures of 288 and 528 embeddings, which is what GS-3 had. It is not cheap
+on a real eight-device node, and E-G5 could not plan at all.
+
+**And a budget that was not one.** The `max_embeddings_per_template` check sat
+*after* the duplicate test, so a re-ordering returned before ever reaching it:
+the cap bounded the OUTPUT while the walk ran on. Measured at seven devices,
+`cap=8` took **57.0 s against 50.9 s uncapped** — a cap that made enumeration
+slower. The check now precedes the duplicate test, and
+`test_a_budget_now_bounds_the_walk_and_not_just_the_output` asserts a cap is
+never slower.
+
+**The kept set is unchanged, and that is checked rather than argued.**
+`_locality_score` sorts its ranks, so every ordering of one partition scores
+alike and `groups` breaks the tie lexicographically — which is precisely the
+ordering the canonical generator emits. E-G1, E-G1b and E-G2 re-run byte for
+byte after the change.
+
+**Affects.** `graphsearch/embeddings.py`; the `skipped_symmetric` column of
+every compression table (values unchanged); `pyproject.toml` gains a `slow`
+marker; `docs/preregistration.md` records the change with the kept set
+verified unchanged.
+
+---
+
+## GS-26 — one graph's paths are computed once, not once per placement · 2026-09-29
+
+**Decision.** `graphsearch/paths.py` keeps a single-entry memo of the derived
+device graph, the admitted edges and the answered `(src, dst)` pairs for the
+graph most recently asked about. `clear_path_cache()` drops it.
+
+**Why.** GS-25 made the enumeration walk instant and the eight-device cluster
+still would not plan. The diagnosis separated the two costs and they are not
+the same thing at all: `real-a40x8` has **6,744 canonical placements, counted
+in 0.0 s**. Every remaining second was in `_build` — about **267 ms per
+placement** — and inside it `path_set`, which rebuilt `_device_graph` and
+`admitted_edges` on every call and re-ran `shortest_simple_paths` for pairs it
+had already answered. `_build` calls it once per flow per placement, so the
+same few dozen questions were asked thousands of times. A near-complete
+eight-device graph has on the order of two thousand simple paths between any
+pair, and enumerating those is the cost.
+
+| | before | after |
+| --- | --- | --- |
+| `real-a40x8`, 8 devices | **did not finish in 1800 s** | **156.95 s**, 6,744 embeddings |
+| per embedding | ~267 ms | ~23 ms |
+
+**Why it is safe.** `ResourceGraph` and `PathPolicy` are both frozen, so the
+same question has the same answer for as long as the entry lives. The memo is
+keyed by object identity **with a strong reference held beside it**, so the id
+cannot be recycled onto a different graph while the entry is alive — the one
+way an identity-keyed cache silently answers for the wrong cluster. One entry,
+because enumeration works through one graph at a time and an unbounded cache of
+resource graphs is a leak.
+
+E-G1, E-G1b and E-G2 re-run byte for byte, which is the check that matters: a
+cache that changed an answer would change one of those tables.
+
+**A test of mine that this broke, and how.**
+`test_a_budget_now_bounds_the_walk_and_not_just_the_output` compared the wall
+time of a capped run against an uncapped one. With this memo the uncapped run
+warms the cache the capped run then reads, so the second is fast for a reason
+that has nothing to do with the budget, and the test passed or failed on noise.
+It now counts the complete placements each walk reaches, which is deterministic
+and is what the budget fix is actually about. **A timing assertion is a claim
+about a machine; a counter is a claim about the algorithm.**
+
+**Affects.** `graphsearch/paths.py`, `tests/test_paths.py`,
+`tests/test_embeddings.py`.

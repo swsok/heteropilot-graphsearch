@@ -4,15 +4,15 @@
 
 | devices | symmetry | nodes | templates | embeddings | representatives | compression_ratio | excluded_by_scope | simulations | t_enumerate_s | t_hash_s | t_vf2_s | t_bounds_s | t_search_s | t_total_s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 32 | 0.0 | 8 | 2448 | 9024 | 744 | 0.082447 | 0 | 8 | 18.2 | 4.084 | 2.869 | 1.935 | 0.09 | 27.36 |
-| 32 | 0.5 | 8 | 2448 | 9024 | 342 | 0.037899 | 0 | 8 | 18.21 | 4.067 | 3.049 | 0.821 | 0.08 | 26.39 |
-| 32 | 1.0 | 8 | 2448 | 9024 | 42 | 0.004654 | 0 | 8 | 18.1 | 4.053 | 3.32 | 0.081 | 0.08 | 25.86 |
-| 64 | 0.0 | 16 | 9504 | 36480 | 2640 | 0.072368 | 0 | 8 | 128.65 | 17.846 | 12.108 | 16.717 | 0.11 | 176.48 |
-| 64 | 0.5 | 16 | 9504 | 36480 | 930 | 0.025493 | 0 | 8 | 128.59 | 17.837 | 13.474 | 5.515 | 0.09 | 166.51 |
-| 64 | 1.0 | 16 | 9504 | 36480 | 42 | 0.001151 | 0 | 8 | 130.88 | 17.974 | 13.849 | 0.136 | 0.08 | 163.62 |
-| 128 | 0.0 | 32 | 37440 | 146688 | 9888 | 0.067408 | 0 | 8 | 868.99 | 81.044 | 50.016 | 142.447 | 0.27 | 1148.43 |
-| 128 | 0.5 | 32 | 37440 | 146688 | 2970 | 0.020247 | 0 | 8 | 891.23 | 83.601 | 53.203 | 37.165 | 0.12 | 1069.52 |
-| 128 | 1.0 | 32 | 37440 | 146688 | 42 | 0.000286 | 0 | 8 | 889.26 | 83.206 | 56.556 | 0.238 | 0.08 | 1036.58 |
+| 32 | 0.0 | 8 | 2448 | 9024 | 744 | 0.082447 | 0 | 8 | 6.04 | 4.078 | 2.842 | 2.268 | 0.09 | 15.5 |
+| 32 | 0.5 | 8 | 2448 | 9024 | 342 | 0.037899 | 0 | 8 | 6.08 | 4.099 | 2.95 | 1.023 | 0.08 | 14.44 |
+| 32 | 1.0 | 8 | 2448 | 9024 | 42 | 0.004654 | 0 | 8 | 5.94 | 4.094 | 3.327 | 0.082 | 0.08 | 13.73 |
+| 64 | 0.0 | 16 | 9504 | 36480 | 2640 | 0.072368 | 0 | 8 | 25.68 | 17.99 | 12.853 | 16.249 | 0.11 | 74.08 |
+| 64 | 0.5 | 16 | 9504 | 36480 | 930 | 0.025493 | 0 | 8 | 26.36 | 17.828 | 12.563 | 5.659 | 0.09 | 63.53 |
+| 64 | 1.0 | 16 | 9504 | 36480 | 42 | 0.001151 | 0 | 8 | 26.36 | 17.87 | 13.189 | 0.134 | 0.09 | 58.68 |
+| 128 | 0.0 | 32 | 37440 | 146688 | 9888 | 0.067408 | 0 | 8 | 111.07 | 81.495 | 49.159 | 140.455 | 0.27 | 388.52 |
+| 128 | 0.5 | 32 | 37440 | 146688 | 2970 | 0.020247 | 0 | 8 | 109.91 | 81.338 | 54.011 | 38.057 | 0.12 | 287.66 |
+| 128 | 1.0 | 32 | 37440 | 146688 | 42 | 0.000286 | 0 | 8 | 112.09 | 82.23 | 54.162 | 0.238 | 0.08 | 255.84 |
 
 ## What is registered, and what is not
 
@@ -20,19 +20,25 @@
 
 One failure condition **is** registered: `saving < 0` at `symmetry = 1`. Symmetry 1 is the most favourable case the generator can produce — every node identical, so the compression has the most to fold — and a compression that cannot pay for itself there cannot pay for itself anywhere. It fires research design §12's first named failure condition, and the registered response is E-G3's: demote exact compression to a cache key and narrow the paper.
 
+## `t_enumerate` before and after GS-25/GS-26
+
+This grid was first measured on 2026-09-28 and re-measured on 2026-09-29 after the enumerator changed. **Every structural column is identical** -- templates, embeddings, representatives, compression ratio, `false_infeasible` and `mismerged_pairs` -- and only the seconds moved:
+
+| devices | `t_enumerate` before | after | |
+| --- | --- | --- | --- |
+| 32 | 18.2 s | 6.04 s | 3.0x |
+| 64 | 128.65 s | 25.68 s | 5.0x |
+| 128 | 868.99 s | 111.07 s | 7.8x |
+
+GS-25 stopped enumerating the `prod_a R_a!` replica orderings and computes the folded count in closed form; GS-26 stopped recomputing one graph's paths once per placement. Neither changes which embeddings exist, which is why only this column moved -- and the 1-minute load figures below moved too, because the 2026-09-28 grid carried a neighbour that has since gone.
+
 ## The machine these timings were taken on
 
-1-minute load average across the cells: min 1.02, median 1.16, max 8.19.
+1-minute load average across the cells: min 2.01, median 2.12, max 2.36.
 
 **The median is not near zero, and that is a standing condition rather than a fault.** This box carries a neighbour that holds roughly six cores continuously. It affects every cell about equally, so it shifts the curve rather than bending it — but a reader comparing these seconds against a quiet machine's should know, and the banner does not say it.
 
-A cell is marked as taken under contention when its peak load exceeds the run's own median by more than 2.0 (so, above 3.16). Relative, because an absolute threshold on this box would mark every row, and a check that always fires is as useless as one that never does. What bends the curve is a TRANSIENT hitting some cells and not others.
-
-## Cells timed under contention
-
-**128/0, 128/0.5** ran with a 1-minute load average above the quiet threshold, so something else had the memory bandwidth at the same time. Their wall-time columns are not comparable with the other rows. The counts are unaffected — they are properties of the graph, not of the machine — and re-running those cells on a quiet box is the fix, not a footnote.
-
-Recorded from `os.getloadavg()` at the start and end of each cell rather than remembered. It has caught two real contaminations already: a 16-worker test run that overlapped two 64-device cells, and a holdout script started while the 128-device cells were being timed. Neither showed up anywhere else in the output.
+A cell is marked as taken under contention when its peak load exceeds the run's own median by more than 2.0 (so, above 4.12). Relative, because an absolute threshold on this box would mark every row, and a check that always fires is as useless as one that never does. What bends the curve is a TRANSIENT hitting some cells and not others.
 
 ## Why there is no `saving` column here
 
