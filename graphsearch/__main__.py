@@ -260,7 +260,10 @@ def _load(args):
     return spec, cluster, profiles, islands, graph
 
 
-def _templates(spec, cluster, islands, profiles, enable_pd: bool = True):
+def _templates(
+    spec, cluster, islands, profiles, enable_pd: bool = True,
+    max_devices: int | None = None,
+):
     """P/D generation is ON by default here, unlike heteropilot's CLI (GS-11).
 
     The research counterexample -- two placements alike in everything except
@@ -269,10 +272,18 @@ def _templates(spec, cluster, islands, profiles, enable_pd: bool = True):
     charges for that can cross a node boundary. With P/D off the pipeline
     generates none, and the compression has nothing to demonstrate.
     """
-    return CandidateGenerator(
+    templates = CandidateGenerator(
         spec, cluster, islands, profiles,
         enable_bound_pruning=False, enable_pd=enable_pd,
     ).generate().candidates
+    if max_devices is not None:
+        # A SCOPE cut, not a feasibility judgement. What it removes is
+        # `excluded_by_scope`: the caller asked "what is the best plan using at
+        # most N devices", and templates above N were never considered rather
+        # than considered and rejected. The two do not merge (work order rule
+        # 4), and every caller that passes this records the number.
+        templates = [t for t in templates if t.total_devices <= max_devices]
+    return templates
 
 
 @dataclass(frozen=True)
@@ -368,7 +379,10 @@ def cmd_plan_objects(args) -> PlanObjects:
     """
     spec, cluster, profiles, islands, graph = _load(args)
     by_id = {i.id: i for i in islands}
-    templates = _templates(spec, cluster, islands, profiles, not args.no_enable_pd)
+    templates = _templates(
+        spec, cluster, islands, profiles, not args.no_enable_pd,
+        max_devices=getattr(args, "max_devices", None),
+    )
     predictor, cache = _predictor_for(args, spec, cluster, by_id)
 
     embedding_policy = EmbeddingPolicy(

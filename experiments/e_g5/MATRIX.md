@@ -104,6 +104,38 @@ work", and a budget is not a property of the hardware.
 
 ---
 
+## 1b. What the topology axis can and cannot ask (GS-27)
+
+A topology condition names a **placement**, and a placement has a fixed device
+count. T2 is "this template, on gpu0 and gpu2"; it is not a template of its own.
+
+That has a consequence this matrix has to state. Asked without a scope, the
+search on an eight-GPU node recommends an **eight-device** plan — and an
+eight-device plan on an eight-device node has **exactly one placement**. There
+is no contrast to measure, and T1 against T2 is not a question that can be put
+at all. The first dry run of the harness made this concrete by emitting
+`CUDA_VISIBLE_DEVICES=0,2 vllm serve ... --tensor-parallel-size 8`, which vLLM
+would refuse instantly.
+
+So each condition **scopes the planner to its own device count** and places the
+best plan of that size. Two things follow, and both are reported in every row
+rather than assumed:
+
+- **The rows are the best plan _of the size the condition places_**, not the
+  best plan on the node. Larger plans are `excluded_by_scope` — not
+  considered, never considered and rejected.
+- **A condition whose scope admits only one candidate has no boundary
+  alternative.** Measured: at `max_devices=2` the search returned one
+  two-device candidate, so that condition's boundary column reads
+  `not applicable` rather than being filled with a candidate of a different
+  size, which would make the two columns answer different questions.
+
+The second point bites §2's `false_infeasible` test, which needs a *second*
+candidate to deploy. It is available only in conditions whose scope admits
+more than one, and T3 (four devices) is where the matrix expects to find them.
+
+---
+
 ## 2. The boundary alternative
 
 Every condition deploys two candidates, and the second is the point of the

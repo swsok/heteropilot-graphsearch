@@ -234,8 +234,44 @@ def run_plan(spec_path: Path, work: Path, args):
         budget_seconds=None, epsilon=0.0,
         max_embeddings_per_template=None, compression="exact",
         bounds="all", diversity=False, oracle=False, output=None,
+        # The topology condition names a placement, and a placement has a fixed
+        # device count -- so the planner is asked "what is the best plan using
+        # at most this many devices", and its answer is what gets placed. Left
+        # unbounded, the search on an eight-GPU node recommends an eight-device
+        # plan, which has exactly ONE placement and therefore no contrast to
+        # measure (GS-27). This is `excluded_by_scope`, recorded in every raw
+        # file, never a judgement that larger plans are worse.
+        max_devices=len(C.TOPOLOGIES[args.topology_key].devices),
     )
     return cmd_plan_objects(args_for_plan)
+
+
+def candidates_of_size(objects, devices: int) -> list:
+    """Ranked candidates that use exactly `devices` accelerators, best first.
+
+    **A topology condition names a PLACEMENT, and a placement has a fixed
+    device count.** T2 is "this template, on gpu0 and gpu2"; it is not a
+    template of its own. So the condition can only be applied to a candidate
+    that uses two devices, and asking for the recommendation regardless
+    produced the command the first dry run emitted:
+
+        CUDA_VISIBLE_DEVICES=0,2 vllm serve ... --tensor-parallel-size 8
+
+    -- two devices visible, eight ranks requested. vLLM would refuse it
+    instantly, and a harness that emits it has not been checked. Selecting by
+    device count is what makes T1 and T2 two placements of ONE template, which
+    is the comparison E-G5 exists to make: the planner cannot tell them apart,
+    and everything else about them is equal by construction.
+    """
+    out = []
+    recommended = objects.output.recommended
+    for entry in [recommended, *(getattr(objects.output, "alternatives", []) or [])]:
+        if entry is None:
+            continue
+        plan_obj = getattr(entry, "plan", entry)
+        if plan_obj.candidate.total_devices == devices:
+            out.append(entry)
+    return out
 
 
 def boundary_alternative(objects) -> tuple[object | None, str]:
@@ -450,6 +486,7 @@ def main(argv: list[str] | None = None) -> int:
     model, pattern, topo_key, level = C.parse(args.condition)
     topo = C.TOPOLOGIES[topo_key]
     info = C.MODELS[model]
+    args.topology_key = topo_key
 
     if topo.tp < info["min_tp"]:
         raise SystemExit(
@@ -488,7 +525,6 @@ def main(argv: list[str] | None = None) -> int:
 
     say(f"planning ({args.predictor}) at {rps:.2f} rps")
     objects = run_plan(spec_path, work, args)
-    recommended = objects.output.recommended
     alternative, alternative_kind = boundary_alternative(objects)
 
     workload = args.workload or (
@@ -497,17 +533,39 @@ def main(argv: list[str] | None = None) -> int:
          else "sharegpt-qwen3-32b-300-sps10.jsonl")
     )
 
+    # The condition names a placement, so only candidates with that many
+    # devices can carry it. See `candidates_of_size`.
+    sized = candidates_of_size(objects, len(topo.devices))
+    chosen = [
+        ("recommendation", sized[0] if sized else None),
+        ("boundary", alternative if alternative in sized else
+                     (sized[1] if len(sized) > 1 else None)),
+    ]
+
     deployments = []
-    for label, entry in (("recommendation", recommended),
-                         ("boundary", alternative)):
+    for label, entry in chosen:
         if entry is None:
             deployments.append({
-                "label": label, "state": "not available",
-                "why": ("the search recommended nothing"
-                        if label == "recommendation" else alternative_kind),
+                "label": label,
+                "state": "not applicable to this topology",
+                "why": (
+                    f"{topo.key} places {len(topo.devices)} devices, and the "
+                    f"search returned no candidate of that size for the "
+                    f"{label} slot. Recorded rather than forced: a TP=8 plan "
+                    f"launched on two visible devices is not this condition "
+                    f"measured badly, it is a different condition that does "
+                    f"not run."
+                ),
+                "boundary_kind": alternative_kind if label == "boundary" else None,
             })
             continue
         plan_obj = getattr(entry, "plan", entry)
+        assignment = plan_obj.candidate.assignments[0]
+        if assignment.total_devices != len(topo.devices):   # pragma: no cover
+            raise SystemExit(
+                f"internal: selected a {assignment.total_devices}-device "
+                f"candidate for {topo.key}, which places {len(topo.devices)}"
+            )
         deployments.append(deploy_and_measure(
             objects, plan_obj, label, topo, model, workload,
             out_dir / label, args,
@@ -541,6 +599,16 @@ def main(argv: list[str] | None = None) -> int:
             "and creating one from this run is the circular evaluation the "
             "work order forbids"
         ),
+        "scope_cut": {
+            "max_devices": len(topo.devices),
+            "state": "excluded_by_scope",
+            "why": (
+                "the topology condition places this many devices, so the "
+                "planner was asked for the best plan of that size. Larger "
+                "plans were not considered -- not considered and rejected "
+                "(GS-27)."
+            ),
+        },
         "topology": {
             "key": topo.key, "devices": list(topo.devices), "tp": topo.tp,
             "link": topo.link, "substitutes": topo.substitutes,
