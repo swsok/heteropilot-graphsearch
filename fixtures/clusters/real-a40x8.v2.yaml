@@ -1,0 +1,606 @@
+# real-a40x8 -- the A40 node this repository runs on. NOT a fictional fixture.
+#
+# **Generated. Do not edit.** `python experiments/e_g5/build_cluster.py` writes
+# it from `experiments/microbench/raw/`, so every `source: measured` number is
+# traceable to a file that records the node serials, the CPU/memory binding,
+# the load average and who else was on the GPUs when it was taken. A measured
+# value transcribed by hand is a value nobody can trace.
+#
+# `tests/test_real_cluster.py` pins that it regenerates byte-identically and
+# that heteropilot's own `load_cluster_spec` accepts it.
+#
+# ---- what is measured and what is not -------------------------------------
+#
+# measured      the p2p plateaus on gpu0-gpu1 (NVLink), gpu0-gpu2 and gpu5-gpu7
+#               (across the host bridge), gpu0-gpu4 (across NUMA); the
+#               all-reduce busbw at world 2 and world 4; the eight port
+#               capacities. E-G4, 2026-09-28/29.
+# vendor_spec   every link's `bandwidth_gbps`. NVLink 112.5 from
+#               profiles/accelerators/a40.yaml; PCIe 31.5 = 16 GT/s x 16 lanes
+#               x 128/130, computed from the standard. These are NEVER edited
+#               to match a measurement (heteropilot absolute rule A3) -- the
+#               measurement sits beside them so the two can be compared.
+# unmeasured    the rest of the PCIe mesh. It carries its vendor_spec value
+#               alone and stays in the registry's measurement queue, which is
+#               the correct state for a wire nobody has put a probe on.
+# unpriced      every device. `price_per_hour_usd: null` -- no cost objective
+#               can be computed from this cluster, and E-G5 reports cost as
+#               uncomputed rather than as zero.
+#
+# ---- the shared-resource model (GS-22) ------------------------------------
+#
+# Each GPU's own PCIe x16 port is the resource, and each PCIe link is attached
+# to its SOURCE port. Both directed edges of a `bidir` link inherit that one
+# id, which is what makes gpu0->gpu2 contend with gpu2->gpu0 and not with
+# gpu1->gpu3. The per-bridge resource this node's plan originally assumed was
+# measured to be wrong: two copies across "one bridge" each got 25.11 GB/s
+# against 25.12 alone, and a background generator holding gpu1-gpu3 at a
+# measured 0.60 duty cycle left gpu0-gpu2 at its unloaded rate to three digits.
+#
+# ---- one island of 8, where heteropilot's own a40 fixtures model two of 4 ---
+#
+# `detect_islands` returns ONE island of all eight devices from this file,
+# because every declared link is PCIE or NVLINK and both are in
+# `INTRA_ISLAND_LINKS`. heteropilot's `docs/nodes/a40.md` says "a size-4 island
+# therefore means GPUs {0,1,2,3} or {4,5,6,7}", and its own fixtures model the
+# node that way.
+#
+# This file does not follow that, and the difference is deliberate. Measured
+# 2026-09-29: `can_device_access_peer(0, 4)` is **True** and a copy across the
+# NUMA boundary sustains 22.58 GB/s -- 90 % of the 25.12 GB/s the same copy
+# gets within one NUMA node. Those eight devices really are one peer-capable
+# PCIe domain. Splitting them would require declaring the cross-NUMA links
+# ETHERNET or INFINIBAND, which is the only way to make `detect_islands` cut
+# there, and they are neither.
+#
+# The consequence to watch: `max_tp_candidates` therefore includes 8, so a
+# candidate may ask for TP=8 spanning both NUMA halves. That is a real option
+# on this hardware and E-G5 will measure whether it is a good one -- the
+# world-4 all-reduce already collapses to 8.71 GB/s busbw, and world 8 across
+# SYS has not been measured at all. Any TP=8 candidate is `unknown_measurement`
+# for its collective bandwidth until it is.
+cluster_id: real-a40x8
+schema_version: 2
+snapshot_id: 2026-09-29-eg4
+nodes:
+- id: a40x8
+  cpu_sockets:
+  - id: sock0
+    numa_node: 0
+  - id: sock1
+    numa_node: 1
+  host_price_per_hour_usd: null
+  accelerators:
+  - id: gpu0
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  - id: gpu1
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  - id: gpu2
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  - id: gpu3
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  - id: gpu4
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  - id: gpu5
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  - id: gpu6
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  - id: gpu7
+    type: GPU
+    vendor: NVIDIA
+    model: A40
+    backend: cuda
+    memory_gb: 45.0
+    profile: vendor/heteropilot/profiles/accelerators/a40.yaml
+    price_per_hour_usd: null
+  nics:
+  - id: nic0
+    type: infiniband
+    speed_gbps: 100.0
+links:
+- id: gpu0-gpu1
+  src: a40x8/gpu0
+  dst: a40x8/gpu1
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  measurements:
+  - collective: p2p
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 52.64
+    world_size: 2
+    source: measured
+    method: torch 2.10.0+cu128, run_pair.py --condition single --share independent --background-util 0.0
+    msg_bytes:
+    - 268435456
+    date: '2026-09-28'
+    raw: experiments/microbench/raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond1-single-nvlink-0-1.json
+    note: NVLink NV4; single-flow plateau, 20 repetitions, node quiet (no other tenant)
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 39.24
+    world_size: 2
+    source: measured
+    method: torch 2.10.0+cu128 + NCCL 2.27.5, link_probe.py under torchrun, run_collective.sh
+    msg_bytes:
+    - 67108864
+    date: '2026-09-28'
+    raw: experiments/microbench/raw/collective-2026-09-28/c-world2-nvlink-0-1.json
+    note: busbw plateau, not algbw; the figure comparable with a link rate
+- id: gpu0-gpu2
+  src: a40x8/gpu0
+  dst: a40x8/gpu2
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu0
+  measurements:
+  - collective: p2p
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 25.12
+    world_size: 2
+    source: measured
+    method: torch 2.10.0+cu128, run_pair.py --condition single --share independent --background-util 0.0
+    msg_bytes:
+    - 268435456
+    date: '2026-09-28'
+    raw: experiments/microbench/raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond1-single-bridge-0-2.json
+    note: PCIe across the host bridge; single-flow plateau, 20 repetitions, node quiet (no other tenant)
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 19.34
+    world_size: 2
+    source: measured
+    method: torch 2.10.0+cu128 + NCCL 2.27.5, link_probe.py under torchrun, run_collective.sh
+    msg_bytes:
+    - 67108864
+    date: '2026-09-28'
+    raw: experiments/microbench/raw/collective-2026-09-28/c-world2-bridge-0-2.json
+    note: busbw plateau, not algbw; the figure comparable with a link rate
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 8.71
+    world_size: 4
+    source: measured
+    method: torch 2.10.0+cu128 + NCCL 2.27.5, link_probe.py under torchrun, run_collective.sh
+    msg_bytes: &id001
+    - 67108864
+    date: '2026-09-28'
+    raw: experiments/microbench/raw/collective-2026-09-28/c-world4-numa0.json
+    note: the TP=4 group on {gpu0,gpu1,gpu2,gpu3}. 2.2x below the world-2 figure over the same wires,
+      which is why world_size is part of the key and not a note beside it
+- id: gpu0-gpu3
+  src: a40x8/gpu0
+  dst: a40x8/gpu3
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu0
+- id: gpu0-gpu4
+  src: a40x8/gpu0
+  dst: a40x8/gpu4
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu0
+  measurements:
+  - collective: p2p
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 22.58
+    world_size: 2
+    source: measured
+    method: torch 2.10.0+cu128, run_pair.py --condition single --share independent --background-util 0.0
+    msg_bytes:
+    - 268435456
+    date: '2026-09-29'
+    raw: experiments/microbench/raw/2026-09-29-GPU-11e5c5fd-9e9/a-cond1-single-sys-0-4.json
+    note: 'PCIe across NUMA (SYS: host bridge + UPI); single-flow plateau, 20 repetitions, node quiet
+      (no other tenant)'
+- id: gpu0-gpu5
+  src: a40x8/gpu0
+  dst: a40x8/gpu5
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu0
+- id: gpu0-gpu6
+  src: a40x8/gpu0
+  dst: a40x8/gpu6
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu0
+- id: gpu0-gpu7
+  src: a40x8/gpu0
+  dst: a40x8/gpu7
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu0
+- id: gpu1-gpu2
+  src: a40x8/gpu1
+  dst: a40x8/gpu2
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu1
+- id: gpu1-gpu3
+  src: a40x8/gpu1
+  dst: a40x8/gpu3
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu1
+  measurements:
+  - collective: all_reduce
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 8.71
+    world_size: 4
+    source: measured
+    method: torch 2.10.0+cu128 + NCCL 2.27.5, link_probe.py under torchrun, run_collective.sh
+    msg_bytes: *id001
+    date: '2026-09-28'
+    raw: experiments/microbench/raw/collective-2026-09-28/c-world4-numa0.json
+    note: the TP=4 group on {gpu0,gpu1,gpu2,gpu3}. 2.2x below the world-2 figure over the same wires,
+      which is why world_size is part of the key and not a note beside it
+- id: gpu1-gpu4
+  src: a40x8/gpu1
+  dst: a40x8/gpu4
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu1
+- id: gpu1-gpu5
+  src: a40x8/gpu1
+  dst: a40x8/gpu5
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu1
+- id: gpu1-gpu6
+  src: a40x8/gpu1
+  dst: a40x8/gpu6
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu1
+- id: gpu1-gpu7
+  src: a40x8/gpu1
+  dst: a40x8/gpu7
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu1
+- id: gpu2-gpu3
+  src: a40x8/gpu2
+  dst: a40x8/gpu3
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+- id: gpu2-gpu4
+  src: a40x8/gpu2
+  dst: a40x8/gpu4
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu2
+- id: gpu2-gpu5
+  src: a40x8/gpu2
+  dst: a40x8/gpu5
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu2
+- id: gpu2-gpu6
+  src: a40x8/gpu2
+  dst: a40x8/gpu6
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu2
+- id: gpu2-gpu7
+  src: a40x8/gpu2
+  dst: a40x8/gpu7
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu2
+- id: gpu3-gpu4
+  src: a40x8/gpu3
+  dst: a40x8/gpu4
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu3
+- id: gpu3-gpu5
+  src: a40x8/gpu3
+  dst: a40x8/gpu5
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu3
+- id: gpu3-gpu6
+  src: a40x8/gpu3
+  dst: a40x8/gpu6
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu3
+- id: gpu3-gpu7
+  src: a40x8/gpu3
+  dst: a40x8/gpu7
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu3
+- id: gpu4-gpu5
+  src: a40x8/gpu4
+  dst: a40x8/gpu5
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+- id: gpu4-gpu6
+  src: a40x8/gpu4
+  dst: a40x8/gpu6
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu4
+- id: gpu4-gpu7
+  src: a40x8/gpu4
+  dst: a40x8/gpu7
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu4
+- id: gpu5-gpu6
+  src: a40x8/gpu5
+  dst: a40x8/gpu6
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu5
+- id: gpu5-gpu7
+  src: a40x8/gpu5
+  dst: a40x8/gpu7
+  type: PCIE
+  bandwidth_gbps: 31.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+  shared_resource: port-gpu5
+  measurements:
+  - collective: p2p
+    msg_size_class: bulk
+    binding: numa_pinned
+    bus_bw_gbps: 25.13
+    world_size: 2
+    source: measured
+    method: torch 2.10.0+cu128, run_pair.py --condition single --share independent --background-util 0.0
+    msg_bytes:
+    - 268435456
+    date: '2026-09-29'
+    raw: experiments/microbench/raw/2026-09-29-GPU-11e5c5fd-9e9/a-cond1-single-bridge-5-7.json
+    note: PCIe across the host bridge; single-flow plateau, 20 repetitions, node quiet (no other tenant)
+- id: gpu6-gpu7
+  src: a40x8/gpu6
+  dst: a40x8/gpu7
+  type: NVLINK
+  bandwidth_gbps: 112.5
+  latency_ns: 0.0
+  duplex: full
+  direction: bidir
+  p2p: true
+  source: vendor_spec
+shared_resources:
+- id: port-gpu0
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured
+- id: port-gpu1
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured
+- id: port-gpu2
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured
+- id: port-gpu3
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured
+- id: port-gpu4
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured
+- id: port-gpu5
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured
+- id: port-gpu6
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured
+- id: port-gpu7
+  kind: pcie_uplink
+  capacity: 25.12
+  unit: GB/s
+  reserved: 0.0
+  node: a40x8
+  source: measured

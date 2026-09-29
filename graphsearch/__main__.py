@@ -32,12 +32,14 @@ from planner.inventory import (  # noqa: E402
     load_cluster_spec,
     load_profiles_for,
 )
+from planner.plan import PlannerOutput  # noqa: E402
 from planner.render import render  # noqa: E402
 from planner.spec import SpecError, load_service_spec  # noqa: E402
 
 from graphsearch.adaptive import (  # noqa: E402
     AdaptiveConfig,
     AdaptiveSearch,
+    SearchAudit,
     SearchMode,
     build_ranker,
 )
@@ -47,7 +49,11 @@ from graphsearch.contention import (  # noqa: E402
     contention_model,
 )
 from graphsearch.embeddings import EmbeddingPolicy, enumerate_embeddings  # noqa: E402
-from graphsearch.equivalence import CompressionPolicy, compress  # noqa: E402
+from graphsearch.equivalence import (  # noqa: E402
+    CompressionPolicy,
+    CompressionReport,
+    compress,
+)
 from graphsearch.oracle import (  # noqa: E402
     binder_for,
     compare,
@@ -61,7 +67,11 @@ from graphsearch.ranker import (  # noqa: E402
     DiversityQuota,
 )
 from graphsearch.render import render_graph_block  # noqa: E402
-from graphsearch.restore import RestoreError, restore  # noqa: E402
+from graphsearch.restore import (  # noqa: E402
+    RestoredPlan,
+    RestoreError,
+    restore,
+)
 from graphsearch.schema import build_resource_graph  # noqa: E402
 
 #: heteropilot's own defaults, repeated rather than imported: `planner.__main__`
@@ -265,22 +275,101 @@ def _templates(spec, cluster, islands, profiles, enable_pd: bool = True):
     ).generate().candidates
 
 
+@dataclass(frozen=True)
+class PlanObjects:
+    """Everything `cmd_plan` computes, before any of it is printed.
+
+    `plan --output` writes a YAML summary, and a summary cannot be launched:
+    `VllmCudaBackend.launch` wants a `DeploymentPlan`. E-G5's harness needs the
+    objects, and re-deriving them by parsing the summary would be a second,
+    quietly different code path -- the first time the two disagreed, the
+    deployment would not match the plan it claims to be.
+    """
+
+    output: PlannerOutput
+    audit: SearchAudit
+    report: CompressionReport
+    restored: list[RestoredPlan]
+    representatives: list
+    verdicts: object
+    rejections: object
+    graph: object
+    islands_by_id: dict
+    profiles: object
+    cluster: object
+    spec: object
+
+
 def cmd_plan(args) -> int:
+    if args.oracle:
+        # Handled here rather than in `cmd_plan_objects`, which has no way to
+        # say "there is no plan": the oracle mode simulates everything and
+        # recommends nothing, so there are no objects to return. An earlier
+        # version signalled it with `raise SystemExit(0)` from inside the
+        # pipeline, which `cmd_plan` then could not turn back into its
+        # documented int return -- tests/test_cli.py caught it.
+        return _cmd_plan_oracle(args)
+    objects = cmd_plan_objects(args)
+    if args.predictor == "mock":
+        print(MOCK_BANNER)
+    print(render(objects.output))
+    print()
+    print(render_graph_block(objects.audit, objects.report, objects.restored))
+
+    if args.output:
+        _write(objects.output, objects.audit, objects.report,
+               objects.restored, Path(args.output))
+        print(f"\nwritten to {args.output}")
+    return 0
+
+
+def _cmd_plan_oracle(args) -> int:
+    """`--oracle`: simulate every embedding, recommend nothing, say so."""
     spec, cluster, profiles, islands, graph = _load(args)
     by_id = {i.id: i for i in islands}
     templates = _templates(spec, cluster, islands, profiles, not args.no_enable_pd)
+    predictor, _cache = _predictor_for(args, spec, cluster, by_id)
+    result = run_oracle(
+        spec, cluster, by_id, profiles, predictor,
+        graph=graph, templates=templates,
+        policy=EmbeddingPolicy(
+            max_embeddings_per_template=args.max_embeddings_per_template
+        ),
+    )
+    print(MOCK_BANNER if args.predictor == "mock" else "")
+    print(
+        f"Oracle: {len(result.embeddings)} embeddings simulated, "
+        f"{len(result.feasible_ids)} feasible. No compression, no bounds, "
+        f"no top-K."
+    )
+    return 0
+
+
+def _predictor_for(args, spec, cluster, by_id):
+    """The predictor and its cache. One definition, three callers."""
     if args.predictor == "mock":
-        predictor, cache = _mock_predictor(), None
-    else:
-        environment = _sim_environment(args, spec, cluster, by_id)
-        predictor, cache = environment.predictor, environment.cache
-        print(
-            f"sim: trace {environment.trace_path} "
-            f"({args.num_requests} requests, seed {args.seed}); "
-            f"work {environment.work_root}; "
-            f"cache {args.cache_dir or 'none'}",
-            file=sys.stderr,
-        )
+        return _mock_predictor(), None
+    environment = _sim_environment(args, spec, cluster, by_id)
+    print(
+        f"sim: trace {environment.trace_path} "
+        f"({args.num_requests} requests, seed {args.seed}); "
+        f"work {environment.work_root}; "
+        f"cache {args.cache_dir or 'none'}",
+        file=sys.stderr,
+    )
+    return environment.predictor, environment.cache
+
+
+def cmd_plan_objects(args) -> PlanObjects:
+    """The whole planning pipeline, returning objects instead of printing.
+
+    `cmd_plan` is this plus the rendering, so the CLI's output is unchanged and
+    the two cannot drift: there is one pipeline, not two.
+    """
+    spec, cluster, profiles, islands, graph = _load(args)
+    by_id = {i.id: i for i in islands}
+    templates = _templates(spec, cluster, islands, profiles, not args.no_enable_pd)
+    predictor, cache = _predictor_for(args, spec, cluster, by_id)
 
     embedding_policy = EmbeddingPolicy(
         max_embeddings_per_template=args.max_embeddings_per_template
@@ -290,19 +379,6 @@ def cmd_plan(args) -> int:
     compression_policy = CompressionPolicy(
         enabled=args.compression == "exact", conflicts=False
     )
-
-    if args.oracle:
-        result = run_oracle(
-            spec, cluster, by_id, profiles, predictor,
-            graph=graph, templates=templates, policy=embedding_policy,
-        )
-        print(MOCK_BANNER if args.predictor == "mock" else "")
-        print(
-            f"Oracle: {len(result.embeddings)} embeddings simulated, "
-            f"{len(result.feasible_ids)} feasible. No compression, no bounds, "
-            f"no top-K."
-        )
-        return 0
 
     embeddings, stats = enumerate_embeddings(
         templates, by_id, graph, spec, embedding_policy
@@ -361,16 +437,12 @@ def cmd_plan(args) -> int:
             except RestoreError as exc:
                 print(f"warning: could not restore the recommendation: {exc}")
 
-    if args.predictor == "mock":
-        print(MOCK_BANNER)
-    print(render(output))
-    print()
-    print(render_graph_block(audit, report, restored))
-
-    if args.output:
-        _write(output, audit, report, restored, Path(args.output))
-        print(f"\nwritten to {args.output}")
-    return 0
+    return PlanObjects(
+        output=output, audit=audit, report=report, restored=restored,
+        representatives=representatives, verdicts=verdicts,
+        rejections=rejections, graph=graph, islands_by_id=by_id,
+        profiles=profiles, cluster=cluster, spec=spec,
+    )
 
 
 def _write(output, audit, report, restored, path: Path) -> None:

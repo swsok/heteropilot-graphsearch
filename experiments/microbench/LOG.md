@@ -36,6 +36,8 @@ plan edited to match what happened is not a plan.
 | 9 | 2026-09-28 | `GPU-11e5c5fd-9e9` | collective | ranks 0,1 | n/a | 0.0 | - | 0 (none) | yes | `raw/collective-2026-09-28/c-world2-bridge-0-2.json` | world 2; **ranks 0,1 here are GPU0 and GPU2** -- `CUDA_VISIBLE_DEVICES=0,2` remaps them, so rank ids are not device ids in this row |
 | 10 | 2026-09-28 | `GPU-11e5c5fd-9e9` | collective | ranks 0,1 | n/a | 0.0 | - | 0 (none) | yes | `raw/collective-2026-09-28/c-world2-nvlink-0-1.json` | world 2; link_probe.py, busbw |
 | 11 | 2026-09-28 | `GPU-11e5c5fd-9e9` | collective | ranks 0,1,2,3 | n/a | 0.0 | - | 0 (none) | yes | `raw/collective-2026-09-28/c-world4-numa0.json` | world 4; link_probe.py, busbw |
+| 12 | 2026-09-29 | `GPU-11e5c5fd-9e9` | single | 0-4 | independent | 0.0 | 20 | 0 (none) | yes | `raw/2026-09-29-GPU-11e5c5fd-9e9/a-cond1-single-sys-0-4.json` | **across NUMA** (`SYS`): 22.58 GB/s at 256 MiB, 90 % of the 25.12 within one NUMA node. `can_device_access_peer(0,4)` is True -- which is why `real-a40x8.v2.yaml` models one island of eight and not two of four |
+| 13 | 2026-09-29 | `GPU-11e5c5fd-9e9` | single | 5-7 | independent | 0.0 | 20 | 0 (none) | yes | `raw/2026-09-29-GPU-11e5c5fd-9e9/a-cond1-single-bridge-5-7.json` | the NUMA-1 bridge, 25.13 GB/s. Run so that all eight `port-gpuN` capacities are the endpoint of a measured pair rather than inferred from a sibling |
 
 ### Columns that decide whether a row is usable
 

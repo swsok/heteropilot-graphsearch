@@ -1,0 +1,31 @@
+{
+  "banner": "REAL HARDWARE",
+  "cuda_visible_devices": "0,2",
+  "dataset": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama-300-rps5.jsonl",
+  "devices": [
+    0,
+    2
+  ],
+  "gpu_tenants_after": [],
+  "gpu_tenants_before": [],
+  "heteropilot_would_use": "0,1,2,3,4,5,6,7",
+  "link": "PCIe across the host bridge, measured 25.12 GB/s p2p",
+  "loadavg_after": [
+    6.1,
+    4.91,
+    4.1
+  ],
+  "loadavg_before": [
+    5.61,
+    4.54,
+    3.91
+  ],
+  "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
+  "placement": "T2",
+  "rep": 42,
+  "returncode": 0,
+  "tp": 2,
+  "wall_s": 91.57,
+  "why_overridden": "resolve_devices() maps an island to ALL of its accelerator ids, so heteropilot names a template and cannot name a placement. This placement is the variable under test.",
+  "written_at": "2026-09-29T03:59:56.133637+00:00"
+}
