@@ -81,10 +81,17 @@ figures:
 	    done; \
 	fi
 
+# `reuse.tex` and `concept_sec9.tex` are HAND-WRITTEN and must survive
+# `make clean`, which removes generated tables. They carry no measured number:
+# one says which repository each module lives in, the other is the design's
+# worked example.
+HANDWRITTEN := tables/reuse.tex figures/concept_sec9.tex
+
 clean:
 	rm -f main.pdf main.aux main.log main.out main.bbl main.blg main.fls \
 	      main.fdb_latexmk main.synctex.gz
-	rm -f tables/*.tex
+	@# generated tables only; the hand-written two are named above and kept
+	find tables -name '*.tex' ! -name 'reuse.tex' -delete
 
 # Regenerated from the results files, like the tables. A number in the body is
 # a macro defined here; `make check` is what keeps it that way.

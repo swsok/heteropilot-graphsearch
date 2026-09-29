@@ -2,44 +2,17 @@
 │ LLMServingSim Bench                                                          │
 │ vLLM end-to-end run -> /home/swsok/heteropilot-graphsearch/experiments/e_g5/ │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-[17:06:23] INFO     Loaded 150 requests from                                    
-                    /home/swsok/heteropilot-graphsearch/vendor/heteropilot/workl
-                    oads/sharegpt-llama-3.1-8b-300-sps10.jsonl                  
-[17:06:24] INFO     Booting AsyncLLM …                                          
-[17:06:26] ERROR    Booting AsyncLLM failed after 2.0s                          
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/bench/__main__.py", line 35, in <module>
-    sys.exit(main())
-             ^^^^^^
-  File "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/bench/__main__.py", line 25, in main
-    return run_bench(args)
-           ^^^^^^^^^^^^^^^
-  File "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/bench/core/runner.py", line 101, in run
-    asyncio.run(_drive(args, requests, output_dir))
-  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/asyncio/runners.py", line 195, in run
-    return runner.run(main)
-           ^^^^^^^^^^^^^^^^
-  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/asyncio/runners.py", line 118, in run
-    return self._loop.run_until_complete(task)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
-    return future.result()
-           ^^^^^^^^^^^^^^^
-  File "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/bench/core/runner.py", line 166, in _drive
-    engine = AsyncLLM.from_engine_args(
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py", line 250, in from_engine_args
-    vllm_config = engine_args.create_engine_config(usage_context)
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/engine/arg_utils.py", line 1758, in create_engine_config
-    parallel_config = ParallelConfig(
-                      ^^^^^^^^^^^^^^^
-  File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/pydantic/_internal/_dataclasses.py", line 121, in __init__
-    s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)
-pydantic_core._pydantic_core.ValidationError: 1 validation error for ParallelConfig
-  Value error, World size (4) is larger than the number of available GPUs (2) in this node. If this is intentional and you are using:
-- ray, set '--distributed-executor-backend ray'.
-- multiprocessing, set '--nnodes' appropriately. [type=value_error, input_value=ArgsKwargs((), {'pipeline...'_api_process_rank': 0}), input_type=ArgsKwargs]
-    For further information visit https://errors.pydantic.dev/2.13/v/value_error
+[19:12:58] INFO     Loaded 150 requests from                                    
+                    /home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/l
+                    lama31-8b-rps55.jsonl                                       
+[19:12:59] INFO     Booting AsyncLLM …                                          
+[19:13:13] INFO     ✓ Booting AsyncLLM (14.5s)                                  
+           INFO     Submitting 150 requests …                                   
+  Requests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 150/150 • 0:00:52 • 0:00:00
+[19:14:06] INFO     ✓ Submitting 150 requests (52.4s)                           
+           INFO     Shutting AsyncLLM down …                                    
+[19:14:07] INFO     ✓ Shutting AsyncLLM down (1.1s)                             
+           INFO     ✓ 150 requests, 53 timeseries rows ->                       
+                    /home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/lla
+                    ma31-8b__normal__T3__knee/42/boundary:impossible_proven/benc
+                    h                                                           

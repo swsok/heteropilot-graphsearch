@@ -1,7 +1,7 @@
 {
   "arrival_rate_rps": 4.0,
-  "banner": "DRY RUN -- nothing was launched and no number here is a measurement. Configs and commands are recorded exactly as they would run.",
-  "boundary_alternative_kind": "feasible_marginal: feasible-marginal on SIMULATED p99 (risk 0.5750, closest to 1 of 15 evaluated feasible at this size); impossible_proven: impossible_proven, tightest: stage throughput_upper_bound, margin 0.0104, bound 55.000 requests/s against a ceiling of 54.433",
+  "banner": "REAL HARDWARE -- node serials in `preconditions`.",
+  "boundary_alternative_kind": "feasible_marginal: feasible-marginal on SIMULATED p99 (risk 0.7689, closest to 1 of 15 evaluated feasible at this size); impossible_proven: impossible_proven, tightest: stage throughput_upper_bound, margin 0.0104, bound 55.000 requests/s against a ceiling of 54.433",
   "calibration": "existing a40.accuracy.yaml only; no new domain may be created from this run",
   "condition": "llama31-8b__normal__T3__knee",
   "deployments": [
@@ -15,7 +15,7 @@
         "--model",
         "NousResearch/Meta-Llama-3.1-8B",
         "--dataset",
-        "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+        "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl",
         "--output-dir",
         "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__knee/42/recommendation/bench",
         "--tensor-parallel-size",
@@ -68,6 +68,7 @@
         }
       ],
       "label": "recommendation",
+      "offered_rps": 4.0,
       "placement_override": {
         "heteropilot_would_use": "every device of the island",
         "model_substitution": "the planner keeps the gated id its profiles name; the engine is given the ungated mirror of the same weights",
@@ -78,11 +79,13 @@
       },
       "plan_id": "hp-00000",
       "predicted": {
-        "p99_tpot_ms": 6.937549623908046,
-        "p99_ttft_ms": 138.38663366447213,
-        "slo_goodput_rps": 4.0
+        "p99_tpot_ms": 13.15877632,
+        "p99_ttft_ms": 161.67772517999995,
+        "slo_goodput_rps": 2.9912925119589495
       },
-      "state": "dry run"
+      "returncode": 0,
+      "state": "measured",
+      "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl"
     },
     {
       "bench_argv": [
@@ -94,7 +97,7 @@
         "--model",
         "NousResearch/Meta-Llama-3.1-8B",
         "--dataset",
-        "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+        "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl",
         "--output-dir",
         "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__knee/42/boundary:feasible_marginal/bench",
         "--tensor-parallel-size",
@@ -147,6 +150,7 @@
         }
       ],
       "label": "boundary:feasible_marginal",
+      "offered_rps": 4.0,
       "placement_override": {
         "heteropilot_would_use": "every device of the island",
         "model_substitution": "the planner keeps the gated id its profiles name; the engine is given the ungated mirror of the same weights",
@@ -157,11 +161,13 @@
       },
       "plan_id": "hp-00001",
       "predicted": {
-        "p99_tpot_ms": 6.937549623908046,
-        "p99_ttft_ms": 138.38663366447213,
-        "slo_goodput_rps": 4.0
+        "p99_tpot_ms": 13.15877632,
+        "p99_ttft_ms": 161.67772517999995,
+        "slo_goodput_rps": 2.9912925119589495
       },
-      "state": "dry run"
+      "returncode": 0,
+      "state": "measured",
+      "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl"
     },
     {
       "bench_argv": [
@@ -173,7 +179,7 @@
         "--model",
         "NousResearch/Meta-Llama-3.1-8B",
         "--dataset",
-        "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/workloads/sharegpt-llama-3.1-8b-300-sps10.jsonl",
+        "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps55.jsonl",
         "--output-dir",
         "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__knee/42/boundary:impossible_proven/bench",
         "--tensor-parallel-size",
@@ -226,6 +232,7 @@
         }
       ],
       "label": "boundary:impossible_proven",
+      "offered_rps": 55.0,
       "placement_override": {
         "heteropilot_would_use": "every device of the island",
         "model_substitution": "the planner keeps the gated id its profiles name; the engine is given the ungated mirror of the same weights",
@@ -240,30 +247,32 @@
         "p99_ttft_ms": 550.0,
         "slo_goodput_rps": 55.0
       },
-      "state": "dry run"
+      "returncode": 0,
+      "state": "measured",
+      "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps55.jsonl"
     }
   ],
-  "dry_run": true,
+  "dry_run": false,
   "gpu_tenants_after": [],
   "has_accuracy_domain": true,
   "hf_model": "NousResearch/Meta-Llama-3.1-8B",
   "level": "knee",
   "loadavg_after": [
-    2.18,
-    2.24,
-    1.93
+    6.83,
+    5.42,
+    3.88
   ],
   "model": "llama31-8b",
   "model_substitution_note": "the planner is given the gated `meta-llama/...` id that heteropilot's profiles name; the engine serves the ungated NousResearch mirror of the same weights",
   "pattern": "normal",
   "planner_model": "meta-llama/Llama-3.1-8B",
   "preconditions": {
-    "checked_at": "2026-09-29T09:54:36.042287+00:00",
+    "checked_at": "2026-09-29T10:06:55.592583+00:00",
     "gpu_tenants_before": [],
     "loadavg_before": [
-      3.5,
-      2.4,
-      1.88
+      2.9,
+      4.01,
+      3.01
     ],
     "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
     "problems": [],
@@ -292,5 +301,5 @@
     "tp": 4
   },
   "topology_key": "T3",
-  "written_at": "2026-09-29T09:57:46.138359+00:00"
+  "written_at": "2026-09-29T10:14:09.270407+00:00"
 }

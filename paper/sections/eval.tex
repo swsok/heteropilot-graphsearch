@@ -129,6 +129,11 @@ derivation is stated with the count.
 % claim: C6
 \input{e_g1b_topk}
 \input{e_g2_topk_holdout}
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{topk_holdout.pdf}
+  \caption{Feasible recall against the simulation budget, both arms, on the holdout fixtures~\sourcetag{MOCK}. The oracle's level is the dotted line. At $K=4$ the graph search is behind, which the curve shows without the reader comparing two rows.}
+  \label{fig:topk}
+\end{figure}
 
 Table~\ref{tab:e_g1b_topk} and Table~\ref{tab:e_g2_topk_holdout} report
 feasible recall against the existing planner's surrogate top-$K$ under a
@@ -161,6 +166,11 @@ passed. \pending{E-G5: real-lab holdout}
 % claim: C15
 % claim: C16
 \input{e_g4_microbench_2}
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{contention_error.pdf}
+  \caption{Fluid and null error against message size, on the declaration the measurements support~\sourcetag{REAL HARDWARE}. The bidirectional error is near zero from 4 to 64 MiB and rises at 128: an accuracy domain, not a single figure.}
+  \label{fig:contention}
+\end{figure}
 
 Table~\ref{tab:e_g4_microbench_2} reports the registered verdict, and it is a
 \textbf{failure}: on the topology the plan declared before measuring,
