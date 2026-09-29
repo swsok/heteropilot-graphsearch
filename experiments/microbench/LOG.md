@@ -1,7 +1,8 @@
 # E-G4 microbenchmark — run log
 
-> **Template. No run has happened.** Every row below the header is an example
-> showing the shape; delete them when the first real row goes in.
+> **REAL HARDWARE.** The rows below are runs that happened, on the node whose
+> serials they carry. `occupancy stable` is computed by `run_pair.py` and
+> written into each raw file; it is not a recollection.
 
 One row per invocation of `run_pair.py`. Fill it **as you run**, not afterwards
 — the columns that matter most are the ones nobody remembers an hour later.
@@ -24,7 +25,17 @@ plan edited to match what happened is not a plan.
 
 | # | date | node (accel serials, first 16) | condition | pairs | share | bg util | iters | others on GPUs | occupancy stable | raw file | notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| — | 2026-09-28 | `GPU-11e5c5fd…` | *(example)* two-same | 0-2,1-3 | same | 0.0 | 10 | 4 × `root` pretrain_gpt | yes | `raw/2026-09-28-…/a40-same-bridge.json` | example row, delete |
+| 1 | 2026-09-28 | `GPU-11e5c5fd-9e9` | single | 0-2 | independent | 0.0 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond1-single-bridge-0-2.json` | load 0.53; mempolicy `bind:0` |
+| 2 | 2026-09-28 | `GPU-11e5c5fd-9e9` | single | 0-1 | independent | 0.0 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond1-single-nvlink-0-1.json` | load 0.49; mempolicy `bind:0` |
+| 3 | 2026-09-28 | `GPU-11e5c5fd-9e9` | two-same | 0-2 | same | 0.598 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond2-bg60-same-bridge.json` | load 0.16; mempolicy `bind:0` |
+| 4 | 2026-09-28 | `GPU-11e5c5fd-9e9` | two-same | 0-2,1-3 | same | 0.0 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond2-two-same-bridge.json` | load 0.57; mempolicy `bind:0` |
+| 5 | 2026-09-28 | `GPU-11e5c5fd-9e9` | two-independent | 0-2 | independent | 0.598 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond3-bg60-independent.json` | load 0.21; mempolicy `bind:0` |
+| 6 | 2026-09-28 | `GPU-11e5c5fd-9e9` | two-independent | 0-2,4-6 | independent | 0.0 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond3-two-independent.json` | load 0.61; mempolicy `bind:0` |
+| 7 | 2026-09-28 | `GPU-11e5c5fd-9e9` | bidirectional | 0-2,2-0 | same | 0.598 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond4-bidi-bg60-same.json` | load 0.33; mempolicy `bind:0` |
+| 8 | 2026-09-28 | `GPU-11e5c5fd-9e9` | bidirectional | 0-2,2-0 | same | 0.0 | 20 | 0 (none) | yes | `raw/2026-09-28-GPU-11e5c5fd-9e9/a-cond4-bidirectional-0-2.json` | load 0.72; mempolicy `bind:0` |
+| 9 | 2026-09-28 | `GPU-11e5c5fd-9e9` | collective | ranks 0,1 | n/a | 0.0 | - | 0 (none) | yes | `raw/collective-2026-09-28/c-world2-bridge-0-2.json` | world 2; **ranks 0,1 here are GPU0 and GPU2** -- `CUDA_VISIBLE_DEVICES=0,2` remaps them, so rank ids are not device ids in this row |
+| 10 | 2026-09-28 | `GPU-11e5c5fd-9e9` | collective | ranks 0,1 | n/a | 0.0 | - | 0 (none) | yes | `raw/collective-2026-09-28/c-world2-nvlink-0-1.json` | world 2; link_probe.py, busbw |
+| 11 | 2026-09-28 | `GPU-11e5c5fd-9e9` | collective | ranks 0,1,2,3 | n/a | 0.0 | - | 0 (none) | yes | `raw/collective-2026-09-28/c-world4-numa0.json` | world 4; link_probe.py, busbw |
 
 ### Columns that decide whether a row is usable
 

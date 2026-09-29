@@ -524,8 +524,63 @@ and this is it, stated before the run rather than chosen from the table.
 
 ---
 
+## E-G4 — the fitted set, excluded from E-G5/P3 validation
+
+Registered 2026-09-28 with change-log row 2. `experiments/results/e_g4_microbench.md`
+reports two topology declarations. The `as_planned` one is what `PLAN.md` fixed
+before any measurement and is what the verdict is computed on. The
+`as_measured` one was **derived from these files**, so nothing fitted on it may
+also be tested by them (work order P2.4):
+
+```
+experiments/microbench/raw/2026-09-28-GPU-11e5c5fd-9e9/
+    a-cond1-single-bridge-0-2.json
+    a-cond1-single-nvlink-0-1.json
+    a-cond2-bg60-same-bridge.json
+    a-cond2-two-same-bridge.json
+    a-cond3-bg60-independent.json
+    a-cond3-two-independent.json
+    a-cond4-bidi-bg60-same.json
+    a-cond4-bidirectional-0-2.json
+```
+
+All eight, not the three that actually drove the conclusion: every file was in
+front of the author when the declaration was written, and "which ones did I
+really use" is not a distinction a reader can check. It costs nothing — P3
+measures served TTFT and TPOT, not bus bandwidth.
+
+**E-G4's verdict, for the record:** FAIL on `two-same` (fluid 93.1 % median
+error) and `bidirectional` (33.2 %) under the registered declaration; PASS on
+all four conditions under `as_measured`, with the model unchanged. The failure
+is a topology declaration, not the contention model (GS-22).
+
+---
+
+## E-G5 precondition — the node is exclusively ours, and it says so
+
+Registered 2026-09-28, appended with change-log row 2.
+
+A figure carrying the `REAL HARDWARE` banner while another tenant holds part of
+the node is **measured under a condition the banner does not state**. So E-G5's
+harness refuses to deploy when another user's process holds any GPU, and every
+raw file carries `nvidia-smi --query-compute-apps` from before and after the
+run plus `os.getloadavg()`, so a contaminated measurement labels itself rather
+than being remembered.
+
+Observed on the morning of 2026-09-28: GPUs 4-7 at 99 % and ~8.8 GB each under
+`root` running `pretrain_gpt.py`. Observed that evening: all eight at 1 MiB,
+0 %, no compute apps, load average 1.08. The E-G4 matrix was taken in the
+second condition and every one of its files records it.
+
+**The user's permission to use the node is not a substitute for this check.**
+Permission is about whether we may run; the record is about what the number
+means. The tenant can come back between two rows of the same table.
+
+---
+
 ## Change log (append-only)
 
 | # | date | what changed | why |
 | --- | --- | --- | --- |
 | 1 | 2026-09-28 | **Initial registration.** The common invariant, the known limitations, and E-G3 through E-G7 with every criterion and its 근거. **E-G4's 15 / 30 / 5 and E-G5(a) are to be appended after their pilots.** | P0.4 of `WORK_ORDER_paper.md`. Written before E-G3 ran, and before `FluidContentionModel`, the synthetic cluster generator and the E-G7 arms existed. Most metrics are registered as report-only on purpose: research design §12 says numeric improvement targets are registered *after* the pilot, so inventing them now would defeat the point of registering anything. |
+| 2 | 2026-09-28 | **E-G4 pilot ran; verdict recorded and the fitted set declared.** The registered limits (fluid p50 ≤ 15 %, p90 ≤ 30 % under contention; null vs fluid within 5 % without; fluid must beat null) are **unchanged** — they were met without adjustment wherever contention exists. The registered verdict on this node is **FAIL**, on the `two-same` and `bidirectional` conditions under the topology `PLAN.md` declared. **The eight raw files below are the fitted set** and are excluded from E-G5/P3 validation. Two accuracy statements are appended, not relaxed: the fluid model's domain for bidirectional transfer ends at 128 MiB (GS-23), and `location (b)` (inter-node NIC) is `not run` because this is one machine. | Work order P2.4: a model corrected against data must name the data. The correction here is to a cluster fixture's `shared_resources`, not to the model (GS-22), and the limits are left alone precisely because nothing was adjusted to meet them. |
