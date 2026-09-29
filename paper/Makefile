@@ -26,13 +26,17 @@ RESULTS := $(wildcard $(ROOT)/experiments/results/*.md)
 # than pretending either way.
 FIGURE_SCRIPTS := $(wildcard $(ROOT)/scripts/paper/figures/*.py)
 
-.PHONY: paper pdf tables figures clean help
+.PHONY: paper pdf tables figures numbers check clean help
 
 help:
 	@echo "make tables   regenerate tables/*.tex from experiments/results/*.md"
 	@echo "make figures  run every generator in scripts/paper/figures/"
 	@echo "make paper    tables + figures + main.pdf"
 	@echo "make pdf      main.pdf from what is already in the tree"
+	@echo "make numbers  regenerate numbers.tex from experiments/results/*.md"
+	@echo "make check    the draft's own rules: no numeric literals, no"
+	@echo "              forbidden claims, every cited claim Established or"
+	@echo "              marked pending, and the list of \\pending markers"
 	@echo "make clean    remove build artefacts and generated tables"
 
 paper: tables figures pdf
@@ -81,3 +85,15 @@ clean:
 	rm -f main.pdf main.aux main.log main.out main.bbl main.blg main.fls \
 	      main.fdb_latexmk main.synctex.gz
 	rm -f tables/*.tex
+
+# Regenerated from the results files, like the tables. A number in the body is
+# a macro defined here; `make check` is what keeps it that way.
+numbers:
+	$(PYTHON) $(ROOT)/scripts/paper/numbers.py
+
+# The draft's own rules. Not part of `make paper`: a draft with pending
+# placeholders is a draft, and should still build. This is what says whether it
+# could be submitted.
+check: numbers
+	$(PYTHON) $(ROOT)/scripts/paper/numbers.py --check
+	$(PYTHON) $(ROOT)/scripts/paper/check.py
