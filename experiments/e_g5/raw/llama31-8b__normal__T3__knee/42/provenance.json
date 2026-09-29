@@ -32,6 +32,7 @@
         "auto",
         "--seed",
         "42",
+        "--no-enable-prefix-caching",
         "--num-reqs",
         "150"
       ],
@@ -49,13 +50,6 @@
           "differs": false,
           "knob": "enable_chunked_prefill",
           "planned": true,
-          "vllm_resolves_to": true
-        },
-        {
-          "checked_against_vllm": "0.19.0",
-          "differs": true,
-          "knob": "enable_prefix_caching",
-          "planned": false,
           "vllm_resolves_to": true
         },
         {
@@ -88,8 +82,7 @@
         "p99_ttft_ms": 138.38663366447213,
         "slo_goodput_rps": 4.0
       },
-      "state": "refused: the configuration measured would not be the configuration planned",
-      "why": "`bench run` builds an AsyncEngineArgs from nine fields and cannot carry enable_prefix_caching (plan False, vLLM would use True). Measuring anyway would produce a row labelled with a plan that was not run. Pass --allow-knob-loss to accept it, and every row then carries this list."
+      "state": "dry run"
     },
     {
       "bench_argv": [
@@ -118,6 +111,7 @@
         "auto",
         "--seed",
         "42",
+        "--no-enable-prefix-caching",
         "--num-reqs",
         "150"
       ],
@@ -135,13 +129,6 @@
           "differs": false,
           "knob": "enable_chunked_prefill",
           "planned": true,
-          "vllm_resolves_to": true
-        },
-        {
-          "checked_against_vllm": "0.19.0",
-          "differs": true,
-          "knob": "enable_prefix_caching",
-          "planned": false,
           "vllm_resolves_to": true
         },
         {
@@ -174,8 +161,7 @@
         "p99_ttft_ms": 138.38663366447213,
         "slo_goodput_rps": 4.0
       },
-      "state": "refused: the configuration measured would not be the configuration planned",
-      "why": "`bench run` builds an AsyncEngineArgs from nine fields and cannot carry enable_prefix_caching (plan False, vLLM would use True). Measuring anyway would produce a row labelled with a plan that was not run. Pass --allow-knob-loss to accept it, and every row then carries this list."
+      "state": "dry run"
     },
     {
       "bench_argv": [
@@ -204,6 +190,7 @@
         "auto",
         "--seed",
         "42",
+        "--no-enable-prefix-caching",
         "--num-reqs",
         "150"
       ],
@@ -221,13 +208,6 @@
           "differs": false,
           "knob": "enable_chunked_prefill",
           "planned": true,
-          "vllm_resolves_to": true
-        },
-        {
-          "checked_against_vllm": "0.19.0",
-          "differs": true,
-          "knob": "enable_prefix_caching",
-          "planned": false,
           "vllm_resolves_to": true
         },
         {
@@ -260,8 +240,7 @@
         "p99_ttft_ms": 550.0,
         "slo_goodput_rps": 55.0
       },
-      "state": "refused: the configuration measured would not be the configuration planned",
-      "why": "`bench run` builds an AsyncEngineArgs from nine fields and cannot carry enable_prefix_caching (plan False, vLLM would use True). Measuring anyway would produce a row labelled with a plan that was not run. Pass --allow-knob-loss to accept it, and every row then carries this list."
+      "state": "dry run"
     }
   ],
   "dry_run": true,
@@ -270,8 +249,8 @@
   "hf_model": "NousResearch/Meta-Llama-3.1-8B",
   "level": "knee",
   "loadavg_after": [
-    2.0,
-    1.89,
+    2.18,
+    2.24,
     1.93
   ],
   "model": "llama31-8b",
@@ -279,12 +258,12 @@
   "pattern": "normal",
   "planner_model": "meta-llama/Llama-3.1-8B",
   "preconditions": {
-    "checked_at": "2026-09-29T08:57:14.732665+00:00",
+    "checked_at": "2026-09-29T09:54:36.042287+00:00",
     "gpu_tenants_before": [],
     "loadavg_before": [
-      1.99,
-      1.78,
-      1.91
+      3.5,
+      2.4,
+      1.88
     ],
     "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
     "problems": [],
@@ -313,5 +292,5 @@
     "tp": 4
   },
   "topology_key": "T3",
-  "written_at": "2026-09-29T09:00:23.802582+00:00"
+  "written_at": "2026-09-29T09:57:46.138359+00:00"
 }

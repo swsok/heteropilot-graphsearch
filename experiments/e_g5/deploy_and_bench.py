@@ -526,9 +526,11 @@ def boundary_alternatives(objects, spec, devices: int, recommended_id):
 #: harness runs it instead of `vllm serve`, and why anything the plan says that
 #: these nine cannot carry has to be reported rather than dropped.
 VLLM_VERSION_CHECKED = "0.19.0"
+#: `enable_prefix_caching` is NOT here any more: heteropilot D127 (hook H4)
+#: gave `bench run` a `--no-enable-prefix-caching` flag, so the plan's value
+#: can be carried. What remains are the knobs that still have no flag.
 INEXPRESSIBLE = {
     # plan field -> (what vLLM resolves to when bench says nothing)
-    "enable_prefix_caching": True,
     "block_size": 16,
     "enable_chunked_prefill": True,
     "prioritize_prefill": False,
@@ -618,6 +620,11 @@ def bench_command(plan_obj, topo: C.Topology, model: str, workload: Path,
         "--dtype", plan_obj.candidate.dtype,
         "--kv-cache-dtype", knobs.kv_cache_dtype,
         "--seed", str(seed),
+        # D127: the plan's value, carried. Before hook H4 `bench run` had no
+        # flag for this and vLLM's own default (True) applied, so a run of a
+        # plan that says False measured a configuration nobody had asked for.
+        ("--enable-prefix-caching" if knobs.enable_prefix_caching
+         else "--no-enable-prefix-caching"),
         # The SAME count the simulator replayed: goodput is
         # `completed / elapsed` and the drain tail is a larger share of a short
         # trace, so two counts make one floor two different constraints.
