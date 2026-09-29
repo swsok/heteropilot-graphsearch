@@ -514,70 +514,62 @@ def boundary_alternatives(objects, spec, devices: int, recommended_id):
     return out
 
 
-# --- stage 2: the deployment ---------------------------------------------
+# --- stage 2: the deployment, which IS the load generator -----------------
 
-def serve_command(plan_obj, islands, topo: C.Topology, port: int,
-                  model_weights: str | None = None):
-    """heteropilot's own builder, then the placement override.
+#: Plan knobs `python -m bench run` cannot express, with what vLLM resolves
+#: them to instead. Measured on vllm 0.19.0 by constructing `AsyncEngineArgs`
+#: and reading `create_engine_config()`; the version is recorded so a change
+#: shows up as a mismatch rather than as a silent drift.
+#:
+#: `bench run` builds an `AsyncEngineArgs` from nine fields and no more. It is
+#: not a client of a served endpoint -- it *is* the engine -- which is why this
+#: harness runs it instead of `vllm serve`, and why anything the plan says that
+#: these nine cannot carry has to be reported rather than dropped.
+VLLM_VERSION_CHECKED = "0.19.0"
+INEXPRESSIBLE = {
+    # plan field -> (what vLLM resolves to when bench says nothing)
+    "enable_prefix_caching": True,
+    "block_size": 16,
+    "enable_chunked_prefill": True,
+    "prioritize_prefill": False,
+}
 
-    `build_serve_command` is imported and called unmodified; only the env it
-    returns is changed, and only `CUDA_VISIBLE_DEVICES`. Both values go into
-    the raw record so a reader sees what heteropilot would have done and what
-    was done instead.
+
+def knob_loss(plan_obj) -> list[dict]:
+    """Plan knobs `bench run` cannot pass on, and whether that changes the run.
+
+    The same discipline the simulator adapter uses: name what could not be
+    expressed instead of dropping it. A knob whose plan value happens to equal
+    what vLLM would choose anyway is recorded as harmless; one that differs
+    means **the configuration measured is not the configuration planned**, and
+    the harness refuses rather than producing a row labelled with a plan it did
+    not run.
     """
-    from planner.deploy.vllm_cuda import build_serve_command
+    knobs = plan_obj.candidate.knobs
+    out = []
+    for field, resolved in sorted(INEXPRESSIBLE.items()):
+        planned = getattr(knobs, field, None)
+        if planned is None:
+            continue
+        out.append({
+            "knob": field,
+            "planned": planned,
+            "vllm_resolves_to": resolved,
+            "differs": planned != resolved,
+            "checked_against_vllm": VLLM_VERSION_CHECKED,
+        })
+    # pipeline parallelism is on the assignment, not the knobs, and bench has
+    # no flag for it at all.
+    pp = max(a.pp_size for a in plan_obj.candidate.assignments)
+    out.append({
+        "knob": "pipeline_parallel_size",
+        "planned": pp,
+        "vllm_resolves_to": 1,
+        "differs": pp != 1,
+        "checked_against_vllm": VLLM_VERSION_CHECKED,
+    })
+    return out
 
-    assignment = plan_obj.candidate.assignments[0]
-    island = islands[assignment.island_id]
-    command = build_serve_command(plan_obj, assignment, island, port=port)
-    argv = list(command.argv)
-    # `build_serve_command` serves `plan.model`, which is the id heteropilot's
-    # PROFILES name: `meta-llama/Llama-3.1-8B`. That repository is gated and
-    # its weights are not on this node; what is cached is the ungated
-    # NousResearch mirror of the same weights. The planner must keep the id it
-    # has a profile for, and the engine must be given the one it can load, so
-    # the substitution happens here and both ids are recorded. Left unapplied,
-    # vLLM exits with "ensure the presence of a 'config.json'" -- which is
-    # exactly what the first hardware attempt did.
-    served = model_weights or plan_obj.model
-    if served != plan_obj.model and plan_obj.model in argv:
-        argv[argv.index(plan_obj.model)] = served
-    placed = ",".join(str(d) for d in topo.devices)
-    override = {
-        "planner_model": plan_obj.model,
-        "served_model": served,
-        "heteropilot_would_use": command.env.get("CUDA_VISIBLE_DEVICES", ""),
-        "this_harness_uses": placed,
-        "why": (
-            "planner/deploy/base.py::resolve_devices maps an island to ALL of "
-            "its accelerator ids, so heteropilot names a TEMPLATE and cannot "
-            "name a PLACEMENT. "
-            f"{topo.key} is the placement under test: {topo.link}."
-        ),
-    }
-    return argv, dict(command.env, CUDA_VISIBLE_DEVICES=placed), override
-
-
-def wait_for_health(port: int, timeout: float, process) -> bool:
-    import urllib.error
-    import urllib.request
-
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if process.poll() is not None:
-            return False
-        try:
-            with urllib.request.urlopen(
-                f"http://127.0.0.1:{port}/health", timeout=5
-            ) as response:
-                if response.status == 200:
-                    return True
-        except (urllib.error.URLError, OSError, TimeoutError):
-            time.sleep(5)
-    return False
-
-
-# --- stage 3: the load ----------------------------------------------------
 
 def background_load(topo: C.Topology, args):
     """T3's 60 % background, from the E-G4 harness. Target, not achieved.
@@ -603,112 +595,132 @@ def background_load(topo: C.Topology, args):
                             stderr=subprocess.DEVNULL)
 
 
-def run_bench(model: str, workload: Path, out_dir: Path, topo: C.Topology,
-              seed: int, port: int, args) -> dict:
-    info = C.MODELS[model]
+def bench_command(plan_obj, topo: C.Topology, model: str, workload: Path,
+                  out_dir: Path, seed: int) -> tuple[list[str], dict]:
+    """`bench run` carrying as much of the plan as its nine fields allow.
+
+    **There is no `vllm serve` step.** An earlier version of this harness
+    started one and then ran `bench run`, which builds its own in-process
+    `AsyncLLM`: two engines on the same devices, and the second failed to
+    initialise. `bench run` is the deployment.
+    """
+    knobs = plan_obj.candidate.knobs
+    assignment = plan_obj.candidate.assignments[0]
     argv = [
-        str(VLLM_PY), "-m", "bench", "run",
-        "--model", info["hf_id"],
+        str(VLLM_PY), "-u", "-m", "bench", "run",
+        "--model", C.MODELS[model]["hf_id"],
         "--dataset", str(workload),
         "--output-dir", str(out_dir),
-        "--tensor-parallel-size", str(topo.tp),
+        "--tensor-parallel-size", str(assignment.tp_size),
+        "--data-parallel-size", str(assignment.dp_replicas),
+        "--max-num-seqs", str(knobs.max_num_seqs),
+        "--max-num-batched-tokens", str(knobs.max_num_batched_tokens),
+        "--dtype", plan_obj.candidate.dtype,
+        "--kv-cache-dtype", knobs.kv_cache_dtype,
         "--seed", str(seed),
-        # The SAME count the simulator replayed. `min_goodput_rps` is
-        # `completed / elapsed` and the drain tail is a larger share of a
-        # short trace, so two different counts make the floor two different
-        # constraints.
+        # The SAME count the simulator replayed: goodput is
+        # `completed / elapsed` and the drain tail is a larger share of a short
+        # trace, so two counts make one floor two different constraints.
         "--num-reqs", str(C.REQUESTS_PER_RUN),
     ]
-    (out_dir.parent / "bench.cmd").write_text(
+    if knobs.max_model_len is not None:
+        argv += ["--max-model-len", str(knobs.max_model_len)]
+
+    placed = ",".join(str(d) for d in topo.devices)
+    override = {
+        # `planner/deploy/base.py::resolve_devices` maps an island to ALL of
+        # its accelerator ids, so heteropilot names a TEMPLATE and never a
+        # PLACEMENT. This is the quantity under test.
+        "heteropilot_would_use": "every device of the island",
+        "this_harness_uses": placed,
+        "why": f"{topo.key}: {topo.link}",
+        "planner_model": plan_obj.model,
+        "served_model": C.MODELS[model]["hf_id"],
+        "model_substitution": (
+            "the planner keeps the gated id its profiles name; the engine is "
+            "given the ungated mirror of the same weights"
+            if C.MODELS[model]["hf_id"] != plan_obj.model else None
+        ),
+    }
+    return argv, override
+
+
+def measure(source, plan_obj, label: str, topo: C.Topology, model: str,
+            workload: Path, out_dir: Path, args) -> dict:
+    """One deployment: run the load, collect, tear down. Always tears down."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    argv, override = bench_command(
+        plan_obj, topo, model, workload, out_dir / "bench", args.rep
+    )
+    losses = knob_loss(plan_obj)
+    record = {
+        "label": label,
+        "placement_override": override,
+        "bench_argv": argv,
+        "knob_loss": losses,
+        "plan_id": plan_obj.plan_id,
+        "candidate_id": plan_obj.candidate.id,
+        "predicted": {
+            "p99_ttft_ms": plan_obj.predicted.p99_ttft_ms,
+            "p99_tpot_ms": plan_obj.predicted.p99_tpot_ms,
+            "slo_goodput_rps": plan_obj.predicted.slo_goodput_rps,
+        },
+    }
+    (out_dir / "bench.cmd").write_text(
         " ".join(shlex.quote(a) for a in argv) + "\n"
     )
-    if args.dry_run:
-        return {"dry_run": True, "argv": argv}
-    env = dict(os.environ,
-               PYTHONPATH=str(HETEROPILOT),
-               CUDA_VISIBLE_DEVICES=",".join(str(d) for d in topo.devices))
-    say("bench: " + " ".join(shlex.quote(a) for a in argv[2:8]))
-    result = subprocess.run(argv, cwd=HETEROPILOT, env=env,
-                            capture_output=True, text=True,
-                            timeout=args.bench_timeout)
-    (out_dir.parent / "bench.log").write_text(result.stdout + result.stderr)
-    return {"returncode": result.returncode, "argv": argv}
 
-
-def deploy_and_measure(objects, plan_obj, label: str, topo: C.Topology,
-                       model: str, workload: Path, out_dir: Path,
-                       args) -> dict:
-    """One deployment: serve, wait, load, tear down. Always tears down."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    argv, env, override = serve_command(
-        plan_obj, objects.islands_by_id, topo, args.port,
-        model_weights=C.MODELS[model]["hf_id"],
-    )
-    (out_dir / "serve.cmd").write_text(
-        " ".join(f"{k}={v}" for k, v in sorted(env.items()))
-        + " " + " ".join(shlex.quote(a) for a in argv) + "\n"
-    )
-    record: dict = {"label": label, "placement_override": override,
-                    "serve_argv": argv}
-    if args.dry_run:
-        record["dry_run"] = True
+    divergent = [entry for entry in losses if entry["differs"]]
+    if divergent and not args.allow_knob_loss:
+        record["state"] = "refused: the configuration measured would not be "\
+                          "the configuration planned"
+        record["why"] = (
+            "`bench run` builds an AsyncEngineArgs from nine fields and cannot "
+            "carry " + ", ".join(
+                f"{d['knob']} (plan {d['planned']}, vLLM would use "
+                f"{d['vllm_resolves_to']})" for d in divergent
+            ) + ". Measuring anyway would produce a row labelled with a plan "
+            "that was not run. Pass --allow-knob-loss to accept it, and every "
+            "row then carries this list."
+        )
+        say(f"{label}: REFUSED -- " + ", ".join(d["knob"] for d in divergent))
         return record
 
-    say(f"{label}: serving on devices {override['this_harness_uses']}")
-    log = (out_dir / "vllm.log").open("w")
+    if args.dry_run:
+        record["state"] = "dry run"
+        return record
+
     background = None
-    process = None
-    # heteropilot's `build_serve_command` emits argv starting with the bare
-    # name `vllm`, which is correct for it -- it assumes the caller is inside
-    # the serving environment. This harness is not: it runs under the
-    # SIMULATOR's interpreter (GS-14 requires that for `--predictor sim`) and
-    # launches vLLM as a subprocess. So the serving venv's `bin` goes on PATH
-    # rather than argv[0] being rewritten: rewriting it would diverge from the
-    # command the raw file records, and `vllm` spawns helpers that need the
-    # same PATH anyway.
-    env = dict(env)
-    env["PATH"] = f"{VLLM_PY.parent}:{os.environ.get('PATH', '')}"
-    env.setdefault("HF_HUB_OFFLINE", "1")
-    # **Everything that can hold a GPU starts INSIDE the try.** The background
-    # generator used to start before it, and the first time the serve `Popen`
-    # raised -- `vllm` was not on PATH -- the `finally` was never entered and
-    # the generator held four GPUs for eleven minutes. The next run's own
-    # precondition then refused, correctly, because it cannot know an orphan
-    # is ours. A cleanup that only runs on the paths you anticipated is not
-    # cleanup.
     try:
         background = background_load(topo, args)
-        process = subprocess.Popen(
-            argv, cwd=HETEROPILOT, env=dict(os.environ, **env),
-            stdout=log, stderr=subprocess.STDOUT,
+        say(f"{label}: bench on devices {override['this_harness_uses']}")
+        env = dict(
+            os.environ,
+            CUDA_VISIBLE_DEVICES=override["this_harness_uses"],
+            PYTHONPATH=str(HETEROPILOT),
+            HF_HUB_OFFLINE="1",
         )
-        healthy = wait_for_health(args.port, args.health_timeout, process)
-        record["healthy"] = healthy
-        if not healthy:
-            record["error"] = (
-                "the engine never became healthy. This is recorded as a "
-                "failed deployment, not retried until it passes: a condition "
-                "that only works on the third attempt is a condition that "
-                "does not work."
+        result = subprocess.run(
+            argv, cwd=HETEROPILOT, env=env, capture_output=True, text=True,
+            timeout=args.bench_timeout,
+        )
+        (out_dir / "bench.log").write_text(result.stdout + result.stderr)
+        record["returncode"] = result.returncode
+        record["state"] = "measured" if result.returncode == 0 else "failed"
+        if result.returncode != 0:
+            record["why"] = (
+                "the load generator exited non-zero. Recorded as a failed "
+                "deployment, not retried until it passes: a condition that "
+                "only works on the third attempt is a condition that does not "
+                "work."
             )
-            return record
-        record["bench"] = run_bench(
-            model, workload, out_dir / "bench", topo, args.rep, args.port, args
-        )
     finally:
-        if process is not None:
-            process.terminate()
-            try:
-                process.wait(timeout=120)
-            except subprocess.TimeoutExpired:
-                process.kill()
         if background is not None:
             background.terminate()
             try:
                 background.wait(timeout=30)
             except subprocess.TimeoutExpired:
                 background.kill()
-        log.close()
     return record
 
 
@@ -748,6 +760,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true",
                         help="write every config file and command; launch "
                              "nothing and touch no GPU")
+    parser.add_argument("--allow-knob-loss", action="store_true",
+                        help="deploy although `bench run` cannot carry a "
+                             "knob the plan sets. Every row then carries "
+                             "the list of what diverged.")
     parser.add_argument("--allow-tenants", action="store_true",
                         help="proceed although another tenant holds a GPU. "
                              "Every row is then labelled contaminated.")
@@ -877,7 +893,7 @@ def main(argv: list[str] | None = None) -> int:
         placed = topo if need == len(topo.devices) else replace(
             topo, devices=tuple(topo.devices[:need])
         )
-        deployments.append(deploy_and_measure(
+        deployments.append(measure(
             source, plan_obj, label, placed, model, workload,
             out_dir / label, args,
         ))
