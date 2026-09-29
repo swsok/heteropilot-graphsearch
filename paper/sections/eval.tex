@@ -224,12 +224,37 @@ the next node's prediction wrong silently.
 
 \subsection{Hardware}
 
-% pending
-This section reports the deployment campaign: the recommended placement against
-its SLOs, the boundary alternatives against the bounds that ranked or rejected
-them, and the difference between two placements of one template across a shared
-interconnect. The campaign is registered in the accompanying repository and has
-not completed. \pending{E-G5: the hardware matrix}
+% claim: C18
+% claim: C19
+% claim: C20
+% not-established
+Table~\ref{tab:e_g5_real_hardware} reports the deployments: the recommended
+placement against its SLOs, and the two boundary alternatives against the
+bounds that ranked or rejected them. Each is offered the rate \emph{its own
+spec} declares, so a predicted and a measured column answer the same question.
+
+\textbf{The recommendation misses, on one axis.} Its measured $p99$ time to
+first token exceeds the target while time per output token and goodput clear
+theirs. The row names the axis rather than reporting a verdict, because which
+target was missed is the part a reader can act on. The prediction was
+optimistic by about an order of magnitude on that axis, in the direction the
+planner's own accuracy domain already records at low served concurrency. This
+experiment does not separate the candidate causes---prediction error, the
+contention model, the engine's scheduler---and does not choose the most
+flattering one.
+
+\textbf{The lower bound was right, and the interesting number is how loose it
+is.} The candidate the throughput bound rejected by the smallest margin was
+deployed and offered the floor it had been rejected against. It did not reach
+it, so no feasible candidate was wrongly eliminated on hardware. That outcome
+was expected: a bound that is a relaxation rejects only what the most
+optimistic arithmetic already misses, so a correct rejection is not news, and
+the test is registered as weak for exactly that reason. What the deployment
+buys is the ratio between the ceiling the bound computed and the capacity the
+hardware actually delivered, and it is more than an order of magnitude. That
+looseness is the price of soundness; this is its size on this machine.
+
+\input{e_g5_real_hardware}
 
 % claim: C21
 % pending
