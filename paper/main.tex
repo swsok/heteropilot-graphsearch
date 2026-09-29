@@ -31,6 +31,11 @@
 %% that does not change when the result arrives, and marked with this.
 %% The draft typesets a margin note; the final build redefines it to an
 %% error, so a forgotten placeholder cannot be submitted.
+%% The provenance tag that ends every table and figure caption. Rule 3:
+%% MOCK, REAL SIM or REAL HARDWARE, so a figure read out of context
+%% cannot be mistaken for a measurement it is not.
+\newcommand{\sourcetag}[1]{\textsc{\footnotesize [#1]}}
+
 \newcommand{\pending}[1]{\marginpar{\footnotesize PENDING: #1}}
 
 \begin{document}

@@ -27,6 +27,7 @@ the number had been left out on purpose.
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -120,6 +121,20 @@ def cell(entry: dict, name: str) -> str:
 
 
 def render(value: str, entry: dict, name: str) -> str:
+    # `pattern` pulls one field out of a composite cell. E-G4 writes a verdict
+    # as "93.1% / 90.9% p90", which is right for the table and unreadable in a
+    # sentence. The regex's first group is taken, and a pattern that does not
+    # match is an error -- silently quoting the whole cell would put the p90
+    # into a sentence about the median.
+    pattern = entry.get("pattern")
+    if pattern is not None:
+        match = re.search(pattern, value)
+        if match is None:
+            raise SystemExit(
+                f"{name}: pattern {pattern!r} does not match cell {value!r}"
+            )
+        value = match.group(1)
+
     spec = entry.get("format")
     if spec is None:
         return value

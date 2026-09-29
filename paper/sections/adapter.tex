@@ -10,5 +10,56 @@
 %% Prediction accuracy and search accuracy are separated here, per section 8's
 %% own instruction. E-G3 measures the second with the first held fixed; E-G5
 %% measures the first.
-\section{Compiling a placement, and what is lost}
+\section{The simulator adapter and the contention model}
 \label{sec:adapter}
+
+\paragraph{Compiling a placement, and naming what was lost.}
+The adapter turns a placed candidate into a simulator configuration. The
+simulator accepts a bandwidth and a latency per collective and has no
+representation of a link graph, so several things the search decided on cannot
+be expressed to it: which resources two groups share, how much of a resource an
+external reservation already holds, and the difference between two placements
+that cross different uplinks.
+
+The adapter therefore emits, with every compiled plan, a report of what it
+could not pass on. This is the alternative to the two tempting options, both
+worse: folding the shared-resource effect into the bandwidth number, which
+would make the simulator's output unattributable, or saying nothing, which
+would let the search distinguish two candidates that the evaluator then judges
+identically without anyone noticing.
+
+% claim: C10
+\paragraph{Prediction accuracy and search accuracy are different questions.}
+This work measures the second with the first held fixed. Whether the simulator
+predicts hardware well is a property of the simulator; whether the search finds
+what an exhaustive oracle finds is a property of the search, and it is asked by
+running both against the same evaluator. Replacing the deterministic mock with
+the real simulator leaves both correctness numbers at zero, which is the result
+that matters here: the compression and the bounds are not relying on an
+artefact of the mock.
+
+% claim: C13
+\paragraph{Binding the predictor to the placement.}
+A predictor that is asked about a template rather than a placement returns the
+same metrics for every placement of it, and then two members of a
+representative can never disagree---so \texttt{mismerged\_pairs} is
+structurally zero and the correctness check is vacuous. The oracle and the
+search therefore bind the predictor to each embedding before evaluating, and
+the binding is a named function rather than an optional attribute, so its
+absence is visible. A cache signature that does not include the embedding's
+identity has the same effect for the same reason, and does not.
+
+% claim: C15
+\paragraph{Contention.}
+Flows that share a resource are priced by processor sharing: at any instant the
+active flows on a resource divide what capacity it has left, a flow's rate is
+the minimum over its path, and the schedule is recomputed whenever a flow
+starts or finishes. It is not packet-level, and it does not model candidates
+contending with each other---candidates are alternatives, and only one is
+deployed.
+
+Section~\ref{sec:eval} measures it against a microbenchmark. The model is
+accurate where flows genuinely share an endpoint and inaccurate above a message
+size where the hardware begins overlapping the two directions of one link; both
+are reported, and the accuracy domain is stated as a range rather than as a
+single error figure.

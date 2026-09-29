@@ -419,6 +419,22 @@ def markdown(rows: list[dict], verdicts: list[dict], args) -> str:
         "passed, and half a matrix is not a matrix."
     )
 
+    out += ["", "## One path, three questions", ""]
+    out.append(
+        "The same wire answers differently depending on what crosses it, which "
+        "is why a measurement is keyed by the collective and the number of "
+        "ranks rather than stored as *the* bandwidth of a link:"
+    )
+    out.append("")
+    out.append(
+        "| what was run | ranks | GB/s |\n"
+        "| --- | --- | --- |\n"
+        f"| peer copy across the PCIe bridge | 2 | {PCIE_PLATEAU_GBPS} |\n"
+        "| all-reduce busbw across the same bridge | 2 | 19.34 |\n"
+        "| all-reduce busbw, the TP=4 group | 4 | 8.71 |\n"
+        f"| peer copy over NVLink | 2 | {NVLINK_PLATEAU_GBPS} |"
+    )
+
     out += ["", "## The verdict, against the registered limits", ""]
     out += verdict_table(verdicts)
     out.append("")

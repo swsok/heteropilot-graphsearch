@@ -7,7 +7,14 @@
 # you want to compile without touching the tables, say `make pdf` and know that
 # you did.
 
-PYTHON ?= python
+# The repository's own interpreter by default. `/usr/bin/python` on this
+# machine is 3.8, which lacks `Path.is_relative_to` (3.9) -- `make tables` then
+# fails inside md_to_tex.py with an AttributeError that says nothing about the
+# real cause. Overridable, so a machine with a different layout can say so.
+PYTHON ?= $(abspath $(CURDIR)/../.venv/bin/python)
+ifeq ($(wildcard $(PYTHON)),)
+PYTHON := python3
+endif
 ROOT   := $(abspath $(CURDIR)/..)
 
 # Every results file, so `make tables` cannot be silently out of date because

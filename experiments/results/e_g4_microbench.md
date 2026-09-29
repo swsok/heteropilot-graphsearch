@@ -6,16 +6,27 @@ Conditions 1-4 of `experiments/microbench/PLAN.md`, at location (a): the A40 nod
 
 **Location (b), the inter-node NIC, is `not run`.** This is one machine with one NIC and there is no second node to send to. It is reported rather than omitted: an omitted row reads as a row that passed, and half a matrix is not a matrix.
 
+## One path, three questions
+
+The same wire answers differently depending on what crosses it, which is why a measurement is keyed by the collective and the number of ranks rather than stored as *the* bandwidth of a link:
+
+| what was run | ranks | GB/s |
+| --- | --- | --- |
+| peer copy across the PCIe bridge | 2 | 25.12 |
+| all-reduce busbw across the same bridge | 2 | 19.34 |
+| all-reduce busbw, the TP=4 group | 4 | 8.71 |
+| peer copy over NVLink | 2 | 52.64 |
+
 ## The verdict, against the registered limits
 
 | declaration | condition | clause | fluid | null | verdict |
 | --- | --- | --- | --- | --- | --- |
 | `as_measured` | bidirectional | fluid p50 <= 15% and p90 <= 30%, and fluid must beat null | 4.8% / 1.5% p90 | 48.3% | **PASS** |
-| `as_measured` | single | null and fluid agree within 5% | 0.0% | 0.5% | **PASS** |
+| `as_measured` | single | null and fluid agree within 5% | 0.0% | 2.6% | **PASS** |
 | `as_measured` | two-independent | null and fluid agree within 5% | 0.0% | 1.1% | **PASS** |
 | `as_measured` | two-same | fluid p50 <= 15% and p90 <= 30%, and fluid must beat null | 1.8% / 3.0% p90 | 1.8% | **PASS** |
 | `as_planned` | bidirectional | fluid p50 <= 15% and p90 <= 30%, and fluid must beat null | 33.2% / 24.3% p90 | 34.2% | **FAIL** |
-| `as_planned` | single | null and fluid agree within 5% | 0.0% | 0.5% | **PASS** |
+| `as_planned` | single | null and fluid agree within 5% | 0.0% | 2.6% | **PASS** |
 | `as_planned` | two-independent | null and fluid agree within 5% | 0.0% | 1.1% | **PASS** |
 | `as_planned` | two-same | fluid p50 <= 15% and p90 <= 30%, and fluid must beat null | 93.1% / 90.9% p90 | 7.5% | **FAIL** |
 
@@ -40,7 +51,9 @@ The registered limits are met at the median and the band above 128 MiB is record
 | condition / flow | 1M | 2M | 4M | 8M | 16M | 32M | 64M | 128M | 256M |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `a-cond1-single-bridge-0-2` 0-2 | 0% | 9% | 5% | 3% | 0% | 0% | 0% | 0% | 0% |
+| `a-cond1-single-bridge-5-7` 5-7 | 0% | 10% | 6% | 3% | 1% | 0% | 0% | 0% | 0% |
 | `a-cond1-single-nvlink-0-1` 0-1 | 16% | 11% | 4% | 4% | 2% | 0% | 0% | 1% | 0% |
+| `a-cond1-single-sys-0-4` 0-4 | 77% | 55% | 13% | 12% | 11% | 10% | 10% | 10% | 10% |
 | `a-cond2-bg60-same-bridge` 0-2 | 3% | 11% | 6% | 3% | 1% | 0% | 0% | 0% | 0% |
 | `a-cond2-two-same-bridge` 0-2 | 14% | 15% | 8% | 5% | 2% | 0% | 0% | 0% | 0% |
 | `a-cond2-two-same-bridge` 1-3 | 19% | 14% | 9% | 5% | 2% | 0% | 0% | 0% | 0% |
@@ -84,6 +97,15 @@ Measured on this node, busbw plateau at 64 MiB: **19.34 GB/s at world 2** across
 | single | 0-2 | 64 | bulk | 2.684 | 2.688 | 2.694 | 2.694 | 0.4% | 0.4% | 0.2% |
 | single | 0-2 | 128 | bulk | 5.353 | 5.357 | 5.365 | 5.365 | 0.2% | 0.2% | 0.2% |
 | single | 0-2 | 256 | bulk | 10.685 | 10.689 | 10.708 | 10.708 | 0.2% | 0.2% | 0.2% |
+| single | 5-7 | 1 | mid | 0.064 | 0.066 | 0.064 | 0.064 | 0.5% | 0.5% | 2.2% |
+| single | 5-7 | 2 | mid | 0.117 | 0.121 | 0.106 | 0.106 | 9.9% | 9.9% | 12.4% |
+| single | 5-7 | 4 | bulk | 0.200 | 0.212 | 0.189 | 0.189 | 5.5% | 5.5% | 10.9% |
+| single | 5-7 | 8 | bulk | 0.366 | 0.370 | 0.356 | 0.356 | 2.7% | 2.7% | 3.8% |
+| single | 5-7 | 16 | bulk | 0.699 | 0.704 | 0.690 | 0.690 | 1.3% | 1.3% | 2.0% |
+| single | 5-7 | 32 | bulk | 1.356 | 1.366 | 1.358 | 1.358 | 0.2% | 0.2% | 0.6% |
+| single | 5-7 | 64 | bulk | 2.683 | 2.686 | 2.694 | 2.694 | 0.4% | 0.4% | 0.3% |
+| single | 5-7 | 128 | bulk | 5.355 | 5.357 | 5.365 | 5.365 | 0.2% | 0.2% | 0.2% |
+| single | 5-7 | 256 | bulk | 10.684 | 10.685 | 10.708 | 10.708 | 0.2% | 0.2% | 0.2% |
 | single | 0-1 | 1 | mid | 0.037 | 0.038 | 0.042 | 0.042 | 15.8% | 15.8% | 11.4% |
 | single | 0-1 | 2 | mid | 0.070 | 0.072 | 0.062 | 0.062 | 11.1% | 11.1% | 13.6% |
 | single | 0-1 | 4 | bulk | 0.107 | 0.114 | 0.102 | 0.102 | 4.4% | 4.4% | 10.3% |
@@ -93,6 +115,15 @@ Measured on this node, busbw plateau at 64 MiB: **19.34 GB/s at world 2** across
 | single | 0-1 | 64 | bulk | 1.292 | 1.300 | 1.297 | 1.297 | 0.4% | 0.4% | 0.2% |
 | single | 0-1 | 128 | bulk | 2.557 | 2.565 | 2.572 | 2.572 | 0.6% | 0.6% | 0.3% |
 | single | 0-1 | 256 | bulk | 5.100 | 5.106 | 5.122 | 5.122 | 0.4% | 0.4% | 0.3% |
+| single | 0-4 | 1 | mid | 0.273 | 0.443 | 0.064 | 0.064 | 76.5% | 76.5% | 85.5% |
+| single | 0-4 | 2 | mid | 0.237 | 0.242 | 0.106 | 0.106 | 55.4% | 55.4% | 56.3% |
+| single | 0-4 | 4 | bulk | 0.219 | 0.449 | 0.189 | 0.189 | 13.5% | 13.5% | 57.9% |
+| single | 0-4 | 8 | bulk | 0.406 | 0.412 | 0.356 | 0.356 | 12.3% | 12.3% | 13.5% |
+| single | 0-4 | 16 | bulk | 0.773 | 0.779 | 0.690 | 0.690 | 10.7% | 10.7% | 11.4% |
+| single | 0-4 | 32 | bulk | 1.512 | 1.529 | 1.358 | 1.358 | 10.2% | 10.2% | 11.2% |
+| single | 0-4 | 64 | bulk | 3.000 | 3.016 | 2.694 | 2.694 | 10.2% | 10.2% | 10.7% |
+| single | 0-4 | 128 | bulk | 5.948 | 5.954 | 5.365 | 5.365 | 9.8% | 9.8% | 9.9% |
+| single | 0-4 | 256 | bulk | 11.888 | 11.894 | 10.708 | 10.708 | 9.9% | 9.9% | 10.0% |
 | two-same | 0-2 | 1 | mid | 0.066 | 0.067 | 0.064 | 0.064 | 3.0% | 3.0% | 4.7% |
 | two-same | 0-2 | 2 | mid | 0.119 | 0.123 | 0.151 | 0.151 | 27.1% | 27.1% | 22.7% |
 | two-same | 0-2 | 4 | bulk | 0.201 | 0.205 | 0.322 | 0.322 | 60.4% | 60.4% | 57.5% |
