@@ -60,13 +60,14 @@ was not done.
 
 % claim: C22
 % pending
-\paragraph{The hardware campaign covers one node and one accelerator kind.}
-The contention measurements are intra-node. The inter-node condition the design
-registers has not been run, for two independent reasons either of which would
-suffice: there is one machine, and the deployment backend builds a
-configuration for a single aggregated engine with no disaggregated
-prefill. Deployment to the NPU in the design's scope is likewise not possible,
-because no backend for it exists. \pending{E-G5: location (b)}
+\paragraph{The hardware campaign covers one accelerator kind, and one of its
+two node-count limits has lifted.}
+The contention measurements now cover both an intra-node bus and an inter-node
+NIC across two machines. What is still not run is inter-node \emph{P/D}, and
+the reason is no longer that there is one machine: it is that the deployment
+backend builds a configuration for a single aggregated engine, with no
+disaggregated prefill. Deployment to the NPU in the design's scope is likewise
+impossible, because no backend for it exists. \pending{E-G5: inter-node P/D}
 
 \paragraph{Every fixture but one is fictional.}
 The toy clusters and the synthetic scaling clusters are invented and say so in

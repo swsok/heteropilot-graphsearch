@@ -51,7 +51,9 @@ exists to prevent.
 | C19 | The throughput upper bound is loose by at least 2.6x against measured capacity on this node | — (E-G5, spec B) | hardware | Pending |
 | C20 | A candidate proved impossible really does miss the constraint it was proved to miss, on hardware | — (E-G5, boundary alternative) | hardware | Pending |
 | C21 | Two placements differing only in which wire their tensor-parallel all-reduce crosses differ measurably in served TTFT | `experiments/e_g5/raw/pilot/` | hardware | Established, **intra-node, by a placement the planner cannot name**[^eg5p] |
-| C22 | The same contrast holds across an inter-node NIC | — (E-G5, location (b)) | hardware | Pending[^locb] |
+| C22 | Two concurrent streams over one inter-node NIC take exactly half each, which processor sharing predicts and the intra-node PCIe path does not do | `experiments/results/e_g4_microbench.md` | hardware | Established[^locb] |
+| C29 | The inter-node NIC is full duplex: both directions together exceed twice a single stream, where the intra-node pair reaches 1.33x | `experiments/results/e_g4_microbench.md` | hardware | Established |
+| C30 | Inter-node **P/D** contention, which needs disaggregated prefill | — (E-G5) | hardware | Pending[^disagg] |
 | C23 | The compression ratio and the search's own cost are reported as a function of device count and cluster symmetry | `experiments/results/e_g6_scale.md` | mock | Established, **report-only**[^eg6] |
 | C24 | Dropping the shared boundary from the signature produces mis-merges | `experiments/results/e_g7_ablation.md` | mock | Established[^eg7] |
 | C25 | The baseline comparison is fair: same candidate space, predictor and cache, with the template-level scoring credited generously to the baseline | `experiments/results/e_g7_baseline_fairness.md` | mock | Established |
@@ -96,10 +98,27 @@ exists to prevent.
     names a template and never a placement. What is *not* claimed is that this
     is the inter-node P/D condition the matrix registered; see the next row.
 
-[^locb]: One machine, one NIC, and `planner/deploy/vllm_cuda.py` builds the
-    argv for "one aggregated engine" with no `kv_connector`. Two independent
-    reasons, either sufficient. `experiments/e_g5/MATRIX.md` states both before
-    any result does.
+[^locb]: Measured 2026-09-29 between two A40 nodes, one Mellanox MT4123
+    each on one InfiniBand subnet, with `perftest ib_send_bw`. A single stream
+    reaches 88.61 Gbit/s of the 100 the port reports; two concurrent streams
+    reach 44.36 each, summing to 88.73. That is processor sharing exactly, and
+    it is the opposite of what the intra-node PCIe pairs did (C16), which is
+    why the pair of results is worth more than either alone: **the contention
+    model was never what was in question, and which resource is genuinely
+    shared has to be measured at each location separately.**
+
+    Two of the five registered conditions at this location are still unanswered,
+    for reasons that do not merge. `two-independent` is **impossible on this
+    hardware** -- each node has exactly one InfiniBand device, so there is no
+    pair of disjoint NICs to put two flows on. `collective` is **deferred**: an
+    all-reduce over IB needs NCCL, which needs torch on both nodes, and the peer
+    has no such environment yet.
+
+[^disagg]: A second node exists, so "one machine" is no longer a reason. The
+    other one stands: `planner/deploy/vllm_cuda.py` builds the argv for "one
+    aggregated engine" with no `kv_connector` and no producer/consumer role, so
+    a disaggregated prefill pair cannot be deployed at all. That is a hook PR to
+    that repository, not a measurement waiting to be taken.
 
 ## Retracted
 

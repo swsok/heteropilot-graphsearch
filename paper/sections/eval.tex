@@ -182,6 +182,28 @@ contention model; the other rewrites a line of a cluster description. The
 registered verdict is computed on the registered declaration, and the corrected
 figure is not offered in its place.
 
+% claim: C22
+% claim: C29
+\paragraph{The same question at a second location, with the opposite answer.}
+Across an inter-node NIC between two machines, two concurrent streams take
+exactly half each: a single stream reaches \egfourNicSingle~Gbit/s and two
+reach \egfourNicTwoSame~each. That is processor sharing precisely, and it is
+what the intra-node PCIe pairs did not do.
+
+The pair of results is worth more than either alone. It is not that the model
+is right in one place and wrong in another---it is that \emph{which resource
+is genuinely shared} is a claim about hardware, settled by measurement at each
+location separately, and the model prices whatever it is told to. The
+bidirectional case says the same thing twice: the intra-node pair reaches only
+a third again as much as a single direction, while the NIC exceeds twice it,
+because that wire really is full duplex.
+
+Two of the five registered conditions remain unanswered at this location, for
+reasons that do not merge. Two concurrent flows over \emph{disjoint} NICs is
+impossible on this hardware---each machine has exactly one InfiniBand
+device---while the collective is deferred, needing an NCCL environment the peer
+node does not yet have. \pending{E-G4: collective at location (b)}
+
 % claim: C17
 The model's accuracy domain has an upper end. Above a message size the hardware
 begins overlapping the two directions of one link, the pair exceeds what

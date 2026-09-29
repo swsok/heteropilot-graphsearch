@@ -1,0 +1,500 @@
+{
+  "banner": "REAL HARDWARE -- two nodes, serials for both ends below. Raw throughput only; this file contains no prediction and no verdict.",
+  "bidirectional_reports": "per direction, not the sum -- established from the NIC's own port_xmit_data and port_rcv_data counters across a run",
+  "condition": "two-same",
+  "condition_means": "two concurrent streams over the SAME NIC",
+  "date": "2026-09-29",
+  "far": {
+    "hostname": "s6",
+    "ib": {
+      "device": "mlx5_0",
+      "rate_gbit_s": 100,
+      "state": "Active"
+    },
+    "serials": "GPU-15bbb01f-ef87-51f9-62dd-8ee2343cbca9+GPU-2f768be6-7468-77d2-"
+  },
+  "gpu_tenants": {
+    "here": 0,
+    "there": 0
+  },
+  "iterations_per_size": {
+    "128MiB": 417,
+    "16MiB": 3337,
+    "1MiB": 50000,
+    "256MiB": 208,
+    "2MiB": 26702,
+    "32MiB": 1668,
+    "4MiB": 13351,
+    "64MiB": 834,
+    "8MiB": 6675
+  },
+  "label": "b-two-same",
+  "loadavg_after": {
+    "here": 2.95,
+    "there": 1.85
+  },
+  "loadavg_before": {
+    "here": 1.48,
+    "there": 0.7
+  },
+  "location": "(b) inter-node NIC",
+  "method": "ib_send_bw --report_gbits -s <size> -n <iterations> -F -N; two streams on ports 18515,18516",
+  "near": {
+    "hostname": "s8",
+    "ib": {
+      "device": "mlx5_0",
+      "rate_gbit_s": 100,
+      "state": "Active"
+    },
+    "serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115"
+  },
+  "not_run_here": {
+    "collective": "an all-reduce over IB needs NCCL, which needs torch on both nodes; the peer node has no such environment yet. Deferred, not impossible.",
+    "two-independent": "each node has exactly one InfiniBand device (Mellanox MT4123), so there is no pair of disjoint NICs to put two flows on. This is a property of the machines, not an experiment that was skipped."
+  },
+  "sizes": {
+    "128MiB": {
+      "msg_bytes": 134217728,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 44.41,
+            "iterations": 417,
+            "msg_bytes": 134217728,
+            "msg_rate_mpps": 4.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.54,
+            "iterations": 417,
+            "msg_bytes": 134217728,
+            "msg_rate_mpps": 4.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 134217728    417              0.00               44.54  \t\t   0.000041",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.42,
+            "iterations": 417,
+            "msg_bytes": 134217728,
+            "msg_rate_mpps": 4.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.55,
+            "iterations": 417,
+            "msg_bytes": 134217728,
+            "msg_rate_mpps": 4.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 134217728    417              0.00               44.55  \t\t   0.000041",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "16MiB": {
+      "msg_bytes": 16777216,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 44.3,
+            "iterations": 3337,
+            "msg_bytes": 16777216,
+            "msg_rate_mpps": 0.00033,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.34,
+            "iterations": 3337,
+            "msg_bytes": 16777216,
+            "msg_rate_mpps": 0.00033,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 16777216    3337             0.00               44.34  \t\t   0.000330",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.3,
+            "iterations": 3337,
+            "msg_bytes": 16777216,
+            "msg_rate_mpps": 0.00033,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.34,
+            "iterations": 3337,
+            "msg_bytes": 16777216,
+            "msg_rate_mpps": 0.00033,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 16777216    3337             0.00               44.34  \t\t   0.000330",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "1MiB": {
+      "msg_bytes": 1048576,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 43.95,
+            "iterations": 50000,
+            "msg_bytes": 1048576,
+            "msg_rate_mpps": 0.00524,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.26,
+            "iterations": 50000,
+            "msg_bytes": 1048576,
+            "msg_rate_mpps": 0.005277,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 1048576    50000            0.00               44.26  \t\t   0.005277",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.24,
+            "iterations": 50000,
+            "msg_bytes": 1048576,
+            "msg_rate_mpps": 0.005273,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.24,
+            "iterations": 50000,
+            "msg_bytes": 1048576,
+            "msg_rate_mpps": 0.005274,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 1048576    50000            0.00               44.24  \t\t   0.005274",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "256MiB": {
+      "msg_bytes": 268435456,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 44.17,
+            "iterations": 208,
+            "msg_bytes": 268435456,
+            "msg_rate_mpps": 2.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.69,
+            "iterations": 208,
+            "msg_bytes": 268435456,
+            "msg_rate_mpps": 2.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 268435456    208              0.00               44.69  \t\t   0.000021",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.45,
+            "iterations": 208,
+            "msg_bytes": 268435456,
+            "msg_rate_mpps": 2.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.66,
+            "iterations": 208,
+            "msg_bytes": 268435456,
+            "msg_rate_mpps": 2.1e-05,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 268435456    208              0.00               44.66  \t\t   0.000021",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "2MiB": {
+      "msg_bytes": 2097152,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 43.96,
+            "iterations": 26702,
+            "msg_bytes": 2097152,
+            "msg_rate_mpps": 0.00262,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 43.97,
+            "iterations": 26702,
+            "msg_bytes": 2097152,
+            "msg_rate_mpps": 0.002621,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 2097152    26702            0.00               43.97  \t\t   0.002621",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 43.95,
+            "iterations": 26702,
+            "msg_bytes": 2097152,
+            "msg_rate_mpps": 0.00262,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 43.96,
+            "iterations": 26702,
+            "msg_bytes": 2097152,
+            "msg_rate_mpps": 0.00262,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 2097152    26702            0.00               43.96  \t\t   0.002620",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "32MiB": {
+      "msg_bytes": 33554432,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 44.35,
+            "iterations": 1668,
+            "msg_bytes": 33554432,
+            "msg_rate_mpps": 0.000165,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.37,
+            "iterations": 1668,
+            "msg_bytes": 33554432,
+            "msg_rate_mpps": 0.000165,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 33554432    1668             0.00               44.37  \t\t   0.000165",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.32,
+            "iterations": 1668,
+            "msg_bytes": 33554432,
+            "msg_rate_mpps": 0.000165,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.36,
+            "iterations": 1668,
+            "msg_bytes": 33554432,
+            "msg_rate_mpps": 0.000165,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 33554432    1668             0.00               44.36  \t\t   0.000165",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "4MiB": {
+      "msg_bytes": 4194304,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 44.56,
+            "iterations": 13351,
+            "msg_bytes": 4194304,
+            "msg_rate_mpps": 0.001328,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.21,
+            "iterations": 13351,
+            "msg_bytes": 4194304,
+            "msg_rate_mpps": 0.001318,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 4194304    13351            0.00               44.21  \t\t   0.001318",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.59,
+            "iterations": 13351,
+            "msg_bytes": 4194304,
+            "msg_rate_mpps": 0.001329,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.14,
+            "iterations": 13351,
+            "msg_bytes": 4194304,
+            "msg_rate_mpps": 0.001315,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 4194304    13351            0.00               44.14  \t\t   0.001315",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "64MiB": {
+      "msg_bytes": 67108864,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 44.3,
+            "iterations": 834,
+            "msg_bytes": 67108864,
+            "msg_rate_mpps": 8.3e-05,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.38,
+            "iterations": 834,
+            "msg_bytes": 67108864,
+            "msg_rate_mpps": 8.3e-05,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 67108864    834              0.00               44.38  \t\t   0.000083",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.31,
+            "iterations": 834,
+            "msg_bytes": 67108864,
+            "msg_rate_mpps": 8.3e-05,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.39,
+            "iterations": 834,
+            "msg_bytes": 67108864,
+            "msg_rate_mpps": 8.3e-05,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 67108864    834              0.00               44.39  \t\t   0.000083",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    },
+    "8MiB": {
+      "msg_bytes": 8388608,
+      "streams": [
+        {
+          "client": {
+            "average_gbit_s": 44.42,
+            "iterations": 6675,
+            "msg_bytes": 8388608,
+            "msg_rate_mpps": 0.000662,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18515,
+          "server": {
+            "average_gbit_s": 44.44,
+            "iterations": 6675,
+            "msg_bytes": 8388608,
+            "msg_rate_mpps": 0.000662,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 8388608    6675             0.00               44.44  \t\t   0.000662",
+            "---------------------------------------------------------------------------------------"
+          ]
+        },
+        {
+          "client": {
+            "average_gbit_s": 44.45,
+            "iterations": 6675,
+            "msg_bytes": 8388608,
+            "msg_rate_mpps": 0.000662,
+            "peak_gbit_s": 0.0
+          },
+          "ib_port": 18516,
+          "server": {
+            "average_gbit_s": 44.46,
+            "iterations": 6675,
+            "msg_bytes": 8388608,
+            "msg_rate_mpps": 0.000662,
+            "peak_gbit_s": 0.0
+          },
+          "server_raw_tail": [
+            " #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]",
+            " 8388608    6675             0.00               44.46  \t\t   0.000662",
+            "---------------------------------------------------------------------------------------"
+          ]
+        }
+      ]
+    }
+  },
+  "tool": "perftest ib_send_bw",
+  "wall_s": 118.29
+}

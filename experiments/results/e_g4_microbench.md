@@ -4,7 +4,25 @@
 
 Conditions 1-4 of `experiments/microbench/PLAN.md`, at location (a): the A40 node's shared PCIe path, GPU0-3 on NUMA 0, pinned with `numactl --cpunodebind=0 --membind=0` (both halves). 20 repetitions per point; PLAN.md registers at least 10.
 
-**Location (b), the inter-node NIC, is `not run`.** This is one machine with one NIC and there is no second node to send to. It is reported rather than omitted: an omitted row reads as a row that passed, and half a matrix is not a matrix.
+
+## Location (b) --- the inter-node NIC
+
+Two nodes, `s8` and `s6`, one mlx5_0 each on one InfiniBand subnet, both ports reporting 100 Gbit/s. Measured with `perftest ib_send_bw`, which is what both nodes have; the tool and its arguments are in every raw file, because two front ends onto one wire are not interchangeable evidence.
+
+| condition | median Gbit/s | against a single stream |
+| --- | --- | --- |
+| single | 88.61 | --- |
+| two-same | 44.36 each | sum 88.73, i.e. 1.001x |
+| bidirectional | 94.51 | 1.067x per direction, sum 189.0 |
+
+**This is the opposite of location (a), and that is the result.** Two streams over one NIC take exactly half each, which is what processor sharing predicts and what the PCIe pairs at location (a) did not do. The contention model was never the thing in question: which resource is genuinely shared is, and it is settled by measurement at each location separately.
+
+Bidirectional is a second contrast. At location (a) the pair reached 1.33x a single direction; here it reaches over 2x, because the wire really is full duplex. That `ib_send_bw -b` reports per direction rather than the sum was established from the NIC's own counters rather than from the tool's documentation: 1,500 messages of 8 MiB left 12.66 GB in `port_xmit_data` **and** 12.66 GB in `port_rcv_data`, both matching the 12.58 GB expected each way, while the tool reported 94.73.
+
+**Two of the five registered conditions are not answered here, for different reasons that do not merge.**
+
+- `two-independent` is **impossible on this hardware**: each node has exactly one InfiniBand device, so there is no pair of disjoint NICs to put two flows on. That is a property of the machines.
+- `collective` is **deferred**: an all-reduce over IB needs NCCL, which needs torch on both nodes, and the peer node has no such environment yet. Nothing here shows it cannot be done.
 
 ## One path, three questions
 
