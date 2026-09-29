@@ -12,3 +12,45 @@
 %% evaluation budget.
 \section{Related work}
 \label{sec:related}
+
+\paragraph{Placement on heterogeneous clusters.}
+Helix formulates serving over heterogeneous GPUs and network as a max-flow
+problem and jointly optimises model placement and request scheduling. The
+overlap is the object: it also represents the cluster as a graph, and this work
+does not claim otherwise. The difference is what the representation is used
+for. Helix solves a flow problem to place and route; the search here
+enumerates complete placements and folds them by exact equivalence so that an
+expensive evaluator is invoked once per class, with the shared boundary in the
+equivalence signature so that two placements crossing different contended links
+are not folded together. ThunderServe and ShuntServe likewise optimise
+placement and parallelism across heterogeneous or spot GPUs; both search
+directly for a good configuration, where this work's contribution is the
+elimination discipline and the accounting of what was never evaluated.
+
+\paragraph{Prefill--decode disaggregation.}
+DistServe separates the two phases onto different resources and schedules them
+independently, and the design has since become common enough that recent work
+treats it as the baseline. This work generates disaggregated candidates and
+prices the transfer between the phases as a flow over the graph, which is what
+makes the counterexample in Section~\ref{sec:candidates} expressible at
+all---two prefill groups sending to one decode group differ only in the uplink
+they cross. It does not contribute a disaggregation policy, and the hardware
+campaign here could not deploy one, for the reason Section~\ref{sec:limits}
+gives.
+
+\paragraph{Simulation.}
+Vidur and LLMServingSim provide simulators for LLM serving; Frontier argues for
+more comprehensive and accurate simulation, including of disaggregated
+architectures. The dependence here is direct---the evaluator is LLMServingSim
+with an analytical backend---and so is the limitation: that simulator has no
+representation of a link graph, so the distinction this search maintains is
+invisible to the evaluator that prices it. Section~\ref{sec:adapter} reports
+what could not be expressed rather than folding it into a bandwidth number.
+This work measures search accuracy with prediction accuracy held fixed, which
+is a different question from the one a simulator paper asks.
+
+\paragraph{What this work does not claim.}
+It is not the first graph representation of a serving cluster; Helix precedes
+it. It does not contribute a scheduler, a disaggregation policy, or a
+simulator. Its claims are the three in Section~\ref{sec:intro} and nothing
+wider.
