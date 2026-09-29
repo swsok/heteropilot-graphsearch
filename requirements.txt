@@ -40,3 +40,9 @@ pandas
 pytest
 ruff
 mypy
+
+# `make figures` (P4.3, P6.3). The figure scripts degrade to a message rather
+# than a traceback when it is absent, so a checkout that only runs the tests
+# does not need it -- but the paper pipeline does, and a dependency the build
+# needs belongs here rather than in a README sentence.
+matplotlib

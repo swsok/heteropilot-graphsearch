@@ -139,9 +139,59 @@ class ConflictMatrix:
         return len(chosen)
 
 
+class UncomputedConflicts(ConflictMatrix):
+    """A conflict matrix nobody asked for, which refuses to pretend it is empty.
+
+    `conflict_matrix` is O(n^2) over EMBEDDINGS. On a synthetic 32-device
+    cluster it was **32.3 s of `compress`'s 52.1 s** -- 4.9 million pairs for
+    9,024 embeddings -- and the whole search pipeline throws it away
+    (`representatives, _, report = compress(...)`). Only
+    `restore.max_concurrent_for` ever reads one. Computed eagerly it charged
+    every caller for a product almost none of them wanted, and in E-G6's
+    scalability curve it charged that to the COMPRESSION, which would have made
+    the contribution look several times more expensive than it is.
+
+    So it is skipped when the caller says it is not needed -- and skipping
+    returns THIS rather than an empty matrix, because the two are not the same
+    claim. An empty `conflicts` reads as "none of these placements clash", and
+    a caller acting on that would deploy two candidates that cannot coexist.
+    That is `unevaluated is not infeasible` one level down, and it gets an
+    exception instead of a plausible answer.
+    """
+
+    def _refuse(self) -> None:
+        raise RuntimeError(
+            "the conflict matrix was not computed for this compression "
+            "(CompressionPolicy(conflicts=False)). It is O(n^2) over "
+            "embeddings and the search pipeline does not use it. Ask for it "
+            "with conflicts=True, or call `conflict_matrix(embeddings, graph)` "
+            "directly -- but do not read this as 'no conflicts'."
+        )
+
+    def conflicting(self, embedding_id: str) -> frozenset[str]:
+        self._refuse()
+        raise AssertionError("unreachable")       # pragma: no cover
+
+    def max_concurrent(self, representative: Representative) -> int:
+        self._refuse()
+        raise AssertionError("unreachable")       # pragma: no cover
+
+    def __repr__(self) -> str:
+        return "UncomputedConflicts(<not computed; see CompressionPolicy.conflicts>)"
+
+
+#: Returned when a caller opted out. A module-level instance so `is` works.
+UNCOMPUTED_CONFLICTS = UncomputedConflicts()
+
+
 @dataclass(frozen=True)
 class CompressionPolicy:
     enabled: bool = True
+    #: Whether to build the conflict matrix. Default True so no existing
+    #: caller changes behaviour; the search pipeline sets False because it
+    #: discards the result, and at scale that is most of the compression's
+    #: wall time (see `UncomputedConflicts`).
+    conflicts: bool = True
     wl_iterations: int = 3
     #: Wall-clock budget for VF2 across the whole run. None means no budget.
     #: What it cannot afford stays unmerged, never merged on the hash.
@@ -402,7 +452,7 @@ def compress(
         ]
         report.hash_seconds += time.perf_counter() - started
         report.representatives_out = len(reps)
-        return reps, conflict_matrix(embeddings, graph), report
+        return reps, _conflicts(embeddings, graph, policy), report
 
     buckets: dict[tuple, list[Representative]] = {}
     graphs: dict[str, nx.DiGraph] = {}
@@ -458,7 +508,18 @@ def compress(
 
     order.sort(key=lambda r: r.rep_id)
     report.representatives_out = len(order)
-    return order, conflict_matrix(embeddings, graph), report
+    return order, _conflicts(embeddings, graph, policy), report
+
+
+def _conflicts(
+    embeddings: Sequence[EmbeddedCandidate],
+    graph: ResourceGraph,
+    policy: CompressionPolicy,
+) -> ConflictMatrix:
+    """The matrix, or the refusal -- never a quietly empty one."""
+    if not policy.conflicts:
+        return UNCOMPUTED_CONFLICTS
+    return conflict_matrix(embeddings, graph)
 
 
 def conflict_matrix(

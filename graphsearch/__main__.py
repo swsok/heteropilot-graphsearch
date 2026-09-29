@@ -285,7 +285,11 @@ def cmd_plan(args) -> int:
     embedding_policy = EmbeddingPolicy(
         max_embeddings_per_template=args.max_embeddings_per_template
     )
-    compression_policy = CompressionPolicy(enabled=args.compression == "exact")
+    # `conflicts=False` for the same reason `run_proposed` does it: the
+    # matrix is discarded here and is O(n^2) over embeddings (GS-21).
+    compression_policy = CompressionPolicy(
+        enabled=args.compression == "exact", conflicts=False
+    )
 
     if args.oracle:
         result = run_oracle(
