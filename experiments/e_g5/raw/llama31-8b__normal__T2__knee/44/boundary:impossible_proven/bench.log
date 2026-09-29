@@ -1,0 +1,18 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ LLMServingSim Bench                                                          │
+│ vLLM end-to-end run -> /home/swsok/heteropilot-graphsearch/experiments/e_g5/ │
+╰──────────────────────────────────────────────────────────────────────────────╯
+[19:53:56] INFO     Loaded 150 requests from                                    
+                    /home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/l
+                    lama31-8b-rps55.jsonl                                       
+[19:53:57] INFO     Booting AsyncLLM …                                          
+[19:54:12] INFO     ✓ Booting AsyncLLM (15.2s)                                  
+           INFO     Submitting 150 requests …                                   
+  Requests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 150/150 • 0:00:55 • 0:00:00
+[19:55:08] INFO     ✓ Submitting 150 requests (55.5s)                           
+           INFO     Shutting AsyncLLM down …                                    
+[19:55:09] INFO     ✓ Shutting AsyncLLM down (1.1s)                             
+           INFO     ✓ 150 requests, 56 timeseries rows ->                       
+                    /home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/lla
+                    ma31-8b__normal__T2__knee/44/boundary:impossible_proven/benc
+                    h                                                           

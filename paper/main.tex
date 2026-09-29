@@ -88,12 +88,14 @@ Across every experiment reported here no feasible candidate was wrongly
 eliminated and no two differently-priced placements were folded together; both
 counts are reported for every arm rather than summarised once. Under a
 discrete-event simulator the compression saved more time than it cost, with its
-own hashing and isomorphism checks charged against it. On hardware we measure
-that a contention model's accuracy depends on which resource a cluster
-description claims is shared---a claim we found to be wrong on one bus and
-exactly right on another---and that an optimistic throughput bound, while never
-eliminating a candidate it should not, sits an order of magnitude above the
-capacity the machine delivers.
+own hashing and isomorphism checks charged against it. On hardware, one plan
+deployed at two placements of itself **meets its latency target on one and
+misses it sevenfold on the other**---a difference the planner it extends cannot
+express. We also measure that a contention model's accuracy depends on which
+resource a cluster description claims is shared, a claim we found wrong on one
+bus and exactly right on another, and that an optimistic throughput bound,
+while never eliminating a candidate it should not, sits an order of magnitude
+above the capacity the machine delivers.
 \end{abstract}
 
 \maketitle

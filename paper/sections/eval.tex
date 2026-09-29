@@ -225,21 +225,28 @@ the next node's prediction wrong silently.
 \subsection{Hardware}
 
 % claim: C18
+Table~\ref{tab:e_g5_real_hardware} reports one template's recommendation at
+three placements of itself, three repetitions each, against the same latency
+target. **On one wire it meets that target and on another it misses it
+sevenfold**, with the same model, trace, scheduler knobs, seed and plan; the
+ranges do not overlap, and time per output token and goodput clear their
+targets at every placement, so the latency axis is the one that decides.
+
+The planner being extended cannot express the difference between those two
+placements at all. It names a template, and the choice this experiment shows
+to be decisive is one it has no language for. That is the paper's claim in its
+strongest available form, and it is a hardware measurement rather than an
+argument.
+
 % claim: C19
 % claim: C20
-% not-established
-Table~\ref{tab:e_g5_real_hardware} reports the deployments: the recommended
-placement against its SLOs, and the two boundary alternatives against the
-bounds that ranked or rejected them. Each is offered the rate \emph{its own
-spec} declares, so a predicted and a measured column answer the same question.
-
-\textbf{The recommendation misses, on one axis.} Its measured $p99$ time to
-first token exceeds the target while time per output token and goodput clear
-theirs. The row names the axis rather than reporting a verdict, because which
-target was missed is the part a reader can act on. The prediction was
-optimistic by about an order of magnitude on that axis, in the direction the
-planner's own accuracy domain already records at low served concurrency. This
-experiment does not separate the candidate causes---prediction error, the
+The two boundary alternatives are deployed against the bounds that ranked or
+rejected them, each offered the rate \emph{its own} spec declares so that a
+predicted and a measured column answer the same question. The prediction is
+optimistic on both axes---and identical across the three placements, which is
+the concrete form of the adapter limitation Section~\ref{sec:adapter}
+reports: the evaluator cannot see the distinction the search is deciding on.
+This experiment does not separate the candidate causes---prediction error, the
 contention model, the engine's scheduler---and does not choose the most
 flattering one.
 

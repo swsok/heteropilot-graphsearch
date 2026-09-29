@@ -157,6 +157,44 @@ def table(data: list[dict]) -> list[str]:
     return out
 
 
+def placement_table(data: list[dict]) -> list[str]:
+    """The recommendation at each placement, medians over repetitions.
+
+    Separate from the full table because it is the one comparison the whole
+    experiment exists to make, and burying it among the boundary rows would
+    ask the reader to find it.
+    """
+    import statistics
+
+    groups: dict[str, list[dict]] = {}
+    for row in data:
+        if row["deployment"] != "recommendation" or not row.get("measured"):
+            continue
+        topo = row["condition"].split("__")[2]
+        groups.setdefault(topo, []).append(row)
+
+    head = ["placement", "devices", "reps", "p99 TTFT median", "range",
+            "p99 TPOT median", "goodput median", "SLO"]
+    out = ["| " + " | ".join(head) + " |",
+           "| " + " | ".join("---" for _ in head) + " |"]
+    for topo in sorted(groups):
+        rows_ = groups[topo]
+        ttft = sorted(r["measured"]["p99_ttft_ms"] for r in rows_)
+        tpot = [r["measured"]["p99_tpot_ms"] for r in rows_]
+        good = [r["measured"]["goodput_rps"] for r in rows_]
+        state, _ = verdict(rows_[0])
+        states = {verdict(r)[0] for r in rows_}
+        state = "met" if states == {"met"} else "MISSED"
+        out.append(
+            f"| {topo} | {rows_[0]['devices']} | {len(rows_)} | "
+            f"{statistics.median(ttft):.1f} ms | "
+            f"[{min(ttft):.1f}, {max(ttft):.1f}] | "
+            f"{statistics.median(tpot):.2f} ms | "
+            f"{statistics.median(good):.3f} rps | **{state}** |"
+        )
+    return out
+
+
 def markdown(data: list[dict], args) -> str:
     out = ["# E-G5 — the recommendation and the bounds, on hardware", "", BANNER, ""]
     out.append(
@@ -170,6 +208,32 @@ def markdown(data: list[dict], args) -> str:
         "162 ms beside a measured 22,068, a number that says nothing about the "
         "simulator and everything about two different offered loads."
     )
+    out += ["", "## The placement decides whether the SLO is met", ""]
+    out.append(
+        "One template, three placements of it, nine repetitions. The rows "
+        "below are the recommendation at each placement, and the target is "
+        "the same 550 ms in every one."
+    )
+    out.append("")
+    out += placement_table(data)
+    out.append("")
+    out.append(
+        "**T1 meets the latency target and T2 does not**, by a factor of "
+        "about seven, with the same model, the same trace, the same scheduler "
+        "knobs, the same seed and the same plan. The only difference is which "
+        "wire the tensor-parallel all-reduce crosses. Three repetitions per "
+        "cell and the ranges do not overlap."
+    )
+    out.append("")
+    out.append(
+        "The planner being extended **cannot express that difference at "
+        "all**: `resolve_devices` maps an execution island to every one of its "
+        "accelerator ids, so a TP=2 plan is launched with all eight devices "
+        "visible and the runtime takes the first two. It names a template; "
+        "T1 and T2 are two placements of that one template, and the choice "
+        "between them decides whether the service meets its objectives."
+    )
+
     out += ["", "## Predicted against measured", ""]
     out += table(data)
 

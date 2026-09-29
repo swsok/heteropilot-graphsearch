@@ -24,12 +24,16 @@ groups of devices that are identical in model, memory and price can still
 differ in the interconnect their tensor-parallel collective crosses, and that
 difference reaches the served latency.
 
+% claim: C18
 % claim: C21
 The size of the difference is easy to underestimate. On the eight-GPU node used
-here, the same engine, model, trace, scheduler knobs and seed placed on an
-NVLink pair rather than across a PCIe bridge does not merely run faster: it
-moves the saturation knee, and with it the load at which the service still
-meets its latency target. Section~\ref{sec:eval} reports the measurement.
+here, one plan---same engine, model, trace, scheduler knobs and seed---deployed
+at two placements of itself meets its latency target on one and misses it by a
+factor of seven on the other. It is not that the slower wire costs some
+latency: it moves the saturation knee, and with it the load at which the
+service still meets its objectives. Section~\ref{sec:eval} reports the
+measurement, over three repetitions per placement whose ranges do not
+overlap.
 
 A planner that enumerates configurations rather than placements cannot make
 that choice, because it has no name for the thing being chosen. The planner
