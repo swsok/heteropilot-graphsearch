@@ -269,6 +269,8 @@ def plan_args(spec_path: Path, work: Path, args):
         budget_seconds=None, epsilon=0.0,
         max_embeddings_per_template=None, compression="exact",
         bounds="all", diversity=False, oracle=False, output=None,
+        # The library's default; the aggregated conditions are one node (GS-32).
+        max_hops=None,
         # The topology condition names a placement, and a placement has a fixed
         # device count -- so the planner is asked "what is the best plan using
         # at most this many devices", and its answer is what gets placed. Left
@@ -872,7 +874,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-tenants", action="store_true",
                         help="proceed although another tenant holds a GPU. "
                              "Every row is then labelled contaminated.")
+    parser.add_argument(
+        "--mode", choices=("aggregated", "pd"), default="aggregated",
+        help="`pd`: the inter-node P/D arm (pd_arm.py). --condition is then "
+             "pd-independent or pd-shared. Deployed by this harness, not by "
+             "heteropilot, which has no router (GS-32).",
+    )
     args = parser.parse_args(argv)
+    if args.mode == "pd":
+        import pd_arm
+
+        return pd_arm.run_pd(args, C, service_spec, workload_at)
 
     model, pattern, topo_key, level = C.parse(args.condition)
     topo = C.TOPOLOGIES[topo_key]

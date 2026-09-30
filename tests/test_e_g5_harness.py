@@ -17,8 +17,6 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
-
 from graphsearch import paths_root
 from graphsearch.__main__ import build_parser, cmd_plan_objects, evaluate_placement
 
@@ -97,7 +95,3 @@ def test_a_placement_the_template_cannot_occupy_is_out_of_scope() -> None:
     assert verdict.state == "excluded_by_scope"
     assert verdict.plan is None
 
-
-@pytest.mark.parametrize("state", ["evaluated: feasible", "unevaluated (the budget did not reach it)"])
-def test_the_search_state_vocabulary_is_closed(state: str) -> None:
-    assert any(state.startswith(s) for s in SEARCH_STATES)

@@ -61,6 +61,7 @@ from graphsearch.oracle import (  # noqa: E402
     run_oracle,
     run_proposed,
 )
+from graphsearch.paths import DEFAULT_POLICY, PathPolicy  # noqa: E402
 from graphsearch.ranker import (  # noqa: E402
     DEFAULT_RANKER_VARIANT,
     RANKER_VARIANTS,
@@ -394,13 +395,17 @@ def cmd_plan_objects(args) -> PlanObjects:
         enabled=args.compression == "exact", conflicts=False
     )
 
+    path_policy = (
+        PathPolicy(max_hops=args.max_hops)
+        if getattr(args, "max_hops", None) is not None else DEFAULT_POLICY
+    )
     embeddings, stats = enumerate_embeddings(
-        templates, by_id, graph, spec, embedding_policy
+        templates, by_id, graph, spec, embedding_policy, path_policy=path_policy
     )
     representatives, _, report = compress(embeddings, graph, compression_policy)
     verdicts, rejections = prune(
         representatives, spec, graph, by_id, profiles, stats,
-        policy=_bound_policy(args.bounds),
+        policy=_bound_policy(args.bounds), path_policy=path_policy,
     )
     contention = contention_model(args.contention)
     quota = DiversityQuota() if args.diversity else None
@@ -659,6 +664,14 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--budget-seconds", type=float, default=None)
     plan.add_argument("--epsilon", type=float, default=0.0)
     plan.add_argument("--max-embeddings-per-template", type=int, default=None)
+    plan.add_argument(
+        "--max-hops", type=int, default=None,
+        help="cap on a path's hop count (default: the library's, 8). Every "
+             "simple path up to the cap is enumerated, so on a cluster whose "
+             "nodes are full PCIe meshes an inter-node pair has tens of "
+             "thousands of them; the cap is then a declared modelling choice, "
+             "recorded by the caller (GS-32).",
+    )
     plan.add_argument("--compression", choices=("exact", "off"), default="exact")
     plan.add_argument("--bounds", default="all")
     plan.add_argument("--diversity", action="store_true")

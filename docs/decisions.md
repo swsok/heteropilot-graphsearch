@@ -1411,3 +1411,89 @@ judged, although they point the same way (0.0714 against 0.5 at k = 8). The
 **What it affects.** `paper/CLAIMS.md` (C26, new C32, footnote `eg7h`),
 `paper/sections/eval.tex`, `experiments/scripts/e_g7_holdout.py`,
 `experiments/results/e_g7_holdout.md`.
+
+## GS-32 — the inter-node P/D arm is deployed by the harness, and five instructions met the code · 2026-09-30
+
+**Decision.** E-G5's inter-node P/D arm is run by `deploy_and_bench.py --mode
+pd` (`experiments/e_g5/pd_arm.py`), which launches the prefill engine on `s8`
+GPU 0 and the decode engine on `s6` GPU 0 itself and drives them with
+`experiments/e_g5/pd_router.py`. **The harness router is an experimental
+instrument, not a serving component.** A router in heteropilot's
+`planner/deploy/` is follow-up work, recorded there as D128 ("deploy has no
+P/D router"), and no hook PR (H5) is made for it now.
+
+The arm was registered before its first request (preregistration change-log
+rows 5 and 6). Five points of the work order met the code, and in each the
+code won, as `CLAUDE.md` requires:
+
+1. **The background generator.** The order named `run_pair.py
+   --background-util 0.6`. That is location (a)'s PCIe generator and does not
+   cross the NIC, so it cannot load this path. The background is E-G4(b)'s own
+   instrument, `ib_send_bw`, run at a 0.6 duty cycle whose achieved value is
+   measured and recorded (`NicBackground`).
+2. **`bandwidth_unit: Gbit/s`.** heteropilot never reads that field: it is in
+   the v2 allowlist (`planner/inventory.py:530`) and nowhere else, and
+   `planner/topology.py` returns `link.bandwidth_gbps` as GB/s. A link written
+   `100` + `Gbit/s` would read as 12.5 GB/s in graphsearch (whose
+   `schema.py` converts) and as 100 GB/s in heteropilot --- one file, two
+   numbers eight times apart. The InfiniBand links are written in GB/s
+   (12.5 = 100 Gbit/s), which both repositories read the same way.
+3. **"The inter-node link is 77.9 Gbit/s".** `LinkMeasurement`'s contract is
+   that `bandwidth_gbps` "stays whatever its datasheet says and is never
+   edited" (heteropilot absolute rule A3); the measured figure sits beside it.
+   So the link carries the port's 100 Gbit/s as `vendor_spec` and the NIXL
+   GPU-to-GPU 77.90 Gbit/s as a `measurement`, which is how `real-a40x8`
+   already carries NVLink (112.5 declared, 52.64 measured).
+4. **The direction E-G4(b) measured.** `run_nic.py` puts the `ib_send_bw`
+   server on the near node and the client --- the sender --- on the peer, and
+   E-G4(b) ran with `s8` near. Its 88.61 Gbit/s single stream is therefore
+   **s6 -> s8**, a fact no raw file states; it was recovered from the code.
+   This arm's KV crosses the other way (the decode instance on `s6` reads the
+   prefill instance's blocks on `s8`). `run_nic.py --reverse` now sends from
+   the near node, records a `direction` field, and writes a `*-to-*`
+   directory that `analyze.py::nic_results` keeps apart from the other
+   direction, where it would otherwise have replaced E-G4(b)'s `single`
+   silently. Until that measurement exists, the fixture declares
+   `nic-s8-to-s6` as a `placeholder` carrying the other direction's figure.
+5. **`--max-model-len 4096`.** One of the 150 requests is 4197 tokens and
+   would be refused in this arm only. Raised to 8192 before any request was
+   sent (row 6).
+
+**The two-node fixture is generated, not typed.**
+`experiments/e_g5/build_cluster_s8s6.py` writes `real-s8s6.v2.yaml` from the
+raw files, reusing `build_cluster.py` for each node and
+`experiments/microbench/analyze.py` for the NIC and collective figures. `s6`
+is the same model of machine but not the machine E-G4 measured, so its copied
+intra-node figures are downgraded to `placeholder` and `s8`'s measurements are
+not attached to its links. `real-s8s6-shared.v2.yaml` differs by one field:
+`nic-s8-to-s6` reserved at 60 % of its capacity, the prediction side of the
+registered criterion.
+
+**How the deployed configuration is chosen.** The search on `real-s8s6`
+produces twelve cross-node P/D templates. The six with prefill on `s8` and
+decode on `s6` are each evaluated at the deployed placement with
+`evaluate_placement`; the best (feasible first, then the lower predicted p99
+TTFT) is deployed in **both** conditions, so that the NIC load is the only
+difference between them. The whole table is kept in every raw file.
+
+**Addendum, before the first request: the path cap.** At the library's
+default `max_hops` of 8, enumeration on `real-s8s6` does not finish: each node
+is a full PCIe mesh, so one `s8` -> `s6` GPU pair has 41,980 simple paths
+(`nx.shortest_simple_paths`), and `_transit_closure` walks every edge of every
+one. `plan` gains `--max-hops`; its default leaves every existing experiment's
+policy unchanged, and the aggregated E-G5 conditions pass `None`. The P/D arm
+declares **3**: the shortest inter-node route, gpu -> nic -> nic -> gpu, is
+exactly three hops, and every longer one relays through another GPU, which
+does not forward NIC traffic. At 3, embedding takes 1.8 s and compression 13 s.
+The flag-parity test caught the harness not passing the new flag before any
+run used it.
+
+**Addendum: the s8 -> s6 direction was measured.** `run_nic.py --reverse`,
+same instrument: 89.12 Gbit/s median (s6 -> s8 was 88.61). The fixture now
+carries both directions as `measured`. With `analyze.py`'s new direction
+filter switched off, E-G4's `single` row silently became 89.12 --- which is
+the evidence that the filter is needed, not a guess that it might be.
+
+**What it affects.** `experiments/e_g5/{pd_arm,pd_router,build_cluster_s8s6,
+deploy_and_bench}.py`, `experiments/microbench/{run_nic,analyze}.py`,
+`fixtures/clusters/real-s8s6{,-shared}.v2.yaml`, heteropilot D128.
