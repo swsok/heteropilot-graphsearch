@@ -34,5 +34,7 @@ with its own hashing and isomorphism checks charged against it.
 On hardware the point is not subtle. One plan, deployed at two placements of
 itself, meets its latency target on one and misses it sevenfold on the other,
 and the planner this work extends cannot tell the two apart. What remains of
-the campaign is the inter-node case, which needs a disaggregation path that
-does not yet exist.
+the campaign is the inter-node case, and what it waits on is not a missing
+disaggregation path but a router: the deployment layer this work extends
+serves one engine, and a split serving architecture is two of them with
+something in front.
