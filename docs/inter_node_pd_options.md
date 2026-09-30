@@ -20,10 +20,13 @@ whole mechanism: `--kv-transfer-config` parses from argv, `kv_role` takes
 `NixlConnector`, `LMCacheConnectorV1`, `MooncakeConnector`, `MultiConnector`
 and `OffloadingConnector`.
 
-It was run. Prefill on `s8` GPU 0, decode on GPU 1, NIXL between them: the
-prefill instance handed back fourteen KV block ids with its engine id, side
-channel host and port, and the decode instance pulled them and produced the
-completion. `experiments/pd_probe/raw/vllm_pd/`.
+It was run, first on one node and then across two. Prefill on `s8` GPU 0,
+decode on `s6` GPU 0, NIXL between them over the InfiniBand subnet: the prefill
+instance handed back fourteen KV block ids with its engine id, side channel
+host and port, and the decode instance on the other machine pulled them and
+produced the completion, at 0.058 s for the prefill call and 0.917 s for the
+decode. `experiments/pd_probe/raw/vllm_pd_two_node/`, with the one-node run it
+repeats in `experiments/pd_probe/raw/vllm_pd/`.
 
 The transport was measured separately across the two machines: a CUDA buffer
 moved from `s8:cuda:0` to `s6:cuda:0` at 77.90 Gbit/s over `rc_mlx5/mlx5_0:1`,
@@ -32,12 +35,19 @@ median on the same pair. `experiments/pd_probe/raw/nixl/`.
 
 ### The disaggregated answer is not the aggregated answer
 
-Greedy, prefix caching off on both, three prompts: two identical, one diverging
-after 57 of 66 characters --- and reproducibly so, while two *aggregated*
-engines on different GPUs agree exactly and each is repeatable. The difference
-is the hand-off. The raw file has the controls; the point for planning is that
-a P/D arm and an aggregated arm do not produce the same token stream, so a
-comparison between them has to say so rather than assume it away.
+Greedy, prefix caching off on both, three prompts. Within one node, two agree
+and one diverges after 57 of 66 characters. **Across two nodes, two of the
+three diverge**, and three repetitions of the whole set give the same rows
+every time. Meanwhile two *aggregated* engines --- one on each machine --- give
+the same answer to the prompt the disaggregated path gets wrong, and each is
+repeatable on its own. So neither the machine nor run-to-run noise is the
+variable; the hand-off is, and it perturbs more across the fabric than across a
+PCIe bus. Why is not established, and the raw file says so rather than offering
+a mechanism it did not measure.
+
+The point for planning is that a P/D arm and an aggregated arm do not produce
+the same token stream, so a comparison between them has to say so rather than
+assume it away.
 
 ## Measured here: what actually blocks it is this repository's own dependency
 
