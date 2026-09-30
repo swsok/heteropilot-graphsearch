@@ -1,0 +1,47 @@
+%% The worked example of research design section 9, as one figure.
+%%
+%% Hand-drawn TikZ, not generated: it carries no measured number. The four
+%% counts (45, 8, 5, 3) are the design's own arithmetic on a stated toy
+%% cluster, not an experimental result, which is why they are literals here and
+%% would not be allowed in a section body.
+%%
+%% The point of the figure is the SHAPE of the pipeline and where each stage's
+%% authority ends: compression folds, compatibility rejects on a runtime
+%% contract, and the bound rejects on optimistic arithmetic. Three different
+%% kinds of removal, and only the last two are judgements about the candidate.
+\begin{figure}[t]
+  \centering
+  \footnotesize
+  \begin{tikzpicture}[
+      node distance=6mm,
+      stage/.style={draw, rounded corners=2pt, align=center,
+                    minimum height=8mm, inner xsep=3mm},
+      lab/.style={font=\scriptsize, align=center},
+      arr/.style={-latex, thick},
+    ]
+    \node[stage] (all)  {45\\device pairs};
+    \node[stage, right=14mm of all]  (rep)  {8\\representatives};
+    \node[stage, right=14mm of rep]  (compat) {5\\representatives};
+    \node[stage, right=14mm of compat] (bound) {3\\representatives};
+
+    \draw[arr] (all) -- node[lab, above] {exact\\equivalence}
+                        node[lab, below] {\emph{folds}} (rep);
+    \draw[arr] (rep) -- node[lab, above] {runtime\\contract}
+                        node[lab, below] {\emph{rejects}} (compat);
+    \draw[arr] (compat) -- node[lab, above] {cut lower\\bound}
+                          node[lab, below] {\emph{rejects}} (bound);
+
+    \node[lab, below=7mm of rep.south, text width=30mm]
+      {28 GPU pairs survive, and their mapping is kept};
+    \node[lab, below=7mm of bound.south, text width=30mm]
+      {each removal is recorded in its own state};
+  \end{tikzpicture}
+  \caption{The worked example of the research design, one stage per arrow.
+  Folding is not rejection: the 45 pairs become 8 representatives without any
+  candidate being judged, and the mapping back to all 28 surviving physical
+  pairs is kept. Only the second and third arrows are judgements, and they are
+  different in kind---one reads a runtime contract, the other arithmetic that
+  is optimistic on every uncertain term. The counts are the design's own
+  arithmetic on a stated toy cluster and are not measurements.}
+  \label{fig:concept}
+\end{figure}

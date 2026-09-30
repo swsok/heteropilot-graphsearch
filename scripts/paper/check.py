@@ -11,9 +11,13 @@ Four checks, each for a failure that is invisible on a casual read:
    may not make: that it is the first to represent a cluster as a graph, and
    that a top-K procedure guarantees a global optimum.
 3. **A paragraph may assert only what `CLAIMS.md` calls `Established`.** Each
-   paragraph carries `% claim: C<n>`; a claim that is `Pending` may still be
-   cited, but the paragraph must also carry `% pending`, which is what the
-   `\\pending` macro marks in the margin.
+   paragraph carries `% claim: C<n>`. Two other statuses may be cited, and each
+   needs its own deliberate marker, because they are not the same situation:
+   `Pending` needs `% pending` (the result is not in), and `Not established`
+   needs `% not-established` (the result IS in and it contradicts the claim --
+   `CLAIMS.md` requires the paper to say so, in the indicative). Conflating
+   them would let a negative result be written as though it were still
+   awaited.
 4. **Every `\\pending` is listed**, so the count is a number somebody looks at
    rather than a habit.
 
@@ -102,7 +106,7 @@ def paragraphs(text: str) -> list[tuple[int, list[str], bool, str]]:
     `% pending` markers may sit on the lines immediately above it, which is
     where they read most naturally.
     """
-    out, claims, pending, body, start = [], [], False, [], 0
+    out, claims, pending, negative, body, start = [], [], False, False, [], 0
     for number, line in enumerate(text.splitlines(), start=1):
         stripped = line.strip()
         if stripped.startswith("% claim:"):
@@ -113,15 +117,20 @@ def paragraphs(text: str) -> list[tuple[int, list[str], bool, str]]:
             pending = True
             start = start or number
             continue
+        if stripped.startswith("% not-established"):
+            negative = True
+            start = start or number
+            continue
         if not stripped:
             if body:
-                out.append((start or number, claims, pending, "\n".join(body)))
-            claims, pending, body, start = [], False, [], 0
+                out.append((start or number, claims, pending, negative,
+                            "\n".join(body)))
+            claims, pending, negative, body, start = [], False, False, [], 0
             continue
         start = start or number
         body.append(line)
     if body:
-        out.append((start, claims, pending, "\n".join(body)))
+        out.append((start, claims, pending, negative, "\n".join(body)))
     return out
 
 
@@ -158,18 +167,30 @@ def main(argv: list[str] | None = None) -> int:
             if re.search(pattern, flat, re.I):
                 failures.append(f"{rel}: {why}")
 
-        for number, claims, pending, _body in paragraphs(raw):
+        for number, claims, pending, negative, _body in paragraphs(raw):
             for cid in claims:
                 state = status.get(cid)
                 if state is None:
                     failures.append(f"{rel}:{number}: unknown claim {cid}")
-                elif not state.startswith("Established") and not pending:
+                    continue
+                if state.startswith("Established"):
+                    continue
+                bare = state.strip("*").split(",")[0].strip()
+                if bare.lower().startswith("not established"):
+                    if not negative:
+                        failures.append(
+                            f"{rel}:{number}: cites {cid}, which is "
+                            f"`Not established` -- the experiment ran and "
+                            f"contradicted it -- without a `% not-established` "
+                            f"marker. CLAIMS.md requires the paper to say so; "
+                            f"the marker is how you confirm the paragraph does."
+                        )
+                elif not pending:
                     failures.append(
-                        f"{rel}:{number}: cites {cid}, which is "
-                        f"{state.split(',')[0]!r}, without a `% pending` "
-                        f"marker. A claim that is not Established is written "
-                        f"in a form that does not change when the result "
-                        f"arrives."
+                        f"{rel}:{number}: cites {cid}, which is {bare!r}, "
+                        f"without a `% pending` marker. A claim that is not "
+                        f"Established is written in a form that does not "
+                        f"change when the result arrives."
                     )
 
         for match in re.finditer(r"\\pending\{([^}]*)\}", raw):
@@ -186,7 +207,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {item}", file=sys.stderr)
         return 1
     print("\ncheck passed: no numeric literals, no forbidden claims, every "
-          "cited claim Established or marked pending")
+          "cited claim Established, or marked pending, or marked "
+          "not-established")
     return 0
 
 

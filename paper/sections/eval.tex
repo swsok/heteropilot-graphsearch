@@ -129,6 +129,11 @@ derivation is stated with the count.
 % claim: C6
 \input{e_g1b_topk}
 \input{e_g2_topk_holdout}
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{topk_holdout.pdf}
+  \caption{Feasible recall against the simulation budget, both arms, on the holdout fixtures~\sourcetag{MOCK}. The oracle's level is the dotted line. At $K=4$ the graph search is behind, which the curve shows without the reader comparing two rows.}
+  \label{fig:topk}
+\end{figure}
 
 Table~\ref{tab:e_g1b_topk} and Table~\ref{tab:e_g2_topk_holdout} report
 feasible recall against the existing planner's surrogate top-$K$ under a
@@ -161,6 +166,11 @@ passed. \pending{E-G5: real-lab holdout}
 % claim: C15
 % claim: C16
 \input{e_g4_microbench_2}
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{contention_error.pdf}
+  \caption{Fluid and null error against message size, on the declaration the measurements support~\sourcetag{REAL HARDWARE}. The bidirectional error is near zero from 4 to 64 MiB and rises at 128: an accuracy domain, not a single figure.}
+  \label{fig:contention}
+\end{figure}
 
 Table~\ref{tab:e_g4_microbench_2} reports the registered verdict, and it is a
 \textbf{failure}: on the topology the plan declared before measuring,
@@ -214,12 +224,44 @@ the next node's prediction wrong silently.
 
 \subsection{Hardware}
 
-% pending
-This section reports the deployment campaign: the recommended placement against
-its SLOs, the boundary alternatives against the bounds that ranked or rejected
-them, and the difference between two placements of one template across a shared
-interconnect. The campaign is registered in the accompanying repository and has
-not completed. \pending{E-G5: the hardware matrix}
+% claim: C18
+Table~\ref{tab:e_g5_real_hardware} reports one template's recommendation at
+three placements of itself, three repetitions each, against the same latency
+target. **On one wire it meets that target and on another it misses it
+sevenfold**, with the same model, trace, scheduler knobs, seed and plan; the
+ranges do not overlap, and time per output token and goodput clear their
+targets at every placement, so the latency axis is the one that decides.
+
+The planner being extended cannot express the difference between those two
+placements at all. It names a template, and the choice this experiment shows
+to be decisive is one it has no language for. That is the paper's claim in its
+strongest available form, and it is a hardware measurement rather than an
+argument.
+
+% claim: C19
+% claim: C20
+The two boundary alternatives are deployed against the bounds that ranked or
+rejected them, each offered the rate \emph{its own} spec declares so that a
+predicted and a measured column answer the same question. The prediction is
+optimistic on both axes---and identical across the three placements, which is
+the concrete form of the adapter limitation Section~\ref{sec:adapter}
+reports: the evaluator cannot see the distinction the search is deciding on.
+This experiment does not separate the candidate causes---prediction error, the
+contention model, the engine's scheduler---and does not choose the most
+flattering one.
+
+\textbf{The lower bound was right, and the interesting number is how loose it
+is.} The candidate the throughput bound rejected by the smallest margin was
+deployed and offered the floor it had been rejected against. It did not reach
+it, so no feasible candidate was wrongly eliminated on hardware. That outcome
+was expected: a bound that is a relaxation rejects only what the most
+optimistic arithmetic already misses, so a correct rejection is not news, and
+the test is registered as weak for exactly that reason. What the deployment
+buys is the ratio between the ceiling the bound computed and the capacity the
+hardware actually delivered, and it is more than an order of magnitude. That
+looseness is the price of soundness; this is its size on this machine.
+
+\input{e_g5_real_hardware}
 
 % claim: C21
 % pending

@@ -526,9 +526,11 @@ def boundary_alternatives(objects, spec, devices: int, recommended_id):
 #: harness runs it instead of `vllm serve`, and why anything the plan says that
 #: these nine cannot carry has to be reported rather than dropped.
 VLLM_VERSION_CHECKED = "0.19.0"
+#: `enable_prefix_caching` is NOT here any more: heteropilot D127 (hook H4)
+#: gave `bench run` a `--no-enable-prefix-caching` flag, so the plan's value
+#: can be carried. What remains are the knobs that still have no flag.
 INEXPRESSIBLE = {
     # plan field -> (what vLLM resolves to when bench says nothing)
-    "enable_prefix_caching": True,
     "block_size": 16,
     "enable_chunked_prefill": True,
     "prioritize_prefill": False,
@@ -618,6 +620,11 @@ def bench_command(plan_obj, topo: C.Topology, model: str, workload: Path,
         "--dtype", plan_obj.candidate.dtype,
         "--kv-cache-dtype", knobs.kv_cache_dtype,
         "--seed", str(seed),
+        # D127: the plan's value, carried. Before hook H4 `bench run` had no
+        # flag for this and vLLM's own default (True) applied, so a run of a
+        # plan that says False measured a configuration nobody had asked for.
+        ("--enable-prefix-caching" if knobs.enable_prefix_caching
+         else "--no-enable-prefix-caching"),
         # The SAME count the simulator replayed: goodput is
         # `completed / elapsed` and the drain tail is a larger share of a short
         # trace, so two counts make one floor two different constraints.
@@ -645,8 +652,33 @@ def bench_command(plan_obj, topo: C.Topology, model: str, workload: Path,
     return argv, override
 
 
+def workload_at(rps: float, model: str, work: Path) -> Path:
+    """A trace re-spaced to `rps`, generated if it is not already there.
+
+    `make_workload.py` rewrites only `arrival_time_ns`: every request's tokens
+    are carried through untouched and in the same order, so across conditions
+    the work is identical and only the load differs. Generating it here rather
+    than requiring a flag means the rate a row was measured at is the rate its
+    spec declared, by construction rather than by care.
+    """
+    stock = HETEROPILOT / "workloads" / (
+        "sharegpt-llama-3.1-8b-300-sps10.jsonl" if model == "llama31-8b"
+        else "sharegpt-qwen3-32b-300-sps10.jsonl"
+    )
+    out = ROOT / "outputs" / "e_g5" / "workloads" / f"{model}-rps{rps:g}.jsonl"
+    if not out.exists():
+        subprocess.run(
+            [sys.executable, str(ROOT / "experiments" / "e_g5" / "make_workload.py"),
+             "--input", str(stock), "--rps", str(rps), "--burstiness", "1.0",
+             "--out", str(out)],
+            check=True, capture_output=True, cwd=ROOT,
+        )
+        say(f"generated {out.name}")
+    return out
+
+
 def measure(source, plan_obj, label: str, topo: C.Topology, model: str,
-            workload: Path, out_dir: Path, args) -> dict:
+            workload: Path, out_dir: Path, args, offered: float = 0.0) -> dict:
     """One deployment: run the load, collect, tear down. Always tears down."""
     out_dir.mkdir(parents=True, exist_ok=True)
     argv, override = bench_command(
@@ -658,6 +690,8 @@ def measure(source, plan_obj, label: str, topo: C.Topology, model: str,
         "placement_override": override,
         "bench_argv": argv,
         "knob_loss": losses,
+        "offered_rps": offered,
+        "workload": str(workload),
         "plan_id": plan_obj.plan_id,
         "candidate_id": plan_obj.candidate.id,
         "predicted": {
@@ -830,11 +864,17 @@ def main(argv: list[str] | None = None) -> int:
         f"goodput floor {stress['min_goodput_rps']}")
     stress_objects = run_plan(stress_path, work / "stress", args)
 
-    workload = args.workload or (
-        HETEROPILOT / "workloads" /
-        ("sharegpt-llama-3.1-8b-300-sps10.jsonl" if model == "llama31-8b"
-         else "sharegpt-qwen3-32b-300-sps10.jsonl")
-    )
+    # **The trace must offer the rate the spec declared**, or the predicted and
+    # measured columns answer different questions. The stock trace is sps10;
+    # replaying it against a plan simulated at 4 rps put the hardware deep into
+    # saturation and made a predicted p99 TTFT of 162 ms sit beside a measured
+    # 22,068 -- a number that says nothing about the simulator, only about two
+    # different offered loads.
+    # Each deployment is offered the rate ITS OWN spec declares: S's rows ask
+    # whether the recommendation meets its SLOs at the service's load, and B's
+    # asks whether a candidate the bound rejected can reach the floor it was
+    # rejected against. One trace for both would answer neither.
+    workload = args.workload
 
     # The condition names a placement, so only candidates with that many
     # devices can carry it. See `candidates_of_size`.
@@ -880,6 +920,8 @@ def main(argv: list[str] | None = None) -> int:
             continue
         source = stress_objects if label.endswith("impossible_proven") else objects
         plan_obj = plan_for(entry, source.spec)
+        offered = float(source.spec.traffic.arrival_rate_rps)
+        trace = workload or workload_at(offered, model, work)
         need = plan_obj.candidate.total_devices
         if need > len(topo.devices):                        # pragma: no cover
             raise SystemExit(
@@ -894,8 +936,8 @@ def main(argv: list[str] | None = None) -> int:
             topo, devices=tuple(topo.devices[:need])
         )
         deployments.append(measure(
-            source, plan_obj, label, placed, model, workload,
-            out_dir / label, args,
+            source, plan_obj, label, placed, model, trace,
+            out_dir / label, args, offered=offered,
         ))
 
     record = {

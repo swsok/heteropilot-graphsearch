@@ -47,9 +47,9 @@ exists to prevent.
 | C15 | A processor-sharing contention model predicts measured transfer time better than pricing each flow alone | `experiments/results/e_g4_microbench.md` | hardware | Established, **at location (a) only, and within 4–64 MiB**[^eg4] |
 | C16 | The A40's intra-node PCIe path is **not** a shared resource: two concurrent peer copies between disjoint device pairs each sustain the single-copy rate | `experiments/results/e_g4_microbench.md` | hardware | Established |
 | C17 | A two-rank and a four-rank all-reduce over one path are different measurements, so `world_size` belongs in the measurement key | `experiments/results/e_g4_microbench.md` (19.34 against 8.71 GB/s busbw) | hardware | Established |
-| C18 | The recommended placement meets its SLOs on real hardware | — (E-G5, spec S) | hardware | Pending |
-| C19 | The throughput upper bound is loose by at least 2.6x against measured capacity on this node | — (E-G5, spec B) | hardware | Pending |
-| C20 | A candidate proved impossible really does miss the constraint it was proved to miss, on hardware | — (E-G5, boundary alternative) | hardware | Pending |
+| C18 | Whether the recommendation meets its SLOs on hardware **depends on the placement**, which the planner cannot choose: the same plan meets its latency target on one wire and misses it sevenfold on another | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^eg5ttft] |
+| C19 | The throughput upper bound's optimistic ceiling sits an order of magnitude above measured capacity | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^eg5bound] |
+| C20 | A candidate proved impossible really does miss the constraint it was proved to miss, on hardware | `experiments/results/e_g5_real_hardware.md` | hardware | Established, **on one candidate, and the test is weak by construction**[^eg5bound] |
 | C21 | Two placements differing only in which wire their tensor-parallel all-reduce crosses differ measurably in served TTFT | `experiments/e_g5/raw/pilot/` | hardware | Established, **intra-node, by a placement the planner cannot name**[^eg5p] |
 | C22 | Two concurrent streams over one inter-node NIC take exactly half each, which processor sharing predicts and the intra-node PCIe path does not do | `experiments/results/e_g4_microbench.md` | hardware | Established[^locb] |
 | C29 | The inter-node NIC is full duplex: both directions together exceed twice a single stream, where the intra-node pair reaches 1.33x | `experiments/results/e_g4_microbench.md` | hardware | Established |
@@ -119,6 +119,39 @@ exists to prevent.
     aggregated engine" with no `kv_connector` and no producer/consumer role, so
     a disaggregated prefill pair cannot be deployed at all. That is a hook PR to
     that repository, not a measurement waiting to be taken.
+
+[^eg5ttft]: Nine repetitions, three per placement, of one template's
+    recommendation against a 550 ms target. On the NVLink pair the measured
+    $p99$ TTFT is 379.3 ms and the target is **met**; across the PCIe bridge it
+    is 2,891.3 ms and **missed**, a factor of 7.6, with the same model, trace,
+    knobs, seed and plan. The ranges do not overlap. TPOT and goodput clear
+    their targets at every placement, so the latency axis is the one that
+    decides, and the placement is what decides it.
+
+    An earlier reading of one condition alone had this row as *Not
+    established*, because the first placement measured happened to be one that
+    misses. Three placements make the claim a different and stronger one: not
+    that the recommendation fails, but that whether it succeeds is a property
+    of a choice the planner has no language for.
+
+    The prediction was 161.7 ms throughout, so the simulator is optimistic by
+    2.3 times at the placement that meets its target and by 18 at the one that
+    does not --- and it predicts the *same* number for both, which is the
+    concrete form of the limitation Section 7 reports. This experiment does not
+    separate the candidate causes the work order names (prediction error, the
+    contention model, the engine's scheduler), and does not choose the most
+    flattering one.
+
+[^eg5bound]: The candidate the throughput bound rejected by the smallest margin
+    was deployed and offered the 55 rps floor it was rejected against. It
+    reached 2.866 rps, so **`false_infeasible` is zero on hardware** and the
+    bound was right. That outcome was expected and the test is registered as
+    weak: a bound that is a *relaxation* rejects only what the most optimistic
+    arithmetic already misses, and a rejection being correct is not news. The
+    number worth having is the ratio --- the ceiling the bound computed,
+    54.433 rps, is **19 times** the measured capacity. That looseness is the
+    price of soundness, and this is its size on this node.
+
 
 ## Retracted
 
