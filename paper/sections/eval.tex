@@ -160,14 +160,27 @@ on a technicality would not be winning.
 \input{e_g7_holdout}
 \input{e_g7_baseline_fairness}
 
-Table~\ref{tab:e_g7_holdout} reports a holdout fixed before the scaling grid
-ran: \egsevenHoldoutEmbeddings{} embeddings compressing to
-\egsevenHoldoutReps{} representatives, both correctness numbers zero, and
-higher recall than the surrogate at the registered operating point. The second
-holdout---a hardware fixture with one uplink reservation altered---does not
-exist, because the hardware campaign has not produced it. That row is reported
-as not run rather than omitted, since an omitted row reads as a row that
-passed. \pending{E-G5: real-lab holdout}
+% claim: C26
+% claim: C32
+Table~\ref{tab:e_g7_holdout} reports both holdouts, fixed before the scaling
+grid ran. On the synthetic one, \egsevenHoldoutEmbeddings{} embeddings compress
+to \egsevenHoldoutReps{} representatives, both correctness numbers are zero,
+and recall at the registered operating point is higher than the surrogate's.
+The second holdout is the hardware fixture with one uplink reservation
+altered, and it now exists.
+
+\textbf{On it the registered recall criterion is not met.} The invariant holds
+there---nothing feasible was removed and nothing mis-merged---but at the
+registered budget heteropilot's template-level surrogate retrieves more
+feasible placements than this search does. The response was registered before
+the run: the ranker was fitted to the diagnosis corpus, and the claim about it
+narrows to those fixtures and the synthetic holdout. It is reported here rather
+than explained, and it is reported as a failure of the \emph{ranking} and not
+of the correctness, which are separate claims and separately evidenced. That
+the altered reservation is a variation of a topology assumption rather than a
+physical claim is stated in the result file, together with what it does to the
+search: it moves candidates out of the feasible set, and they leave evaluated
+and rejected rather than unevaluated.
 
 \subsection{The contention model against the wire}
 
