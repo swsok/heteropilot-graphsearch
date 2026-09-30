@@ -459,6 +459,110 @@ def cmd_plan_objects(args) -> PlanObjects:
     )
 
 
+
+@dataclass
+class PlacementVerdict:
+    """What the search says about ONE placement, asked about that placement.
+
+    E-G5 deploys a template at a placement the condition names. The search's
+    recommendation is the best placement it reached, which is not necessarily
+    that one, and printing the recommendation's metrics beside a measurement
+    taken somewhere else is the defect GS-30 records. This is the verdict for
+    the placement actually deployed.
+    """
+
+    embedding_id: str
+    devices: tuple[str, ...]
+    #: How the search's own run treated this placement's representative, in
+    #: the five-state vocabulary: whether the bound judged it, and whether the
+    #: budget reached it. Never merged with `state` below.
+    search_state: str
+    #: The verdict of simulating THIS placement: `evaluated` or
+    #: `unknown_measurement`. Only `evaluated` carries metrics.
+    state: str
+    feasible: bool | None
+    plan: object | None
+    detail: str
+
+
+def evaluate_placement(args, objects: PlanObjects, template_id: str,
+                       devices) -> PlacementVerdict:
+    """Simulate one placement of one template, through the search's own parts.
+
+    Same predictor, same compile hook, same per-candidate cache signature as
+    `cmd_plan_objects` uses, so a placement the search already evaluated is a
+    cache hit with its own metrics, and one it did not reach is simulated now
+    rather than reported as something it is not.
+    """
+    from typing import cast
+
+    from planner.optimizer.exhaustive import evaluate_candidates
+
+    from graphsearch.adaptive import _graph_signature
+    from graphsearch.schema import ResourceGraph
+
+    wanted = frozenset(devices)
+    rep = embedding = None
+    for r in objects.representatives:
+        if r.template_id != template_id:
+            continue
+        for e in [r.exemplar, *r.embeddings]:
+            if e.devices == wanted:
+                rep, embedding = r, e
+                break
+        if embedding is not None:
+            break
+    if embedding is None:
+        return PlacementVerdict(
+            embedding_id="", devices=tuple(sorted(wanted)),
+            search_state="excluded_by_scope", state="excluded_by_scope",
+            feasible=None, plan=None,
+            detail=f"no embedding of {template_id} occupies exactly these devices",
+        )
+
+    assert rep is not None
+    graph = cast(ResourceGraph, objects.graph)
+    bound = cast(dict, objects.verdicts).get(rep.rep_id)
+    reached = rep.exemplar.id not in set(objects.audit.unevaluated_ids or [])
+    feasible_ids = {p.candidate.id for p in objects.audit.feasible_plans}
+    if bound is not None and bound.eliminated:
+        search_state = "impossible_proven (by a bound; never simulated)"
+    elif not reached:
+        search_state = "unevaluated (the budget did not reach it)"
+    elif rep.exemplar.id in feasible_ids:
+        search_state = "evaluated: feasible"
+    else:
+        search_state = "evaluated: not feasible"
+
+    spec, cluster = objects.spec, objects.cluster
+    by_id, profiles = objects.islands_by_id, objects.profiles
+    predictor, cache = _predictor_for(args, spec, cluster, by_id)
+    bind = binder_for(predictor, graph, spec, cluster, by_id, profiles,
+                      contention_model(args.contention))
+    if bind is not None:
+        bind({embedding.id: embedding})
+    if cache is not None:
+        signature = _graph_signature(rep, graph)
+        cache = cache.with_signature_of(lambda c: signature)
+    candidate = embedding.template.model_copy(update={"id": embedding.id})
+    result = evaluate_candidates(
+        [candidate], spec, cluster, by_id, profiles, predictor,
+        cache=cache, pd_transfer=not prices_pd_on_the_path(predictor),
+    )
+    ranks = tuple(v for p in embedding.placements for v in p.ranks)
+    if result.feasible_plans:
+        return PlacementVerdict(embedding.id, ranks, search_state, "evaluated",
+                                True, result.feasible_plans[0], "")
+    if result.infeasible_plans:
+        plan, report = result.infeasible_plans[0]
+        return PlacementVerdict(embedding.id, ranks, search_state, "evaluated",
+                                False, plan, str(getattr(report, "reasons", report)))
+    why = "; ".join(str(r) for r in result.rejections) or "; ".join(result.notes)
+    return PlacementVerdict(
+        embedding.id, ranks, search_state, "unknown_measurement", None, None,
+        why or "the simulator returned no verdict for this placement",
+    )
+
 def _write(output, audit, report, restored, path: Path) -> None:
     import yaml
 
