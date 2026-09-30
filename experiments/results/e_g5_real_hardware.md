@@ -147,7 +147,32 @@ The candidate the throughput bound rejected by the smallest margin, deployed and
 
 **Deployed by this experiment's harness, not by heteropilot's `planner/deploy/`**, which has no router and cannot launch a split architecture (GS-28, heteropilot D128). The router is `experiments/e_g5/pd_router.py`, an instrument for this measurement and not a serving component (GS-32).
 
-Not run.
+Prefill on `s8` GPU 0, decode on `s6` GPU 0, `NixlConnector` between them. **TTFT is the registered definition**: from the router sending the prefill call to the first token of the decode stream, so it includes the prefill, the KV pull across the NIC, and the decode instance's first step.[^pdtokens]
+
+| condition | rep | completed | failed | p50 TTFT | p99 TTFT | p99 TPOT | goodput | SLO attainment | background duty |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| pd-independent | 42 | 150 | 0 | 38640.5 | 76859.3 | 41.21 | 1.081 | 0.080 | none |
+| pd-independent | 43 | 150 | 0 | 1257.1 | 24795.0 | 96.22 | 1.563 | 0.167 | none |
+| pd-independent | 44 | 150 | 0 | 38592.9 | 76812.6 | 41.21 | 1.079 | 0.080 | none |
+| pd-shared | 42 | 150 | 0 | 39230.5 | 76485.0 | 41.20 | 1.080 | 0.080 | 0.600 |
+| pd-shared | 43 | 150 | 0 | 1239.6 | 24799.9 | 97.57 | 1.560 | 0.147 | 0.600 |
+| pd-shared | 44 | 150 | 0 | 38633.5 | 76717.8 | 41.22 | 1.081 | 0.080 | 0.600 |
+
+### Paired by repetition
+
+| rep | template | independent p99 TTFT | shared p99 TTFT | change | predicted change | goodput / offered |
+| --- | --- | --- | --- | --- | --- | --- |
+| 42 | `…D)-s32-t8192` | 76859.3 ms | 76485.0 ms | -374.3 ms | +51.5 ms | 0.27 |
+| 43 | `…)-s128-t8192` | 24795.0 ms | 24799.9 ms | +4.8 ms | +50.9 ms | 0.39 |
+| 44 | `…D)-s32-t8192` | 76812.6 ms | 76717.8 ms | -94.8 ms | +50.9 ms | 0.27 |
+
+**Saturated in repetitions 42, 43, 44.** Goodput is below 90 % of the offered rate, so requests queue for the whole trace and p99 TTFT is set by that queue, not by the path the KV takes. In that regime a change in the NIC's load is not observable, and this arm cannot answer its question.
+
+### The registered criterion
+
+**Not computable as registered.** The criterion reads the spread of the three independent repetitions as noise, which assumes they are replicates. They are not: each repetition re-ran the search and deployed the template it chose, and the repetitions chose 2 different ones (`…)-s128-t8192`, `…D)-s32-t8192`). The spread is therefore a configuration difference, and a verdict computed from it would be met by construction. It is not reported as met.
+
+[^pdtokens]: This arm compares **latency and goodput** between two P/D conditions, not outputs. A disaggregated greedy token stream is not the aggregated one: across these two nodes two of three probe prompts diverged, reproducibly (GS-29). No statement about output identity is made from these rows.
 
 ## Reproducing
 

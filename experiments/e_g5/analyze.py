@@ -338,6 +338,8 @@ def pd_rows(raw_root: Path) -> list[dict]:
             "measured": pd_latencies(req) if req.exists() else None,
             "prediction": prov.get("prediction"),
             "background": prov.get("background"),
+            "template": ((prov.get("prediction") or {}).get("chosen") or {}).get("template_id"),
+            "offered_rps": prov.get("offered_rps"),
         })
     return out
 
@@ -377,9 +379,55 @@ def pd_section(raw_root: Path) -> list[str]:
 
     by = {c: [r for r in data if r["condition"] == c and r["measured"]]
           for c in ("pd-independent", "pd-shared")}
+
+    # Paired, per repetition: within a repetition both conditions deployed the
+    # same template, so this difference is the NIC load and nothing else.
+    out += ["", "### Paired by repetition", "",
+            "| rep | template | independent p99 TTFT | shared p99 TTFT | change | "
+            "predicted change | goodput / offered |",
+            "| --- | --- | --- | --- | --- | --- | --- |"]
+    reps = sorted({r["rep"] for r in data})
+    saturated = []
+    for rep in reps:
+        a = next((r for r in by["pd-independent"] if r["rep"] == rep), None)
+        b = next((r for r in by["pd-shared"] if r["rep"] == rep), None)
+        if not a or not b:
+            continue
+        pa = a["prediction"]["independent"]["p99_ttft_ms"]
+        pb = (b["prediction"].get("shared") or {}).get("p99_ttft_ms")
+        ratio = a["measured"]["goodput_rps"] / a["offered_rps"] if a["offered_rps"] else 0
+        if ratio < 0.9:
+            saturated.append(rep)
+        out.append(
+            f"| {rep} | `…{(a['template'] or '')[-12:]}` | "
+            f"{a['measured']['p99_ttft_ms']:.1f} ms | {b['measured']['p99_ttft_ms']:.1f} ms | "
+            f"{b['measured']['p99_ttft_ms'] - a['measured']['p99_ttft_ms']:+.1f} ms | "
+            + (f"{pb - pa:+.1f} ms" if pb is not None else "-")
+            + f" | {ratio:.2f} |"
+        )
+    if saturated:
+        out += ["", f"**Saturated in repetitions {', '.join(map(str, saturated))}.** "
+                "Goodput is below 90 % of the offered rate, so requests queue for "
+                "the whole trace and p99 TTFT is set by that queue, not by the path "
+                "the KV takes. In that regime a change in the NIC's load is not "
+                "observable, and this arm cannot answer its question."]
+
     out += ["", "### The registered criterion", ""]
+    templates = {r["template"] for r in by["pd-independent"] + by["pd-shared"]}
     if not by["pd-independent"] or not by["pd-shared"]:
         out.append("Not computable: both conditions have not been measured.")
+    elif len(templates) > 1:
+        out.append(
+            "**Not computable as registered.** The criterion reads the spread of "
+            "the three independent repetitions as noise, which assumes they are "
+            "replicates. They are not: each repetition re-ran the search and "
+            f"deployed the template it chose, and the repetitions chose "
+            f"{len(templates)} different ones ("
+            + ", ".join(f"`…{t[-12:]}`" for t in sorted(templates))
+            + "). The spread is therefore a configuration difference, and a "
+            "verdict computed from it would be met by construction. It is not "
+            "reported as met."
+        )
     else:
         mi = [r["measured"]["p99_ttft_ms"] for r in by["pd-independent"]]
         ms = [r["measured"]["p99_ttft_ms"] for r in by["pd-shared"]]

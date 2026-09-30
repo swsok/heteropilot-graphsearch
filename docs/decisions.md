@@ -1515,3 +1515,44 @@ six are run with the corrected instrument**, so no row mixes two instruments.
 **What it affects.** `experiments/e_g5/{pd_arm,pd_router,build_cluster_s8s6,
 deploy_and_bench}.py`, `experiments/microbench/{run_nic,analyze}.py`,
 `fixtures/clusters/real-s8s6{,-shared}.v2.yaml`, heteropilot D128.
+
+## GS-33 — the P/D arm ran, and at the registered load it cannot answer its question · 2026-09-30
+
+**Result.** All six runs completed: 150 of 150 requests each, no failures,
+every request's length confirmed by the server. The inter-node P/D path works
+under load. The registered criterion is **not computable**, for two reasons
+the design did not anticipate, and it is reported that way rather than as met.
+
+**The repetitions were not replicates.** Each repetition re-ran the search
+with its own seed and deployed the template it chose. Repetitions 42 and 44
+chose `max_num_seqs` 32; repetition 43 chose 128. Within a repetition both
+conditions deployed the same template, as registered, but the criterion reads
+the spread *across* independent repetitions as noise --- and that spread
+(52 s) was a configuration difference. Computed mechanically it said "met",
+and it would have for any outcome. `analyze.py` now refuses the verdict when
+the repetitions deployed different templates.
+
+**The deployed configuration saturates at 4.0 rps.** Goodput is 0.27--0.39 of
+the offered rate in every run; requests queue for the whole trace and p99
+TTFT is 25--77 s, against a predicted 472--597 ms. One A40 decode instance
+with 32 or 128 sequences cannot hold the concurrency this trace needs (about
+four requests a second of about six hundred output tokens each). In that regime
+the NIC's load is invisible: paired by repetition, the shared condition moved
+p99 TTFT by -374, +5 and -95 ms, against a predicted +51 ms each time, and the
+KV transfer it would slow is a few milliseconds per request.
+
+Every P/D template was predicted **infeasible** before the run (TPOT 160.7 ms
+against 60), and the registered selection rule --- feasible first, then the
+lower predicted TTFT --- therefore picked among infeasible candidates. The
+planner said the deployment would miss its SLO; it did, by far more than it
+predicted on TTFT and by far less on TPOT (41--97 ms measured).
+
+**What a valid rerun needs, which is a registration change and not taken
+here.** A fixed template across repetitions, and an offered rate below that
+template's measured capacity, found by a knee pilot as E-G5's aggregated arm
+did. Both change row 5 and must be registered before the rerun's first
+request.
+
+**What it affects.** `experiments/e_g5/analyze.py`,
+`experiments/results/e_g5_real_hardware.md`, `paper/sections/limits.tex`.
+The `\pending{E-G5: inter-node P/D}` stays pending.
