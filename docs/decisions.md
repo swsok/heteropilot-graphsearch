@@ -1265,3 +1265,37 @@ no `nixl_ep` and needs no workaround.
 **What it affects.** `paper/sections/conclusion.tex`, `paper/CLAIMS.md` (C18),
 `docs/inter_node_pd_options.md`, and the two raw directories named above. It
 does not change any experiment already run.
+
+## GS-29 — inter-node P/D runs here; the divergence grows with the distance · 2026-09-30
+
+**Decision.** GS-28's claim is now backed by the inter-node case rather than
+by the intra-node case plus a transport measurement. `s8` prefill handed
+fourteen KV blocks to `s6` decode across the InfiniBand subnet and the decode
+instance produced the completion, at 0.058 s for the prefill call and 0.917 s
+for the decode. `experiments/pd_probe/raw/vllm_pd_two_node/`.
+
+**Why it is a separate entry.** Because a number changed, and in the direction
+that matters. Within one node the disaggregated answer differed from the
+aggregated one on one of three prompts; **across two nodes it differs on two of
+three**, deterministically over three repetitions of the whole set. The control
+holds in both: two *aggregated* engines, one per machine, give the same answer
+to the prompt the disaggregated path gets wrong, and each is repeatable alone.
+So neither the machine nor noise is the variable.
+
+No mechanism is claimed. Prefill batch shape, block layout and the transfer
+itself are all candidates and nothing measured here separates them. What is
+recorded is that the perturbation is real, reproducible, and larger across the
+fabric than across a bus.
+
+**A replication that was not planned.** `s6` was first brought up with
+`nixl==1.4.1` and its engine refused to start with
+`ModuleNotFoundError: nixl_ep_cpp_torch210`, through the same import chain
+GS-28 recorded on `s8` --- because the pin had been applied to the wrong
+virtualenv on that machine. Two machines configured hours apart failed
+identically. The trap in GS-28 is therefore a property of the wheel against
+torch 2.10, not of one installation.
+
+**What it affects.** `docs/inter_node_pd_options.md`,
+`experiments/pd_probe/`. It does **not** close `\pending{E-G5: inter-node P/D}`:
+this is a probe of the serving stack, and E-G5's arm still needs the router
+that `planner/deploy/` does not have.
