@@ -1,0 +1,31 @@
+{
+  "banner": "REAL HARDWARE",
+  "cuda_visible_devices": "0,1",
+  "dataset": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama-300-rps6.jsonl",
+  "devices": [
+    0,
+    1
+  ],
+  "gpu_tenants_after": [],
+  "gpu_tenants_before": [],
+  "heteropilot_would_use": "0,1,2,3,4,5,6,7",
+  "link": "NVLink NV4, measured 52.64 GB/s p2p / 19.34 GB/s busbw world 2",
+  "loadavg_after": [
+    5.9,
+    5.82,
+    5.78
+  ],
+  "loadavg_before": [
+    5.96,
+    5.91,
+    5.81
+  ],
+  "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
+  "placement": "T1",
+  "rep": 44,
+  "returncode": 0,
+  "tp": 2,
+  "wall_s": 87.69,
+  "why_overridden": "resolve_devices() maps an island to ALL of its accelerator ids, so heteropilot names a template and cannot name a placement. This placement is the variable under test.",
+  "written_at": "2026-09-29T03:22:01.442653+00:00"
+}

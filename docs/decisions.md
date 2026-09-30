@@ -1167,3 +1167,54 @@ about a machine; a counter is a claim about the algorithm.**
 
 **Affects.** `graphsearch/paths.py`, `tests/test_paths.py`,
 `tests/test_embeddings.py`.
+
+---
+
+## GS-27 — a placement contrast needs a candidate smaller than the node · 2026-09-29
+
+**Decision.** Each E-G5 topology condition scopes the planner to its own device
+count (`_templates(..., max_devices=n)`), and the recommendation placed is the
+best plan **of that size**. What the cut removes is `excluded_by_scope` and is
+recorded in every raw file.
+
+**Why.** The first dry run of `deploy_and_bench.py` emitted this:
+
+```
+CUDA_VISIBLE_DEVICES=0,2 vllm serve ... --tensor-parallel-size 8
+```
+
+Two devices visible, eight ranks requested. vLLM would refuse it instantly, and
+the harness would have been "verified" without ever producing a runnable
+command. The bug was not the override; it was a category error in the design.
+
+**A topology condition names a PLACEMENT, and a placement has a fixed device
+count.** T2 is "this template, on gpu0 and gpu2" — it is not a template of its
+own. Asked without a scope, the search on an eight-GPU node recommends an
+eight-device plan, and an eight-device plan on an eight-device node has
+**exactly one placement**. There is then no contrast to measure, and T1 against
+T2 is not a question that can be put.
+
+So the contrast is only available for candidates smaller than the node, and the
+honest way to get one is to ask the planner a well-posed question — "the best
+plan using at most two devices" — rather than to take its unconstrained answer
+and force it onto two devices.
+
+**What this costs, stated rather than hidden.** The rows E-G5 reports are the
+best plan *of the size the condition places*, not the best plan on the node.
+Those are different claims and the result file says which one it is making.
+Larger plans are `excluded_by_scope` in these rows: not considered, never
+considered and rejected (work order rule 4).
+
+**A second thing the dry run showed.** With `max_devices=2` the search returned
+**one** two-device candidate, so the boundary alternative is `not applicable`
+for that condition. Recorded as such rather than filled with a candidate of a
+different size, which would have made the two columns answer different
+questions. It also means `false_infeasible`'s real-hardware test needs a
+condition whose scope admits more than one candidate, and the matrix has to
+say which conditions those are.
+
+**Side effect worth having.** Planning a scoped condition takes **40 s** where
+the unscoped plan took 3:13, because the space it enumerates is far smaller.
+
+**Affects.** `graphsearch/__main__.py` (`_templates` gains `max_devices`),
+`experiments/e_g5/deploy_and_bench.py`, `experiments/e_g5/MATRIX.md`.

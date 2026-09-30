@@ -556,6 +556,121 @@ is a topology declaration, not the contention model (GS-22).
 
 ---
 
+## E-G5 — the two specs, and how every number in them was derived
+
+Registered 2026-09-29 with change-log row 4, **before the E-G5 hardware matrix
+ran** and after the placement pilot.
+
+### Why two specs and not one
+
+Achieved goodput can never exceed offered load. A `min_goodput_rps` high enough
+to make `throughput_capacity` reject anything is therefore a floor no candidate
+can meet at the arrival rate it was measured under, and the first attempt at a
+single spec made `recommended` **None** — not a search failure but an
+arithmetic contradiction in the spec. The recommendation and the lower bound
+are different questions and get different specs. Every result row names which
+one produced it.
+
+| | spec S (service) | spec B (bound-stress) |
+| --- | --- | --- |
+| purpose | recommendation, and alternative A | alternative B only |
+| `ttft.max_ms` | 550 | 550 |
+| `tpot.max_ms` | 60 | 60 |
+| `arrival_rate_rps` | 4.0 | 55.0 |
+| `min_goodput_rps` | **2.3** | 55.0 |
+| recommendation column | measured | **not applicable (bound verification only)** |
+
+### Derivation
+
+**TTFT = 550 ms** — T1's measured p99 at the knee (365.2 ms) x 1.5. T1-class
+placements clear it; T2-class (2793.3 ms) do not. This is the axis the
+placement question lives on.
+
+**TPOT = 60 ms** — about 10 % above the measured 50.95-55.06 ms band,
+deliberately **not** a deciding axis: both placements pass, so a verdict cannot
+come from it by accident.
+
+**S's `min_goodput_rps` = 2.3** — 95 % of the **measured** achieved goodput,
+not of the offered rate. Offered and achieved are not the same number and the
+difference is not small: on a finite trace the decode tail drains after
+arrivals stop, so 150 requests offered at 4.0 rps over 36.5 s of arrivals
+complete over 58-61 s of wall time. Measured at the knee:
+
+| placement | achieved goodput | offered |
+| --- | --- | --- |
+| T1 | 2.582 rps | 4.0 |
+| T2 | 2.470 rps | 4.0 |
+| T3 | 2.586 rps | 4.0 |
+
+2.470 x 0.95 = 2.35, registered as **2.3**. The lowest of the three is used so
+the floor is meetable by every placement and therefore does not decide the
+placement question, which is TTFT's job.
+
+A first draft registered 95 % of the *offered* 4.0 rps (3.8). That is
+unreachable by construction -- no finite trace can complete requests faster
+than it drains -- and it made every candidate infeasible on goodput while
+passing TTFT and TPOT comfortably (p99 127.99 ms against 550, 11.88 ms against
+60, `slo_attainment` 1.000). Corrected here before registration rather than
+registered and superseded.
+
+**The simulator and the hardware must replay the same number of requests**, or
+this floor means two different things: goodput is `completed / elapsed` and
+the drain tail is a larger share of a short trace. Both use **150**.
+
+**B's 55.0** — chosen from the measured ceiling distribution below, computed
+over all 1,302 representatives by reading `BoundProof.threshold`:
+
+| optimistic ceiling | candidates | shape |
+| --- | --- | --- |
+| 10.527 rps | 6 | tp1 dp1 (1 device) |
+| 21.053 | 36 | tp1 dp2 (2) |
+| 31.580 | 78 | tp1 dp3 (3) |
+| 42.106 | 174 | tp1 dp4 (4) |
+| **54.433** | 168 | **tp2 dp1 (2)** |
+| 101.081 | 240 | tp4 dp1 (4) |
+| 108.866 | 420 | tp2 dp2 (4) |
+| 202.163 | 96 | tp4 dp1 (4) |
+| 242.371 | 84 | tp4 dp1 (4) |
+
+55.0 rejects everything up to 54.433 and leaves tp4 dp1 (101.081) standing. The
+tightest rejection is then **tp2 dp1 at a margin of 1.04 %**, and it is
+`dp_replicas = 1`, so `VllmCudaBackend.launch` can actually start it — a
+tightest rejection that cannot be launched is not a test. The registered
+interval endpoints are **10.527** (the smallest candidate's ceiling) and
+**101.081** (the recommendation's).
+
+### The runs it was derived from, and their exclusion
+
+```
+experiments/e_g5/raw/pilot/T1-knee/{42,43,44}
+experiments/e_g5/raw/pilot/T2-knee/{42,43,44}
+```
+
+**Excluded from E-G5's validation set.** The TTFT and TPOT limits were fitted
+on these, and a limit fitted on a measurement cannot also be tested by it.
+
+### What B's hardware test is, and is not
+
+**The throughput upper bound is a relaxation.** It rejects only when the most
+optimistic arithmetic already misses, so a rejected candidate failing on
+hardware is the **expected** result, not a finding — the purpose is to measure
+**how loose** the bound is, not to be surprised by it. The registered outputs
+are therefore two, and the second matters more:
+
+1. **`false_infeasible` on hardware.** Deploy tp2 dp1, offer 55 rps, measure
+   achieved goodput, confirm it is below 55. The power of this test is weak and
+   is reported as weak: the bound's ceiling for the *smallest* candidate,
+   10.527 rps, is already 2.6x the measured knee of 4 rps, so a rejection is
+   very unlikely to be wrong. A `false_infeasible > 0` here would still be
+   reported and would still stop the experiment (work order rule 5).
+2. **The ratio of ceiling to measured capacity, at three points.** tp1 dp1
+   (10.527), tp2 dp1 (54.433) and tp4 dp1 (101.081), each against its measured
+   saturated goodput. This is what research design section 6 asks of measured
+   speeds and what section 12's third row records, and it is the reason B is
+   run at all.
+
+---
+
 ## E-G5 precondition — the node is exclusively ours, and it says so
 
 Registered 2026-09-28, appended with change-log row 2.
@@ -585,3 +700,4 @@ means. The tenant can come back between two rows of the same table.
 | 1 | 2026-09-28 | **Initial registration.** The common invariant, the known limitations, and E-G3 through E-G7 with every criterion and its 근거. **E-G4's 15 / 30 / 5 and E-G5(a) are to be appended after their pilots.** | P0.4 of `WORK_ORDER_paper.md`. Written before E-G3 ran, and before `FluidContentionModel`, the synthetic cluster generator and the E-G7 arms existed. Most metrics are registered as report-only on purpose: research design §12 says numeric improvement targets are registered *after* the pilot, so inventing them now would defeat the point of registering anything. |
 | 2 | 2026-09-28 | **E-G4 pilot ran; verdict recorded and the fitted set declared.** The registered limits (fluid p50 ≤ 15 %, p90 ≤ 30 % under contention; null vs fluid within 5 % without; fluid must beat null) are **unchanged** — they were met without adjustment wherever contention exists. The registered verdict on this node is **FAIL**, on the `two-same` and `bidirectional` conditions under the topology `PLAN.md` declared. **The eight raw files below are the fitted set** and are excluded from E-G5/P3 validation. Two accuracy statements are appended, not relaxed: the fluid model's domain for bidirectional transfer ends at 128 MiB (GS-23), and `location (b)` (inter-node NIC) is `not run` because this is one machine. | Work order P2.4: a model corrected against data must name the data. The correction here is to a cluster fixture's `shared_resources`, not to the model (GS-22), and the limits are left alone precisely because nothing was adjusted to meet them. |
 | 3 | 2026-09-29 | **Enumerator changed; kept set verified unchanged.** `graphsearch/embeddings.py` now emits one ordering per replica set partition instead of enumerating all `prod_a R_a!` of them and folding them with the canonical key. `skipped_symmetric` is filled from a closed form and is **the same number**, not a substitute for it (GS-25, superseding GS-3). Separately, the `max_embeddings_per_template` check moved ahead of the duplicate test so a cap bounds the walk rather than only the output. **No metric, threshold or success criterion is changed by this entry.** | E-G5 could not plan: enumeration on the eight-device `real-a40x8` cluster did not finish, with 81,432 re-orderings discarded per 768 placements kept at seven devices (106:1). The kept set is unchanged and checked: E-G1, E-G1b and E-G2 re-run byte for byte, and `tests/test_embeddings.py` asserts formula == enumeration on four toy shapes every run and on the seven-device real cluster under `pytest -m slow`. Registered because a reader comparing a compression table written before this date with one written after is entitled to know the generator changed, even though the numbers did not. |
+| 4 | 2026-09-29 | **E-G5's two specs registered, with every value's derivation.** Spec S (service): TTFT 550 ms, TPOT 60 ms, 4.0 rps offered, `min_goodput_rps` 3.8. Spec B (bound-stress): same SLO, 55.0 rps offered, `min_goodput_rps` 55.0. The interval B was chosen from is (10.527, 101.081) rps, its endpoints being the smallest candidate's optimistic ceiling and the recommendation's. The six pilot runs the TTFT and TPOT limits were fitted on are named above and **excluded from E-G5's validation set**. | One spec cannot ask both questions: achieved goodput cannot exceed offered load, so a floor that makes the throughput bound bite is a floor nothing can meet, and the single-spec attempt produced `recommended: None`. Registered before the hardware matrix ran. **No metric, threshold or success criterion from entries 1-3 is changed.** |

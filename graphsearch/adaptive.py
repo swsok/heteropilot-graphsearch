@@ -144,6 +144,13 @@ class SearchAudit:
     #: `PlannerOutput.alternatives`, which is the Pareto frontier with
     #: equivalents collapsed -- a caller measuring recall needs the full set.
     feasible_ids: list[str] = field(default_factory=list)
+    #: The feasible plans themselves, with their `predicted` metrics. Like
+    #: `timings` below, deliberately NOT in `as_provenance`: it is for the
+    #: in-process caller, and serialising a DeploymentPlan per candidate would
+    #: change every provenance block. E-G5 needs it because its marginal
+    #: alternative is chosen on the SIMULATOR's p99s, not on the ranker's
+    #: proxy -- the proxy tied 280 candidates at 0.6137.
+    feasible_plans: list = field(default_factory=list)
     compression: dict = field(default_factory=dict)
     residual_splits: list[str] = field(default_factory=list)
     #: How many times each adapter hook fired, and how many of those fired for
@@ -396,6 +403,7 @@ class AdaptiveSearch:
         audit.unevaluated_placements = sum(r.multiplicity for r in unreached)
         audit.evaluated = len(evaluated)
         audit.feasible_ids = sorted({p.candidate.id for p in feasible})
+        audit.feasible_plans = list(feasible)
         audit.termination = termination
         audit.certificate = certificate
         self._record_hook_evidence(audit)

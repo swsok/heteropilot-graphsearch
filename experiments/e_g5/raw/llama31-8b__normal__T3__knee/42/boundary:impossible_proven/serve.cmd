@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0,1 vllm serve NousResearch/Meta-Llama-3.1-8B --tensor-parallel-size 2 --dtype bfloat16 --kv-cache-dtype auto --block-size 16 --max-num-seqs 128 --max-num-batched-tokens 2048 --host 0.0.0.0 --port 8000 --no-enable-prefix-caching --enable-chunked-prefill
