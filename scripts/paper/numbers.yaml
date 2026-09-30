@@ -48,3 +48,8 @@ egfourNicTwoSame:  {file: e_g4_microbench.md, find: ["condition", "median Gbit/s
 # The collective at location (b), beside the intra-node figure it is compared to.
 egfourCollNicTwo:   {file: e_g4_microbench.md, find: ["ranks", "busbw plateau"], row: "2", where: {where: "across the NIC"}, column: "busbw plateau", pattern: "^([0-9.]+)"}
 egfourCollNodeTwo:  {file: e_g4_microbench.md, find: ["ranks", "busbw plateau"], row: "2", where: {where: "inside one node, across the PCIe bridge"}, column: "busbw plateau", pattern: "^([0-9.]+)"}
+# The SIM_ERROR share, per fixture. Spelled out in prose it read "six to eight
+# per cent", which was wrong (the lab fixture is 21 %) and which the literal
+# rule cannot see, because it matches digits and not words.
+egthreeUnjudgedLab:   {file: e_g3_real_sim_oracle.md, find: [fixture, embeddings, unjudged], row: heterogeneous-lab, column: unjudged}
+egthreeEmbeddingsLab: {file: e_g3_real_sim_oracle.md, find: [fixture, embeddings, unjudged], row: heterogeneous-lab, column: embeddings}

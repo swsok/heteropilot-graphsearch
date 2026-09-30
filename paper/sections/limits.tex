@@ -33,11 +33,17 @@ rather than to argue the cost away.
 % claim: C13
 % claim: C14
 % pending
-\paragraph{Six to eight per cent of placements never simulate.}
+\paragraph{A share of placements never simulate, and on one fixture it is a fifth of them.}
+On the smallest corpus \egthreeUnjudgedLab{} of \egthreeEmbeddingsLab{} placements returned no verdict.
+% claim: C14
 They are reported as \texttt{unknown\_measurement} and are not counted as
-infeasible, but the cause is not established, and until it is, every
-correctness result in this paper is a statement about the placements the
-simulator judged. \pending{P1.5: SIM\_ERROR cause}
+infeasible, so every correctness result in this paper is a statement about the
+placements the simulator judged. The cause is two causes---a missing profile
+for a parallelism degree, and a decode instance exhausting its KV---and neither
+becomes a verdict by being understood. The second is the more interesting: the
+evaluator knows the run cannot proceed and reports it by raising, so a
+candidate it has effectively judged is indistinguishable from one that timed
+out.
 
 % claim: C15
 \paragraph{The contention model is fluid, and has an upper message size.}
