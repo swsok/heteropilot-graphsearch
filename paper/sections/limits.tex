@@ -70,10 +70,12 @@ was not done.
 two node-count limits has lifted.}
 The contention measurements now cover both an intra-node bus and an inter-node
 NIC across two machines. What is still not run is inter-node \emph{P/D}, and
-the reason is no longer that there is one machine: it is that the deployment
-backend builds a configuration for a single aggregated engine, with no
-disaggregated prefill. Deployment to the NPU in the design's scope is likewise
-impossible, because no backend for it exists. \pending{E-G5: inter-node P/D}
+the reason is no longer that there is one machine, nor that the serving stack
+lacks the mechanism---it was exercised on this hardware, and the KV crossed.
+It is that the deployment backend serves a single aggregated engine and has no
+router, so a split architecture has no way to be launched through it.
+Deployment to the NPU in the design's scope is likewise impossible, because no
+backend for it exists. \pending{E-G5: inter-node P/D}
 
 \paragraph{Every fixture but one is fictional.}
 The toy clusters and the synthetic scaling clusters are invented and say so in

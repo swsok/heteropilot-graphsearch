@@ -1218,3 +1218,50 @@ the unscoped plan took 3:13, because the space it enumerates is far smaller.
 
 **Affects.** `graphsearch/__main__.py` (`_templates` gains `max_devices`),
 `experiments/e_g5/deploy_and_bench.py`, `experiments/e_g5/MATRIX.md`.
+
+## GS-28 — the disaggregation path exists; what is missing here is a router · 2026-09-30
+
+**Decision.** The paper stops claiming that inter-node P/D needs a path that
+does not exist. `conclusion.tex` says instead that it needs a router the
+deployment layer does not have, which is the true statement and the narrower
+one. `limits.tex` is unchanged, because it already said "the deployment
+backend" and not "vLLM". The survey and the measurements behind this are in
+`docs/inter_node_pd_options.md`.
+
+**Why.** The claim was checked and it failed. vLLM 0.19.0, as installed,
+parses `--kv-transfer-config`, accepts `kv_producer` / `kv_consumer`, and
+registers five KV connectors. It was then run: prefill on `s8` GPU 0 handed
+fourteen KV block ids to decode on GPU 1, which pulled them over NIXL and
+produced the completion (`experiments/pd_probe/raw/vllm_pd/`). The
+transport was measured across the two machines at 77.90 Gbit/s GPU to GPU over
+`rc_mlx5`, byte content verified (`experiments/pd_probe/raw/nixl/`).
+
+What actually blocks the hardware arm is in this repository's own dependency.
+`planner/deploy/vllm_cuda.py` refuses a non-aggregated role, refuses a non-local
+host, and refuses a plan with more than one assignment because that "needs a
+router" --- and there is no router anywhere under `planner/deploy/`. A P/D
+deployment is two engines and something in front of them, and only the third
+of those three is real work. The probe above got its result by making the two
+HTTP calls by hand, which is precisely the thing a router would do.
+
+**Two findings worth keeping, because neither was expected.**
+
+The disaggregated answer is not the aggregated answer. Greedy, prefix caching
+off, three prompts: two identical, one diverging after 57 of 66 characters,
+reproducibly, while two aggregated engines on *different GPUs* agree exactly
+and each is repeatable. So a P/D arm and an aggregated arm do not produce the
+same token stream, and any comparison between them has to say so. The first
+run of that test appeared to show agreement and did not: prefix caching had
+moved the aggregated baseline between two calls of the same harness, which is
+the confound `--no-enable-prefix-caching` (D127) now removes.
+
+`nixl` is pinned to 0.9.0, and not for a feature. 1.3.2 and 1.4.1 ship a
+`nixl_ep` package built for torch 2.11 to 2.13; this environment is torch 2.10;
+vLLM's `has_nixl_ep()` is a `find_spec` presence check that cannot see the
+missing binary, and the import it guards is unconditional. Installing either
+stops vLLM starting **at all**, on a dense model with no MoE layer. 0.9.0 has
+no `nixl_ep` and needs no workaround.
+
+**What it affects.** `paper/sections/conclusion.tex`, `paper/CLAIMS.md` (C18),
+`docs/inter_node_pd_options.md`, and the two raw directories named above. It
+does not change any experiment already run.
