@@ -336,6 +336,32 @@ def markdown(rows: list[dict], args) -> str:
         "exact compression to a cache key and narrow the paper."
     )
 
+    out += ["", "## `t_enumerate` before and after GS-25/GS-26", ""]
+    out.append(
+        "This grid was first measured on 2026-09-28 and re-measured on "
+        "2026-09-29 after the enumerator changed. **Every structural column "
+        "is identical** -- templates, embeddings, representatives, "
+        "compression ratio, `false_infeasible` and `mismerged_pairs` -- and "
+        "only the seconds moved:"
+    )
+    out.append("")
+    out.append(
+        "| devices | `t_enumerate` before | after | |\n"
+        "| --- | --- | --- | --- |\n"
+        "| 32 | 18.2 s | 6.04 s | 3.0x |\n"
+        "| 64 | 128.65 s | 25.68 s | 5.0x |\n"
+        "| 128 | 868.99 s | 111.07 s | 7.8x |"
+    )
+    out.append("")
+    out.append(
+        "GS-25 stopped enumerating the `prod_a R_a!` replica orderings and "
+        "computes the folded count in closed form; GS-26 stopped recomputing "
+        "one graph's paths once per placement. Neither changes which "
+        "embeddings exist, which is why only this column moved -- and the "
+        "1-minute load figures below moved too, because the 2026-09-28 grid "
+        "carried a neighbour that has since gone."
+    )
+
     if load.get("available"):
         out += ["", "## The machine these timings were taken on", ""]
         out.append(

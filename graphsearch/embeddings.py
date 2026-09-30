@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import math
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 
@@ -170,30 +171,92 @@ def _locality_score(graph: ResourceGraph, ranks: Sequence[str]) -> tuple[int, in
 # --- enumeration ----------------------------------------------------------
 
 def _ordered_groupings(
-    devices: Sequence[str], replicas: int, per_replica: int
+    devices: Sequence[str], replicas: int, per_replica: int, *, canonical: bool = True
 ) -> Iterator[tuple[tuple[str, ...], ...]]:
-    """Split `devices` into `replicas` ORDERED groups of `per_replica`.
+    """Split `devices` into `replicas` groups of `per_replica`.
 
     Replicas are interchangeable -- two decode replicas differ only in which
     requests a router sends them, and the planner does not model the router --
-    so `({a,b},{c,d})` and `({c,d},{a,b})` are one placement. They could be
-    collapsed here, by fixing the lowest device into the first group.
+    so `({a,b},{c,d})` and `({c,d},{a,b})` are one placement.
 
-    They are not, on purpose. Collapsing by construction makes
-    `EmbeddingStats.skipped_symmetric` structurally zero, and a counter that
-    cannot move is not evidence that symmetry was removed - it is a claim with
-    nothing behind it. Enumerating the orderings and letting the canonical key
-    fold them makes the number real, and `canonical_only=False` then measures
-    how much symmetry a cluster had. The cost is a factor of `replicas!`, paid
-    in list building rather than in simulation.
+    `canonical=True` emits **one ordering per set partition**, by putting the
+    lowest remaining device in the next group. `canonical=False` emits all
+    `replicas!` orderings of each partition, which is what `canonical_only=False`
+    asks for when it measures how much symmetry a cluster had.
+
+    **GS-25 supersedes GS-3 here.** GS-3 enumerated the orderings even under
+    `canonical_only=True`, on the grounds that a `skipped_symmetric` made
+    structurally zero by construction "is a claim with nothing behind it". The
+    premise was wrong: the count does not have to be enumerated to be real. R
+    interchangeable replicas give each canonical partition exactly R! orderings,
+    so the number of folded re-orderings is a closed form
+    (`_symmetry_multiplier`), equal to the enumerated figure and computable
+    where enumeration does not finish. `tests/test_embeddings.py` asserts the
+    two agree, including the 81,432 of the seven-device real cluster -- so the
+    enumeration is now the formula's TEST rather than its implementation.
+    """
+    if replicas == 0:
+        yield ()
+        return
+    if not canonical:
+        yield from _enumerate_all_orderings(devices, replicas, per_replica)
+        return
+    # The lowest remaining device fixes this group, so the groups come out
+    # ordered by their least element: exactly one ordering per set partition,
+    # and it is the lexicographically smallest one -- which is the ordering the
+    # enumerate-then-fold path kept, because `_locality_score` sorts its ranks
+    # and therefore ties across orderings, leaving `groups` as the tiebreak.
+    # That is what makes the kept set byte-identical rather than merely
+    # equivalent.
+    lowest = min(devices)
+    rest = [d for d in devices if d != lowest]
+    for others in itertools.combinations(rest, per_replica - 1):
+        group = tuple(sorted((lowest, *others)))
+        remaining = [d for d in rest if d not in others]
+        for tail in _ordered_groupings(
+            remaining, replicas - 1, per_replica, canonical=True
+        ):
+            yield (group, *tail)
+
+
+def _enumerate_all_orderings(
+    devices: Sequence[str], replicas: int, per_replica: int
+) -> Iterator[tuple[tuple[str, ...], ...]]:
+    """Every ordering of every partition. **Slow: `replicas!` per partition.**
+
+    This is GS-3's original generator, kept for two jobs and used for nothing
+    else: serving `canonical_only=False`, which measures a cluster's symmetry,
+    and standing as the evidence that `_symmetry_multiplier`'s closed form is
+    the same number. On the eight-device real cluster it does not finish in
+    three minutes, which is why it is no longer on the default path.
     """
     if replicas == 0:
         yield ()
         return
     for group in itertools.combinations(devices, per_replica):
         remaining = [d for d in devices if d not in group]
-        for tail in _ordered_groupings(remaining, replicas - 1, per_replica):
+        for tail in _enumerate_all_orderings(remaining, replicas - 1, per_replica):
             yield (tuple(sorted(group)), *tail)
+
+
+def _symmetry_multiplier(template: CandidateConfig) -> int:
+    """How many orderings each canonical placement of `template` stands for.
+
+    The replicas of one assignment are interchangeable, so R of them give R!
+    orderings; assignments are independent, so the template's multiplier is the
+    product over its assignments. A complete placement is one choice per
+    assignment, hence `prod(R_a!)` orderings per canonical placement and
+    `prod(R_a!) - 1` of them folded away.
+
+    This is the closed form GS-25 replaced enumeration with. It is exact, not
+    an estimate: `tests/test_embeddings.py` checks it against
+    `_enumerate_all_orderings` on every toy fixture and on the seven-device
+    real cluster.
+    """
+    multiplier = 1
+    for assignment in template.assignments:
+        multiplier *= math.factorial(max(0, assignment.dp_replicas))
+    return multiplier
 
 
 def _assignment_options(
@@ -215,7 +278,8 @@ def _assignment_options(
     for chosen in itertools.combinations(free, need):
         options.extend(
             _ordered_groupings(
-                list(chosen), assignment.dp_replicas, assignment.devices_per_replica
+                list(chosen), assignment.dp_replicas, assignment.devices_per_replica,
+                canonical=policy.canonical_only,
             )
         )
     if policy.hierarchical:
@@ -338,14 +402,21 @@ def _embeddings_of(
             return
         if index == len(template.assignments):
             placements = tuple(acc)
+            # The budget is checked BEFORE the duplicate test on purpose. The
+            # other way round, a re-ordering returned early without ever
+            # reaching the budget, so a cap bounded the OUTPUT and not the
+            # WALK: measured on the seven-device real cluster, `cap=8` took
+            # 57.0 s against 50.9 s uncapped -- slower, while still generating
+            # 60,534 re-orderings. A budget that does not stop the search is
+            # not a budget.
+            if budget is not None and produced >= budget:
+                truncated = True
+                return
             key = _canonical_key(placements)
             if policy.canonical_only and key in seen:
                 stats.skipped_symmetric += 1
                 return
             seen.add(key)
-            if budget is not None and produced >= budget:
-                truncated = True
-                return
             out.append(_build(template, placements, spec, graph, path_policy))
             produced += 1
             return
@@ -372,6 +443,15 @@ def _embeddings_of(
                 return
 
     walk(0, frozenset(), [])
+
+    if policy.canonical_only:
+        # Nothing was enumerated to be skipped -- the generator emitted one
+        # ordering per partition -- so the count comes from the closed form
+        # (GS-25). It is the SAME number the enumerate-then-fold path produced,
+        # not a stand-in for it and not `unknown`: each of the `produced`
+        # canonical placements stands for `multiplier` orderings, of which one
+        # is itself.
+        stats.skipped_symmetric += produced * (_symmetry_multiplier(template) - 1)
 
     if truncated:
         # What the cap cost, counted by re-running the enumeration without the

@@ -17,6 +17,13 @@ exclude = ["vendor/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# `slow` is the GS-25 evidence: enumerating every replica ordering on the
+# seven-device real cluster to prove the closed form counts the same thing.
+# It takes about a minute, so it is opt-in rather than in every run --
+# `pytest -m slow`. The formula it checks is exercised by the fast tests on
+# the toy fixtures on every run, so skipping it does not leave the claim
+# untested, only less thoroughly tested.
+markers = ["slow: enumerates every replica ordering; ~1 min (GS-25 evidence)"]
 # networkx changed what `weisfeiler_lehman_graph_hash` returns between
 # releases and warns about it. The warning is correct and this repository
 # already acts on it -- `Signature.tool_version` records the version so a hash

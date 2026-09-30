@@ -247,6 +247,53 @@ def _device_graph(
     return out, parallel
 
 
+#: One graph's derived structures and its answered pairs, kept only for the
+#: graph most recently asked about.
+#:
+#: `path_set` rebuilt `_device_graph` and `admitted_edges` on **every call**
+#: and then re-ran `shortest_simple_paths` for pairs it had already answered.
+#: `_build` calls it once per flow per placement, so enumerating the
+#: eight-device `real-a40x8` cluster asked the same few dozen questions
+#: thousands of times: 6,744 placements at about 267 ms each, which is the
+#: half-hour that stopped E-G5 planning at all (GS-26). A near-complete
+#: eight-device graph has on the order of two thousand simple paths between
+#: any pair, and that enumeration is the cost.
+#:
+#: Keyed by object identity with a strong reference held alongside, so the id
+#: cannot be recycled onto a different graph while the entry lives. One entry,
+#: because enumeration works through one graph at a time and an unbounded cache
+#: of resource graphs is a leak. **Nothing here changes an answer** -- a
+#: `ResourceGraph` is frozen and `PathPolicy` is frozen, so the same question
+#: has the same answer, and `tests/test_paths.py` pins that the cached and
+#: uncached results are equal.
+_MEMO: dict[str, object] = {}
+
+
+def _memo_for(graph: ResourceGraph, policy: PathPolicy) -> dict:
+    key = (id(graph), policy)
+    if _MEMO.get("key") != key:
+        _MEMO.clear()
+        device_graph, parallel = _device_graph(graph, policy)
+        _, notes = admitted_edges(graph, policy)
+        _MEMO.update({
+            "key": key,
+            # The strong reference. Without it `graph` could be collected and
+            # a new one allocated at the same address, and the cache would
+            # answer for the wrong cluster.
+            "graph": graph,
+            "device_graph": device_graph,
+            "parallel": parallel,
+            "notes": notes,
+            "pairs": {},
+        })
+    return _MEMO
+
+
+def clear_path_cache() -> None:
+    """Drop the memo. For tests, and for a caller that wants the memory back."""
+    _MEMO.clear()
+
+
 def path_set(
     graph: ResourceGraph, src: str, dst: str, policy: PathPolicy = DEFAULT_POLICY
 ) -> PathSet:
@@ -256,13 +303,26 @@ def path_set(
     bottleneck: a path is one route, and the caller that wants the pair's total
     capacity wants `cut_capacity` instead.
     """
-    device_graph, parallel = _device_graph(graph, policy)
-    _, notes = admitted_edges(graph, policy)
+    memo = _memo_for(graph, policy)
+    cached = memo["pairs"].get((src, dst))
+    if cached is not None:
+        return cached
+    device_graph = memo["device_graph"]
+    parallel = memo["parallel"]
+    notes = memo["notes"]
+
+    def remember(result: PathSet) -> PathSet:
+        memo["pairs"][(src, dst)] = result
+        return result
 
     if src not in device_graph or dst not in device_graph:
-        return PathSet(src=src, dst=dst, notes=(*notes, f"{src} or {dst} is not a vertex"))
+        return remember(
+            PathSet(src=src, dst=dst, notes=(*notes, f"{src} or {dst} is not a vertex"))
+        )
     if src == dst:
-        return PathSet(src=src, dst=dst, notes=(*notes, "src and dst are the same vertex"))
+        return remember(
+            PathSet(src=src, dst=dst, notes=(*notes, "src and dst are the same vertex"))
+        )
 
     found: list[Path] = []
     try:
@@ -290,7 +350,7 @@ def path_set(
     found.sort(key=lambda p: (p.hops, -p.bottleneck_bytes_per_s, p.edges))
     if not found:
         notes = (*notes, f"no path from {src} to {dst} under this policy")
-    return PathSet(src=src, dst=dst, paths=tuple(found), notes=notes)
+    return remember(PathSet(src=src, dst=dst, paths=tuple(found), notes=notes))
 
 
 def effective_bottleneck_bytes_per_s(graph: ResourceGraph, path: Path) -> float:
