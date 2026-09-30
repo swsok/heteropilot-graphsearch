@@ -66,13 +66,35 @@ def cell(entry: dict, name: str) -> str:
     if not path.exists():
         raise SystemExit(f"{name}: {path} does not exist")
     tables = tables_of(path.read_text())
-    index = entry.get("table", 0)
-    if index >= len(tables):
-        raise SystemExit(
-            f"{name}: {entry['file']} has {len(tables)} table(s), asked for "
-            f"index {index}"
-        )
-    table = tables[index]
+
+    # A table may be named by its INDEX or by a column it has. Index is
+    # positional and breaks the moment a results script grows a table above the
+    # one being quoted -- which happened twice while writing this paper, each
+    # time silently re-pointing several macros at the wrong table until a
+    # column name failed to match. `find` is the stable form: the first table
+    # containing all the named columns.
+    find = entry.get("find")
+    if find:
+        wanted = set(find if isinstance(find, list) else [find])
+        matching = [t for t in tables if wanted <= set(t[0])]
+        if not matching:
+            raise SystemExit(
+                f"{name}: no table in {entry['file']} has columns {sorted(wanted)}"
+            )
+        if len(matching) > 1:
+            raise SystemExit(
+                f"{name}: {len(matching)} tables in {entry['file']} have "
+                f"columns {sorted(wanted)}; name more of them"
+            )
+        table = matching[0]
+    else:
+        index = entry.get("table", 0)
+        if index >= len(tables):
+            raise SystemExit(
+                f"{name}: {entry['file']} has {len(tables)} table(s), asked "
+                f"for index {index}"
+            )
+        table = tables[index]
     header = table[0]
     if entry["column"] not in header:
         raise SystemExit(

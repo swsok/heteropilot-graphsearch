@@ -53,6 +53,7 @@ exists to prevent.
 | C21 | Two placements differing only in which wire their tensor-parallel all-reduce crosses differ measurably in served TTFT | `experiments/e_g5/raw/pilot/` | hardware | Established, **intra-node, by a placement the planner cannot name**[^eg5p] |
 | C22 | Two concurrent streams over one inter-node NIC take exactly half each, which processor sharing predicts and the intra-node PCIe path does not do | `experiments/results/e_g4_microbench.md` | hardware | Established[^locb] |
 | C29 | The inter-node NIC is full duplex: both directions together exceed twice a single stream, where the intra-node pair reaches 1.33x | `experiments/results/e_g4_microbench.md` | hardware | Established |
+| C31 | A collective's bandwidth is keyed by **where** it ran as well as by how many ranks: at two ranks the same all-reduce is 3.8x slower across the NIC than inside one node | `experiments/results/e_g4_microbench.md` | hardware | Established[^collb] |
 | C30 | Inter-node **P/D** contention, which needs disaggregated prefill | — (E-G5) | hardware | Pending[^disagg] |
 | C23 | The compression ratio and the search's own cost are reported as a function of device count and cluster symmetry | `experiments/results/e_g6_scale.md` | mock | Established, **report-only**[^eg6] |
 | C24 | Dropping the shared boundary from the signature produces mis-merges | `experiments/results/e_g7_ablation.md` | mock | Established[^eg7] |
@@ -151,6 +152,16 @@ exists to prevent.
     number worth having is the ratio --- the ceiling the bound computed,
     54.433 rps, is **19 times** the measured capacity. That looseness is the
     price of soundness, and this is its size on this node.
+
+
+[^collb]: 5.07 GB/s busbw across the NIC against 19.34 inside one node, both at
+    two ranks, same torch and same NCCL at each end. At **four** ranks the two
+    are within two per cent and the inter-node figure is the higher, because
+    that run places two ranks per node so half of each all-reduce stays on the
+    local bus --- while the four-rank intra-node run is the case where that bus
+    is already the bottleneck. Two different mixtures of two wires; the
+    contributions are not decomposed and the result file says so. What the rows
+    establish is the keying, in either direction, not an ordering.
 
 
 ## Retracted

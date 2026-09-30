@@ -19,10 +19,26 @@ Two nodes, `s8` and `s6`, one mlx5_0 each on one InfiniBand subnet, both ports r
 
 Bidirectional is a second contrast. At location (a) the pair reached 1.33x a single direction; here it reaches over 2x, because the wire really is full duplex. That `ib_send_bw -b` reports per direction rather than the sum was established from the NIC's own counters rather than from the tool's documentation: 1,500 messages of 8 MiB left 12.66 GB in `port_xmit_data` **and** 12.66 GB in `port_rcv_data`, both matching the 12.58 GB expected each way, while the tool reported 94.73.
 
-**Two of the five registered conditions are not answered here, for different reasons that do not merge.**
+### The collective, across the NIC
+
+NCCL all-reduce under `torch.distributed.run` across both nodes, same torch and same NCCL at each end. The busbw plateau is the figure comparable with a link rate:
+
+| ranks | where | busbw plateau |
+| --- | --- | --- |
+| 2 | across the NIC | 5.07 GB/s |
+| 2 | inside one node, across the PCIe bridge | 19.34 GB/s |
+| 4 | across the NIC | 8.89 GB/s |
+| 4 | inside one node, the TP=4 group | 8.71 GB/s |
+
+**At two ranks the same collective is 3.8x slower across the NIC than inside one node** -- 5.07 GB/s against 19.34. At four ranks the two are within two per cent of each other, and the inter-node figure is the higher of the two.
+
+That reversal is not a puzzle, and it is also not decomposed here. The four-rank inter-node run places two ranks on each node, so half of each all-reduce stays on the local bus, while the four-rank intra-node run is the case where that bus is already the bottleneck (8.71 GB/s, the collapse E-G4 measures at location (a)). Two different mixtures of two wires, and this file does not separate their contributions.
+
+What the rows do establish is the `world_size` argument one level up: a measurement is keyed by what was run **and where**, and a figure taken inside a node does not answer for one that crosses between them -- in either direction.
+
+**One of the five registered conditions is not answered here, and it is not a matter of effort.**
 
 - `two-independent` is **impossible on this hardware**: each node has exactly one InfiniBand device, so there is no pair of disjoint NICs to put two flows on. That is a property of the machines.
-- `collective` is **deferred**: an all-reduce over IB needs NCCL, which needs torch on both nodes, and the peer node has no such environment yet. Nothing here shows it cannot be done.
 
 ## One path, three questions
 
