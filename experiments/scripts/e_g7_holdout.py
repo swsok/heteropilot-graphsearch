@@ -142,6 +142,70 @@ def invariant_table(rows: list[dict]) -> list[str]:
     return out
 
 
+
+#: The registered operating point. Pre-registration, E-G7 success criterion 3:
+#: "`full` arm `feasible_recall` at k = 16 >= heteropilot arm's at k = 16.
+#: Equal counts as met." k = 4 and k = 8 are report-only and are not judged.
+REGISTERED_K = 16
+
+
+def criterion_three(rows) -> list[str]:
+    """State the registered verdict, per fixture, instead of printing rows.
+
+    A table two arms wide is not a verdict: the reader has to find two rows and
+    compare them, and a criterion that is only met by inspection is one that
+    can fail silently. This computes it.
+    """
+    at_k = {}
+    for r in rows:
+        if r.get("k") != REGISTERED_K:
+            continue
+        at_k.setdefault(r["fixture"], {})[r["arm"]] = r.get("feasible_recall")
+
+    out = ["### Criterion 3, judged", ""]
+    out.append("| fixture | `full` at k = 16 | heteropilot at k = 16 | registered criterion |")
+    out.append("| --- | --- | --- | --- |")
+    failures = []
+    for fixture in sorted(at_k):
+        full = at_k[fixture].get("graphsearch")
+        hp = at_k[fixture].get("heteropilot")
+        if full is None or hp is None:
+            verdict = "not computable (an arm is missing)"
+        elif full >= hp:
+            verdict = "**met**"
+        else:
+            verdict = "**NOT met**"
+            failures.append((fixture, full, hp))
+        out.append(f"| {fixture} | {full} | {hp} | {verdict} |")
+    out.append("")
+    if failures:
+        out.append(
+            "**The criterion is not met on every fixture, and the registered "
+            "response applies rather than an explanation.** Pre-registration, "
+            "failure interpretation: *\"The holdout\'s recall is materially "
+            "worse than the diagnosis fixtures\' -> the ranker was fitted to "
+            "the diagnosis corpus. Reported as such; the claim about the "
+            "ranker narrows to those fixtures.\"* That is what this result "
+            "does. The ranker claim covers the diagnosis corpus and "
+            "`synth-holdout-1`; it does **not** cover "
+            + ", ".join(f"`{f}`" for f, _, _ in failures)
+            + ", where heteropilot\'s template-level surrogate retrieves more "
+            "feasible placements at the registered budget than this search "
+            "does."
+        )
+        out.append("")
+        for fixture, full, hp in failures:
+            out.append(
+                f"On `{fixture}` the gap is {full} against {hp}. The invariant "
+                "still holds there --- no feasible placement was wrongly "
+                "removed and nothing was mis-merged --- so what fails is the "
+                "ranking, not the correctness. Those are separate claims and "
+                "are reported separately."
+            )
+        out.append("")
+    return out
+
+
 def markdown(
     rows: list[dict],
     invariants: list[dict],
@@ -156,6 +220,33 @@ def markdown(
         "ranker, no δ, no bound and no threshold was modified afterwards."
     )
     out.append("")
+    if REAL_HOLDOUT.exists():
+        out.append(
+            "**What the real-lab holdout's altered field is, and is not.** "
+            "E-G4 showed that this node's PCIe ports are not physically "
+            "shared, so the reservation raised on `port-gpu0` is **not a "
+            "physical fact**: it is a variation of the topology *assumption* "
+            "the search is required to respond to. What this holdout tests is "
+            "the invariant and the recall on a graph that was never touched "
+            "while anything was tuned -- not whether the node behaves this "
+            "way. The fixture is `real-a40x8.v2.yaml` with "
+            "`shared_resources[port-gpu0].reserved` 0.0 -> 15.07 GB/s and "
+            "nothing else, derived by "
+            "`experiments/scripts/make_holdout_fixture.py`; 15.07 is 60 % of "
+            "the measured 25.12 GB/s capacity, the fraction E-G4's background "
+            "generator held. The port was chosen because the candidates under "
+            "test cross it: `gpu0-gpu2` declares it and `gpu0-gpu1`, being "
+            "NVLink, declares none, so the single field moves the PCIe "
+            "placements from 25.12 to 10.05 GB/s and leaves the NVLink pair "
+            "at 112.50. Exhaustively -- 210 representatives, none left "
+            "unevaluated -- it takes the feasible set from 64 plans to 52, and "
+            "the twelve that leave are the six placements containing `gpu0` "
+            "over PCIe, at two templates, **evaluated and rejected rather "
+            "than unevaluated**. A holdout built on a port no candidate "
+            "crosses would have moved nothing, which is why this was checked "
+            "rather than assumed (GS-30)."
+        )
+        out.append("")
     out += ["## Criterion 1 — the invariant, on the holdout", ""]
     out += invariant_table(invariants)
     out.append("")
@@ -168,6 +259,8 @@ def markdown(
     out.append("")
     out += ["## Criterion 3 — recall against heteropilot's surrogate", ""]
     out += base.table(rows)
+    out.append("")
+    out += criterion_three(rows)
     out.append("")
     out.append(
         "**Registered at k = 16**, and only there. E-G1b is where this arm "

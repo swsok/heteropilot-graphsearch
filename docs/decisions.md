@@ -1299,3 +1299,115 @@ torch 2.10, not of one installation.
 `experiments/pd_probe/`. It does **not** close `\pending{E-G5: inter-node P/D}`:
 this is a probe of the serving stack, and E-G5's arm still needs the router
 that `planner/deploy/` does not have.
+
+## GS-30 — the identical T1/T2 predictions are a harness artefact, not a simulator finding · 2026-09-30
+
+**Decision.** E-G5's three topology conditions are rerun, and the harness is
+changed to ask the search for the prediction **of the placement it is about to
+deploy**. The identical `p99_ttft_ms` across T1, T2 and all three repetitions
+is withdrawn as evidence for anything about the simulator.
+
+**Why, and what was ruled out.** Two hypotheses were put and **both were
+falsified**, in this order:
+
+| checked | result |
+| --- | --- |
+| the compile hook was never bound (GS-13 family) | **no** --- `compile_applied 8/8` on a cold cache |
+| the simulator does not respond to TP all-reduce bandwidth (D3/D124) | **no** --- at tp2, p99 TTFT runs 23383 / 26160 / 31708 / 119710 ms for `link_bw` 112.5 / 25.12 / 10.05 / 1.0 GB/s |
+
+The graph does distinguish the placements: `compile_embedded` puts them in
+three classes on this cluster, 112.5 GB/s for the four NVLink pairs, 25.12 for
+the PCIe ones, and 10.05 for those crossing an uplink the holdout reserves.
+
+So the cause is elsewhere, and it is in this repository. `run_plan` passes
+`max_devices=len(topology.devices)` and **no placement at all**, so T1 and T2
+are the same search with the same arguments: same candidate id, same
+prediction, and the second run served entirely from cache. The placement is
+applied afterwards as `placement_override`, with no second prediction. Under
+the budget the harness uses, every feasible plan came out on an NVLink pair and
+194 placements --- including T2's `(gpu0, gpu2)` --- were **unevaluated**, not
+rejected. The harness therefore prints a feasible NVLink placement's numbers
+beside a measurement taken at a placement the search never judged.
+
+That is a defect of the same family as GS-13 but not the same defect: the hook
+is bound and applied, and what is missing is the step that asks for the
+placement's own verdict. For T2 the honest raw value is `unknown_measurement`,
+not a feasible candidate's metrics, and the rerun must record it as such.
+
+**Three readings of my own were wrong before this one, and each was caught by a
+control rather than by reading code.** A warm cache reported `compile_applied
+0` and looked exactly like an unbound hook. A bandwidth sweep run on a
+`tp1-dp2` candidate showed no response, because tensor-parallel degree one has
+no all-reduce to respond with. And "not feasible" was written where the audit
+said `unevaluated`, which is the one distinction this project does not allow to
+blur.
+
+**The difference between the instruction and the registration, recorded here as
+`CLAUDE.md` requires.** The work order for this step described the holdout as a
+variant of "the two-node YAML (s8, s6)". No such fixture exists --- the P3
+fixture is `real-a40x8.v2.yaml`, one node --- and the registration
+(`docs/preregistration.md`, E-G7 holdout 2) requires the variant to be derived
+from the committed real fixture by one field "so that what is being held out is
+the *topology condition* and not a different cluster". The registered reading
+was followed: `real-lab-holdout.v2.yaml` is `real-a40x8.v2.yaml` with
+`shared_resources[port-gpu0].reserved` 0.0 -> 15.07 GB/s and nothing else,
+derived by `experiments/scripts/make_holdout_fixture.py`. The two-node fixture
+belongs to E-G5's P/D arm, where it is a cluster and not a holdout.
+
+**The altered port is one the candidates actually cross, and this was checked
+rather than assumed.** `gpu0-gpu2` declares `shared_resource: port-gpu0`;
+`gpu0-gpu1` declares none, because NVLink does not traverse the PCIe port. So
+the single field moves T2's path from 25.12 to 10.05 GB/s and leaves T1 at
+112.50. Exhaustively --- 210 representatives per cluster, **0 unevaluated on
+either** --- it changes the answer: 64 feasible plans become 52. The twelve
+that leave are the six placements containing `gpu0` over PCIe, at two
+templates, and they are **evaluated and rejected**, not unevaluated. A holdout
+built on `port-gpu7` would have moved nothing, which is why the check was made.
+
+**What it affects.** `experiments/e_g5/deploy_and_bench.py` and E-G5's three
+conditions (rerun), `experiments/results/e_g7_holdout.md`,
+`fixtures/clusters/real-lab-holdout.v2.yaml`,
+`experiments/scripts/make_holdout_fixture.py`, and paper §8.7, which must not
+carry the withdrawn claim.
+
+## GS-31 — the registered recall criterion fails on the real-lab holdout, and the ranker claim narrows · 2026-09-30
+
+**Decision.** E-G7 success criterion 3 --- "`full` arm `feasible_recall` at
+k = 16 >= heteropilot arm's at k = 16" --- is **not met** on
+`real-lab-holdout`. The registered response is taken as written: the ranker was
+fitted to the diagnosis corpus, and the claim about it narrows to those
+fixtures and `synth-holdout-1`. The paper's C26 splits into C26 (the invariant,
+which holds on both) and C32 (the recall, which does not).
+
+| fixture | `full` at k = 16 | heteropilot at k = 16 | criterion |
+| --- | --- | --- | --- |
+| synth-holdout-1 | 0.625 | 0.0312 | met |
+| real-lab-holdout | **0.1429** | **0.5** | **not met** |
+
+**Why it is reported rather than explained.** The failure interpretation was
+written into `docs/preregistration.md` before the fixture existed, precisely so
+that this table could not be met with an argument invented afterwards. The
+honest reading is that heteropilot's template-level surrogate, credited
+generously because it cannot name a placement at all, retrieves more feasible
+placements at the registered budget on this graph than this search does.
+
+**What does not fail.** Criterion 1 holds on the same fixture: 384 embeddings
+to 210 representatives, `false_infeasible` 0, `mismerged_pairs` 0, `unjudged`
+0, complete. So the failure is of the **ranking**, not of the correctness, and
+the two are separate claims with separate evidence. Reporting them as one
+number would have hidden a pass inside a fail or the reverse.
+
+**The result file did not say any of this, and now does.** It printed the two
+arms as rows and left the comparison to the reader, which is a criterion that
+can only fail by inspection --- the same shape of defect as GS-24's harness
+checks. `e_g7_holdout.py` now computes the verdict per fixture, prints
+**met** / **NOT met**, and on a failure quotes the registered response rather
+than paraphrasing it.
+
+**Scope.** k = 4 and k = 8 are report-only under the registration and were not
+judged, although they point the same way (0.0714 against 0.5 at k = 8). The
+`no_boundary` arm, which is criterion 2, is unaffected by this entry.
+
+**What it affects.** `paper/CLAIMS.md` (C26, new C32, footnote `eg7h`),
+`paper/sections/eval.tex`, `experiments/scripts/e_g7_holdout.py`,
+`experiments/results/e_g7_holdout.md`.

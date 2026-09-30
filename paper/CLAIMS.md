@@ -58,7 +58,8 @@ exists to prevent.
 | C23 | The compression ratio and the search's own cost are reported as a function of device count and cluster symmetry | `experiments/results/e_g6_scale.md` | mock | Established, **report-only**[^eg6] |
 | C24 | Dropping the shared boundary from the signature produces mis-merges | `experiments/results/e_g7_ablation.md` | mock | Established[^eg7] |
 | C25 | The baseline comparison is fair: same candidate space, predictor and cache, with the template-level scoring credited generously to the baseline | `experiments/results/e_g7_baseline_fairness.md` | mock | Established |
-| C26 | On a holdout fixed before the scaling grid ran, the invariant holds and the search reaches higher recall at k = 16 than heteropilot's surrogate | `experiments/results/e_g7_holdout.md` | mock | Established, **on the synthetic holdout only**[^eg7h] |
+| C26 | On both holdouts, fixed before the scaling grid ran, the invariant holds: no feasible placement removed, nothing mis-merged | `experiments/results/e_g7_holdout.md` | mock | Established |
+| C32 | The search reaches higher recall at k = 16 than heteropilot's surrogate on `synth-holdout-1`, and **does not** on `real-lab-holdout` | `experiments/results/e_g7_holdout.md` | mock | Established, and the registered criterion is **not met** on the hardware-derived holdout[^eg7h] |
 
 [^eg4]: The verdict computed on the topology `experiments/microbench/PLAN.md`
     registered — `as_planned` — is **FAIL**, at 93.1 % median error. That is a
@@ -85,9 +86,19 @@ exists to prevent.
     sits.
 
 [^eg7h]: `real-lab-holdout.v2` — the hardware fixture with one uplink
-    reservation changed — does not exist, because P3 has not produced it. The
-    result file reports that row as `not run` rather than omitting it. Half a
-    holdout is not a holdout, and an omitted row reads as a row that passed.
+    reservation changed — now exists and was run. The registered criterion is
+    "`full` arm `feasible_recall` at k = 16 ≥ heteropilot arm's at k = 16", and
+    on this fixture it is **0.1429 against 0.5**: not met. The registered
+    response, written before the run, is that the ranker was fitted to the
+    diagnosis corpus and the claim about it narrows to those fixtures; that is
+    what is done here rather than an explanation being offered. What fails is
+    the ranking, not the correctness: the invariant holds on this fixture too,
+    which is why C26 and C32 are separate rows. The reservation raised on
+    `port-gpu0` is not a physical claim — E-G4 showed these ports are not
+    physically shared — but a variation of the topology assumption the search
+    must respond to, and it does: it takes the feasible set from 64 plans to
+    52, the twelve leaving being evaluated and rejected rather than
+    unevaluated.
 
 [^eg5p]: Measured on this node's own wires, not across a NIC: TP=2 on the
     NVLink pair against TP=2 across the PCIe bridge, same model, trace, knobs
