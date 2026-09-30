@@ -1,0 +1,201 @@
+#!/usr/bin/env python
+"""Turn cells of `experiments/results/*.md` into LaTeX macros.
+
+**Rule 2 of the draft: no numeric literal appears in a body `.tex` file.** A
+number typed into prose is a number whose provenance was dropped on the way in,
+and it goes stale silently the next time an experiment re-runs. Every inline
+figure the paper states comes from here, and `make check` fails the build if a
+literal creeps back into a section.
+
+The mapping lives in `numbers.yaml`, one entry per macro:
+
+    egthreeSavingAbcde:
+      file: e_g3_real_sim_oracle.md
+      table: 1                 # 0-based index among the file's tables
+      row: graph-toy-abcde     # matched against the FIRST column
+      column: saving_s
+      format: "{:.0f}"
+
+A macro whose cell cannot be found is an error, not a blank: a silently empty
+`\\newcommand` would typeset as nothing and the sentence would read as though
+the number had been left out on purpose.
+
+    python scripts/paper/numbers.py            # writes paper/numbers.tex
+    python scripts/paper/numbers.py --check    # fails if it would change
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+RESULTS = ROOT / "experiments" / "results"
+DEFAULT_MAP = Path(__file__).parent / "numbers.yaml"
+DEFAULT_OUT = ROOT / "paper" / "numbers.tex"
+
+
+def tables_of(text: str) -> list[list[list[str]]]:
+    """Every markdown table in the file, as a list of rows of cells.
+
+    A table is a run of consecutive lines starting with `|`; the separator row
+    (`| --- |`) is dropped. Nothing else about the file's structure is assumed,
+    because the results files are written by several different scripts and the
+    only thing they agree on is the table syntax.
+    """
+    tables, current = [], []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            cells = [c.strip() for c in stripped.strip("|").split("|")]
+            if not all(set(c) <= set("-: ") for c in cells):
+                current.append(cells)
+            continue
+        if current:
+            tables.append(current)
+            current = []
+    if current:
+        tables.append(current)
+    return tables
+
+
+def cell(entry: dict, name: str) -> str:
+    path = RESULTS / entry["file"]
+    if not path.exists():
+        raise SystemExit(f"{name}: {path} does not exist")
+    tables = tables_of(path.read_text())
+    index = entry.get("table", 0)
+    if index >= len(tables):
+        raise SystemExit(
+            f"{name}: {entry['file']} has {len(tables)} table(s), asked for "
+            f"index {index}"
+        )
+    table = tables[index]
+    header = table[0]
+    if entry["column"] not in header:
+        raise SystemExit(
+            f"{name}: column {entry['column']!r} not in {header}"
+        )
+    col = header.index(entry["column"])
+    want = str(entry["row"])
+    # `where` narrows by further columns. Without it, a file whose first column
+    # repeats -- E-G6 has three symmetry rows per device count -- would be
+    # matched by whichever row came first, and "the first one that matched" is
+    # not a specification of which number the paper is quoting.
+    where = {str(k): str(v) for k, v in (entry.get("where") or {}).items()}
+    for key in where:
+        if key not in header:
+            raise SystemExit(f"{name}: `where` names column {key!r}, not in {header}")
+
+    matches = []
+    for row in table[1:]:
+        if not row or row[0].strip("`*") != want:
+            continue
+        if any(
+            len(row) <= header.index(k) or row[header.index(k)].strip("`*") != v
+            for k, v in where.items()
+        ):
+            continue
+        matches.append(row)
+
+    if not matches:
+        raise SystemExit(
+            f"{name}: no row with first column {want!r}"
+            + (f" and {where}" if where else "")
+            + f" in {entry['file']} table {index}"
+        )
+    if len(matches) > 1:
+        raise SystemExit(
+            f"{name}: {len(matches)} rows match {want!r}"
+            + (f" and {where}" if where else "")
+            + f" in {entry['file']} table {index}. Add a `where:` clause -- "
+            f"quoting whichever matched first is not a specification of which "
+            f"number the paper states."
+        )
+    row = matches[0]
+    if col >= len(row):
+        raise SystemExit(f"{name}: row {want!r} is short")
+    return row[col]
+
+
+def render(value: str, entry: dict, name: str) -> str:
+    # `pattern` pulls one field out of a composite cell. E-G4 writes a verdict
+    # as "93.1% / 90.9% p90", which is right for the table and unreadable in a
+    # sentence. The regex's first group is taken, and a pattern that does not
+    # match is an error -- silently quoting the whole cell would put the p90
+    # into a sentence about the median.
+    pattern = entry.get("pattern")
+    if pattern is not None:
+        match = re.search(pattern, value)
+        if match is None:
+            raise SystemExit(
+                f"{name}: pattern {pattern!r} does not match cell {value!r}"
+            )
+        value = match.group(1)
+
+    spec = entry.get("format")
+    if spec is None:
+        return value
+    try:
+        return spec.format(float(value))
+    except ValueError:
+        raise SystemExit(
+            f"{name}: cell {value!r} is not a number, but `format` was given. "
+            f"Drop `format` to quote it verbatim."
+        ) from None
+
+
+def build(mapping: dict) -> str:
+    lines = [
+        "%% GENERATED by scripts/paper/numbers.py. Do not edit.",
+        "%%",
+        "%% Every inline number in the paper is defined here, from a named cell",
+        "%% of a named results file. `make check` fails if a section contains a",
+        "%% numeric literal instead.",
+        "",
+    ]
+    for name in sorted(mapping):
+        entry = mapping[name]
+        raw = cell(entry, name)
+        value = render(raw, entry, name)
+        lines.append(
+            f"%% {entry['file']} table {entry.get('table', 0)} "
+            f"[{entry['row']}][{entry['column']}]"
+        )
+        lines.append(f"\\newcommand{{\\{name}}}{{{value}}}")
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    import yaml
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--map", type=Path, default=DEFAULT_MAP)
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--check", action="store_true",
+                        help="fail if the file on disk is not what this would "
+                             "write")
+    args = parser.parse_args(argv)
+
+    mapping = yaml.safe_load(args.map.read_text()) or {}
+    text = build(mapping)
+
+    if args.check:
+        current = args.out.read_text() if args.out.exists() else ""
+        if current != text:
+            print(f"{args.out} is stale; run scripts/paper/numbers.py",
+                  file=sys.stderr)
+            return 1
+        print(f"{args.out} is up to date ({len(mapping)} macros)")
+        return 0
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(text)
+    print(f"wrote {args.out}: {len(mapping)} macros")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

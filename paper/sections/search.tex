@@ -17,4 +17,77 @@
 %%
 %% Numbers: tables/e_g1b_topk.tex, tables/e_g2_topk_holdout.tex,
 %% tables/e_g7_holdout.tex.
-\section{Safe elimination and an adaptive budget}
+\section{Provable elimination and an adaptive budget}
+\label{sec:search}
+
+% claim: C2
+\paragraph{Elimination is a relaxation, or it is not elimination.}
+A candidate may be removed only when arithmetic that is optimistic on every
+uncertain term still misses a constraint the specification declares. Five
+checks qualify: backend compatibility, device memory, communication latency
+against the time-to-first-token target, throughput capacity against a declared
+goodput floor, and a cost lower bound against the incumbent. Each publishes the
+relaxations it made---``every KV slot holds a live request'', ``a decode step
+costs only the weight sweep'', ``cut capacity is nominal and uncontended''---so
+a reader can check that the arithmetic really is optimistic rather than merely
+plausible.
+
+Anything that cannot be shown to be a relaxation is not called proved. It is
+reported as \texttt{deferred\_heuristic}, in a different column, and the
+candidates it removes are not counted among those shown infeasible. This is a
+rule inherited from the planner being extended, which had once removed
+under-provisioned candidates with a throughput bound its specification did not
+declare; the bound here runs only when the specification sets a goodput floor,
+and does not run at all when that field is unset.
+
+\paragraph{The cut bound.}
+The graph makes one check possible that an island-level planner cannot express:
+the maximum flow between a candidate's device sets, over nominal capacities
+minus external reservations, is a ceiling on what its traffic can achieve. A
+candidate whose demand exceeds that ceiling misses its target under the most
+favourable routing available, which is a proof and not an estimate.
+
+% claim: C7
+% claim: C8
+\paragraph{Ranking is only ranking.}
+What survives elimination is ordered by a service-margin estimate: for each
+SLO, the ratio of what the candidate is estimated to need to what the
+specification allows, and the ranking reads the maximum of those ratios---the
+binding constraint---because a candidate meets its objectives only if every one
+is met. The ranker produces no verdict; a candidate it places last is not a
+candidate it rejects.
+
+The estimate was wrong once, in a way worth recording. Its goodput term divided
+by the elimination bound's optimistic ceiling rather than by a knob-aware
+throughput estimate, which made every candidate look comfortable on that axis
+and admitted false positives on each diagnosis fixture. The correction was
+diagnosed on two fixtures and then checked on two it had never seen, because a
+correction validated on the data that motivated it has not been validated.
+
+% claim: C9
+Neither correctness number moves when the ranker changes, and that is asserted
+by a test rather than argued: ranking decides what is evaluated first, not what
+is eliminated, so a ranker change that moved \texttt{false\_infeasible} would
+be evidence of a different bug.
+
+% claim: C5
+% claim: C6
+\paragraph{An adaptive budget.}
+The search evaluates representatives in ranked order under a schedule of
+increasing $K$, stopping when the budget is exhausted or when no unevaluated
+candidate could beat the incumbent. It reports which of those happened.
+
+Against the existing planner's surrogate top-$K$ on a specification whose SLOs
+bind, this reaches higher feasible recall at $K = 8$ and $K = 16$. At $K = 4$
+it does not: it ties on one holdout fixture and trails on the other. That is
+reported here and in the table rather than left to the appendix, because a
+method whose advantage appears only above a budget threshold has a threshold,
+and the reader is entitled to it.
+
+\paragraph{What was not reached.}
+The output names the representatives the search never judged and the number of
+placements they stand for. They are \texttt{excluded\_by\_scope}: removed by a
+budget, which is a property of the search, not of the hardware. A certificate
+of optimality, where the search can produce one, is explicitly bounded by the
+declared candidate space and the evaluation model---it says that nothing
+\emph{evaluated under this model} can do better, and not that nothing can.

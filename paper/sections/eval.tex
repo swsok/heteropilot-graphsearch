@@ -21,3 +21,212 @@
 %% The two correctness numbers are reported for every arm, in every table, and
 %% never aggregated away.
 \section{Evaluation}
+\label{sec:eval}
+
+\subsection{Setup}
+
+Three evaluators are used and never confused. A deterministic \emph{mock} obeys
+the same physics as the elimination bounds, which is what makes a disagreement
+between the search and an exhaustive oracle meaningful; it is not a
+performance model and no figure produced by it is a measurement.
+\emph{LLMServingSim} with an analytical network backend is the real simulator.
+\emph{Hardware} is an eight-GPU node whose accelerator serial numbers every raw
+file records. Every table carries its provenance in the caption.
+
+Every fixture in the accompanying repository is fictional and says so in its
+header, with one exception: the hardware cluster description is generated from
+the microbenchmark's own raw files, so that each figure marked as measured is
+traceable to a file recording the node's serials, the process binding, the load
+average and which other processes held a GPU.
+
+The success criteria, the numeric limits, and the interval a threshold was
+chosen from were registered before the corresponding experiment ran, and the
+registration is append-only. Where a limit was derived from a measurement, the
+runs it was derived from are named and excluded from the set that tests it.
+
+\subsection{Correctness under the real simulator}
+
+% claim: C10
+% claim: C11
+% claim: C12
+\input{e_g3_real_sim_oracle}
+
+Table~\ref{tab:e_g3_real_sim_oracle} reports the search against an exhaustive
+oracle, both driven by LLMServingSim. Both correctness numbers are zero on all
+three fixtures: no feasible candidate was eliminated, and no two placements the
+oracle prices differently were folded together.
+
+% claim: C13
+The \texttt{complete} column is \textbf{False} on all three, and that
+qualification travels with the result everywhere it is quoted. Between six and
+eight per cent of placements failed to simulate at all. They are reported as
+\texttt{unknown\_measurement}---the evaluator was asked and did not
+answer---and not as infeasible. The correctness claim is therefore about the
+placements the simulator judged, which is a narrower statement than it would be
+if those failures had been counted as rejections. Their cause is not
+established and is listed as an open item in Section~\ref{sec:limits}.
+\pending{P1.5: SIM\_ERROR cause}
+
+\input{e_g3_real_sim_oracle_2}
+
+Table~\ref{tab:e_g3_real_sim_oracle_2} reports what the compression cost
+against what it saved. On the largest fixture, \egthreeSimOracleAbcde~seconds
+of oracle simulation become \egthreeSimProposedAbcde, a saving of
+\egthreeSavingAbcde~seconds with the hashing, the isomorphism checks and the
+bound evaluation all charged against the compression rather than ignored.
+
+The compression ratio is a property of the graph and not of the evaluator: it
+agrees to four decimals between the mock and the real simulator on every shared
+fixture, which is what a structural claim should do when the thing that
+evaluates it is replaced.
+
+\subsection{Compression, and where it fails}
+
+% claim: C1
+% claim: C4
+\input{e_g1_toy_pilot}
+\input{e_g6_scale}
+
+Table~\ref{tab:e_g1_toy_pilot} reports the compression on the toy corpus.
+Table~\ref{tab:e_g6_scale} reports it against device count and cluster
+symmetry, for a mock evaluator, at 32, 64 and 128 devices.
+
+% claim: C23
+The symmetry axis carries the result. At 128 devices the same
+\egsixEmbeddingsLarge{} embeddings compress to \egsixRepsAsym{} representatives
+on a fully asymmetric cluster and to \egsixRepsSym{} on a fully symmetric one.
+The asymmetric ratio is \egsixRatioAsym---that is, the compression finds almost
+nothing to fold, and the corpus reports that rather than omitting the
+configuration. A method whose benefit depends on a property of the input should
+be shown on inputs that lack it.
+
+This experiment has no success target and is registered as report-only, with a
+single failure condition: the compression must not cost more than it saves on a
+fully symmetric cluster. It does not. The grid is driven by the mock, and a
+simulation at this scale is not offered as validation of accuracy at scale.
+
+\subsection{Contribution A: the boundary in the signature}
+
+% claim: C24
+\input{e_g7_ablation}
+
+Table~\ref{tab:e_g7_ablation} reports the ablation. With the shared boundary in
+the equivalence signature the corpus yields no mis-merged pairs. With
+\texttt{no\_boundary}---every other label retained---two placements that differ
+only in which uplink they cross are folded into one representative, and the
+oracle prices them apart.
+
+The threshold that decides ``prices them apart'' is derived from the oracle's
+own distribution rather than fixed in advance. An earlier form of this
+experiment used a fixed tight specification and found no mis-merges, because
+that specification made both placements infeasible and the oracle agreed they
+were equally bad. A mis-merge count depends on where the threshold sits, so the
+derivation is stated with the count.
+
+\subsection{Search quality}
+
+% claim: C5
+% claim: C6
+\input{e_g1b_topk}
+\input{e_g2_topk_holdout}
+
+Table~\ref{tab:e_g1b_topk} and Table~\ref{tab:e_g2_topk_holdout} report
+feasible recall against the existing planner's surrogate top-$K$ under a
+specification whose SLOs bind. At $K = 8$ and $K = 16$ this search reaches
+higher recall. At $K = 4$ it does not---it ties on one holdout fixture and
+trails on the other---and that is the row to read before the others.
+
+The baseline is scored generously and deliberately so. It ranks and judges
+templates rather than placements, so it cannot name which devices a candidate
+occupies; one verdict is therefore credited to every placement of the template
+it judged. There is no stricter reading that would be fair to it, and winning
+on a technicality would not be winning.
+
+% claim: C25
+% claim: C26
+\input{e_g7_holdout}
+\input{e_g7_baseline_fairness}
+
+Table~\ref{tab:e_g7_holdout} reports a holdout fixed before the scaling grid
+ran: \egsevenHoldoutEmbeddings{} embeddings compressing to
+\egsevenHoldoutReps{} representatives, both correctness numbers zero, and
+higher recall than the surrogate at the registered operating point. The second
+holdout---a hardware fixture with one uplink reservation altered---does not
+exist, because the hardware campaign has not produced it. That row is reported
+as not run rather than omitted, since an omitted row reads as a row that
+passed. \pending{E-G5: real-lab holdout}
+
+\subsection{The contention model against the wire}
+
+% claim: C15
+% claim: C16
+\input{e_g4_microbench_2}
+
+Table~\ref{tab:e_g4_microbench_2} reports the registered verdict, and it is a
+\textbf{failure}: on the topology the plan declared before measuring,
+processor-sharing is \egfourFluidPlannedSame\,\% out at the median on the
+condition it exists for, against \egfourNullPlannedSame\,\% for pricing each
+flow alone.
+
+The reason is not the model. Two device pairs believed to share a host bridge
+were measured to share nothing: each concurrent copy sustained the full
+single-copy rate, and a third process saturating one pair left the other at its
+unloaded rate to three digits. Run on the declaration the measurements support,
+the same model is \egfourFluidMeasuredSame\,\% out; and on the bidirectional
+condition, where the two flows genuinely do share endpoints, it is
+\egfourFluidMeasuredBidi\,\% against \egfourNullMeasuredBidi\,\% for the null
+model.
+
+Both are reported because they are different corrections. One would rewrite the
+contention model; the other rewrites a line of a cluster description. The
+registered verdict is computed on the registered declaration, and the corrected
+figure is not offered in its place.
+
+% claim: C22
+% claim: C29
+\paragraph{The same question at a second location, with the opposite answer.}
+Across an inter-node NIC between two machines, two concurrent streams take
+exactly half each: a single stream reaches \egfourNicSingle~Gbit/s and two
+reach \egfourNicTwoSame~each. That is processor sharing precisely, and it is
+what the intra-node PCIe pairs did not do.
+
+The pair of results is worth more than either alone. It is not that the model
+is right in one place and wrong in another---it is that \emph{which resource
+is genuinely shared} is a claim about hardware, settled by measurement at each
+location separately, and the model prices whatever it is told to. The
+bidirectional case says the same thing twice: the intra-node pair reaches only
+a third again as much as a single direction, while the NIC exceeds twice it,
+because that wire really is full duplex.
+
+Two of the five registered conditions remain unanswered at this location, for
+reasons that do not merge. Two concurrent flows over \emph{disjoint} NICs is
+impossible on this hardware---each machine has exactly one InfiniBand
+device---while the collective is deferred, needing an NCCL environment the peer
+node does not yet have. \pending{E-G4: collective at location (b)}
+
+% claim: C17
+The model's accuracy domain has an upper end. Above a message size the hardware
+begins overlapping the two directions of one link, the pair exceeds what
+processor sharing predicts, and the model becomes optimistic by about a third.
+That boundary is stated rather than absorbed into a fitted capacity: a capacity
+chosen because it reproduces the answer is not a measurement, and it would make
+the next node's prediction wrong silently.
+
+\subsection{Hardware}
+
+% pending
+This section reports the deployment campaign: the recommended placement against
+its SLOs, the boundary alternatives against the bounds that ranked or rejected
+them, and the difference between two placements of one template across a shared
+interconnect. The campaign is registered in the accompanying repository and has
+not completed. \pending{E-G5: the hardware matrix}
+
+% claim: C21
+% pending
+One result from it is already measured and is reported here because it does not
+depend on the rest. Two placements of a single template---a tensor-parallel
+pair on an NVLink link, and the same pair across a PCIe bridge---differ in
+served $p99$ time to first token by a factor that grows sharply at the knee,
+because the slower interconnect moves the knee itself. Three repetitions per
+cell; the ranges do not overlap. The planner being extended cannot express the
+difference between these two placements at all, which is the point.

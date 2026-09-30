@@ -15,3 +15,81 @@
 %% first graph representation of a cluster (Helix), and that a Top-K procedure
 %% guarantees a global optimum (heteropilot already has a Top-K).
 \section{Introduction}
+\label{sec:intro}
+
+Serving a large language model on a heterogeneous cluster means choosing, for
+one service specification, which accelerators run which role at which degree of
+parallelism. The choice is a placement and not merely a configuration: two
+groups of devices that are identical in model, memory and price can still
+differ in the interconnect their tensor-parallel collective crosses, and that
+difference reaches the served latency.
+
+% claim: C21
+The size of the difference is easy to underestimate. On the eight-GPU node used
+here, the same engine, model, trace, scheduler knobs and seed placed on an
+NVLink pair rather than across a PCIe bridge does not merely run faster: it
+moves the saturation knee, and with it the load at which the service still
+meets its latency target. Section~\ref{sec:eval} reports the measurement.
+
+A planner that enumerates configurations rather than placements cannot make
+that choice, because it has no name for the thing being chosen. The planner
+this work builds on is such a planner, by construction: it maps a candidate to
+an \emph{execution island} and hands the island's whole device list to the
+serving runtime, which takes as many devices as the parallelism degree needs.
+Two placements of one candidate are, to it, one candidate.
+
+% claim: C1
+% claim: C3
+Enumerating placements instead is immediately expensive, and the expense is not
+in the enumeration but in the evaluation: each candidate's latency comes from a
+discrete-event simulation costing seconds to minutes. The space is also highly
+redundant, because a cluster is built from repeated parts. The obvious response
+is to evaluate one member of each class of interchangeable placements, and the
+obvious way to find those classes is to hash a description of each placement
+and merge the collisions.
+
+That is the step where correctness is lost, and the loss is silent. Two
+placements can agree in every local attribute---same device model, same
+parallelism, same price---and still be distinguishable, because one of them
+crosses a link that something outside the deployment is already using. A
+signature built from local attributes merges them; the evaluator then prices
+the representative and attributes that price to both.
+
+\paragraph{Contributions.}
+
+% claim: C24
+\textbf{A. An equivalence relation over placements that carries the shared
+communication boundary.} Placements are folded only after a graph isomorphism
+check confirms their candidate graphs agree, and those graphs carry the shared
+resources their traffic crosses along with the capacity each one has left.
+Dropping the boundary from the signature is an ablation, and it produces
+mis-merges that the full relation does not
+(Section~\ref{sec:eval}).
+
+% claim: C2
+\textbf{B. Elimination that is a relaxation of the feasibility test.} A
+candidate is removed only when arithmetic that is optimistic on every uncertain
+term still misses a declared constraint; each check publishes the relaxations
+it made. Anything that cannot be shown to be a relaxation is a heuristic and is
+reported in a different state, because a candidate that was never evaluated is
+not a candidate that was shown to be infeasible. Across every experiment in
+this paper the count of feasible candidates wrongly eliminated is zero, and it
+is reported for every arm of every table rather than summarised once.
+
+% claim: C11
+% claim: C26
+\textbf{C. An evaluation budget that reports what it did not reach.} The search
+spends a bounded number of simulations and returns, with the recommendation,
+the number of representatives it never judged and the number of placements
+those stand for. On the three fixtures where the full oracle was also run under
+the real simulator, the compression saved more simulation time than it cost:
+\egthreeSavingAbcde~seconds against \egthreeSimOracleAbcde~seconds of oracle
+simulation on the largest, with the compression's own hashing, isomorphism and
+bound checks charged against it.
+
+This work is built on an existing planner and says throughout which parts are
+reused, which are modified through a small number of hooks, and which are new;
+Section~\ref{sec:limits} carries that table. It does not claim to be the first
+graph representation of a serving cluster, and it does not claim that a
+top-$K$ procedure yields a global optimum---the search's contribution is the
+opposite, that it states what it left unevaluated.

@@ -331,6 +331,123 @@ def verdict(rows: list[dict]) -> list[dict]:
     return out
 
 
+
+# --- location (b): the inter-node NIC -------------------------------------
+
+def nic_results(root: Path) -> dict:
+    """The `run_nic.py` raws, keyed by condition. Empty when none were taken.
+
+    A point the harness marked `suspect` is dropped from the medians and named
+    in the section: `ib_send_bw -b` sometimes reports the SUM of both
+    directions rather than one of them, and a figure whose unit is uncertain is
+    `unknown_measurement` rather than a datum to average.
+    """
+    out: dict[str, dict] = {}
+    for path in sorted(root.glob("*-nic-*/*.json")):
+        raw = json.loads(path.read_text())
+        rows, suspect = [], []
+        for key, block in sorted(
+            raw["sizes"].items(), key=lambda kv: kv[1]["msg_bytes"]
+        ):
+            for stream in block["streams"]:
+                value = (stream.get("server") or {}).get("average_gbit_s")
+                if value is None:
+                    continue
+                if "suspect" in stream:
+                    suspect.append((key, value, stream["suspect"]))
+                    continue
+                rows.append((block["msg_bytes"], value))
+        out[raw["condition"]] = {
+            "raw": raw, "rows": rows, "suspect": suspect,
+            "median": statistics.median([v for _, v in rows]) if rows else None,
+        }
+    return out
+
+
+def location_b_section(nic: dict) -> list[str]:
+    if not nic:
+        return [
+            "**Location (b), the inter-node NIC, is `not run`.** Reported "
+            "rather than omitted: an omitted row reads as a row that passed.",
+        ]
+
+    any_raw = next(iter(nic.values()))["raw"]
+    near, far = any_raw["near"], any_raw["far"]
+    out = [
+        f"Two nodes, `{near['hostname']}` and `{far['hostname']}`, one "
+        f"{near['ib']['device']} each on one InfiniBand subnet, both ports "
+        f"reporting {near['ib']['rate_gbit_s']} Gbit/s. Measured with "
+        f"`perftest ib_send_bw`, which is what both nodes have; the tool and "
+        f"its arguments are in every raw file, because two front ends onto one "
+        f"wire are not interchangeable evidence.",
+        "",
+        "| condition | median Gbit/s | against a single stream |",
+        "| --- | --- | --- |",
+    ]
+    single = nic.get("single", {}).get("median")
+    for condition in ("single", "two-same", "bidirectional"):
+        entry = nic.get(condition)
+        if not entry or entry["median"] is None:
+            continue
+        median = entry["median"]
+        if condition == "two-same":
+            # Two streams; the question is what they sum to.
+            total = median * 2
+            ratio = f"sum {total:.2f}, i.e. {total / single:.3f}x"
+            shown = f"{median:.2f} each"
+        elif condition == "bidirectional":
+            ratio = f"{median / single:.3f}x per direction, sum {2 * median:.1f}"
+            shown = f"{median:.2f}"
+        else:
+            ratio = "---"
+            shown = f"{median:.2f}"
+        out.append(f"| {condition} | {shown} | {ratio} |")
+
+    out += [
+        "",
+        "**This is the opposite of location (a), and that is the result.** Two "
+        "streams over one NIC take exactly half each, which is what processor "
+        "sharing predicts and what the PCIe pairs at location (a) did not do. "
+        "The contention model was never the thing in question: which resource "
+        "is genuinely shared is, and it is settled by measurement at each "
+        "location separately.",
+        "",
+        "Bidirectional is a second contrast. At location (a) the pair reached "
+        "1.33x a single direction; here it reaches over 2x, because the wire "
+        "really is full duplex. That `ib_send_bw -b` reports per direction "
+        "rather than the sum was established from the NIC's own counters "
+        "rather than from the tool's documentation: 1,500 messages of 8 MiB "
+        "left 12.66 GB in `port_xmit_data` **and** 12.66 GB in "
+        "`port_rcv_data`, both matching the 12.58 GB expected each way, while "
+        "the tool reported 94.73.",
+    ]
+
+    suspects = [(c, e) for c, e in nic.items() if e["suspect"]]
+    if suspects:
+        out += ["", "**Points excluded as `unknown_measurement`.** "
+                "`ib_send_bw -b` does not consistently report per direction; "
+                "some points come back at almost exactly twice their "
+                "neighbours, which is the same measurement reported as a sum. "
+                "A figure whose unit is uncertain is not a datum to average:"]
+        for condition, entry in suspects:
+            for key, value, _why in entry["suspect"]:
+                out.append(f"- {condition}, {key}: {value:.2f} Gbit/s")
+
+    out += [
+        "",
+        "**Two of the five registered conditions are not answered here, for "
+        "different reasons that do not merge.**",
+        "",
+        "- `two-independent` is **impossible on this hardware**: each node has "
+        "exactly one InfiniBand device, so there is no pair of disjoint NICs "
+        "to put two flows on. That is a property of the machines.",
+        "- `collective` is **deferred**: an all-reduce over IB needs NCCL, "
+        "which needs torch on both nodes, and the peer node has no such "
+        "environment yet. Nothing here shows it cannot be done.",
+    ]
+    return out
+
+
 # --- the report -----------------------------------------------------------
 
 COLUMNS = [
@@ -412,11 +529,23 @@ def markdown(rows: list[dict], verdicts: list[dict], args) -> str:
         f"{args.iters_note}"
     )
     out.append("")
+    out += ["", "## Location (b) --- the inter-node NIC", ""]
+    out += location_b_section(args.nic)
+
+    out += ["", "## One path, three questions", ""]
     out.append(
-        "**Location (b), the inter-node NIC, is `not run`.** This is one "
-        "machine with one NIC and there is no second node to send to. It is "
-        "reported rather than omitted: an omitted row reads as a row that "
-        "passed, and half a matrix is not a matrix."
+        "The same wire answers differently depending on what crosses it, which "
+        "is why a measurement is keyed by the collective and the number of "
+        "ranks rather than stored as *the* bandwidth of a link:"
+    )
+    out.append("")
+    out.append(
+        "| what was run | ranks | GB/s |\n"
+        "| --- | --- | --- |\n"
+        f"| peer copy across the PCIe bridge | 2 | {PCIE_PLATEAU_GBPS} |\n"
+        "| all-reduce busbw across the same bridge | 2 | 19.34 |\n"
+        "| all-reduce busbw, the TP=4 group | 4 | 8.71 |\n"
+        f"| peer copy over NVLink | 2 | {NVLINK_PLATEAU_GBPS} |"
     )
 
     out += ["", "## The verdict, against the registered limits", ""]
@@ -557,8 +686,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = args.raw or RAW
+    args.nic = nic_results(root)
+    # Location (a) only. The collective raws are a different instrument
+    # (`link_probe.py` under torchrun) and the NIC raws a third
+    # (`ib_send_bw` across two nodes); neither carries the peer-copy harness's
+    # `occupancy_stable` or `binding_claim_is_consistent`, and running this
+    # loader's refusal check over them would reject files for lacking fields
+    # they were never meant to have.
     files = sorted(
-        p for p in root.glob("*/*.json") if not p.parent.name.startswith("collective")
+        p for p in root.glob("*/*.json")
+        if not p.parent.name.startswith("collective")
+        and "-nic-" not in p.parent.name
     )
     if not files:
         raise SystemExit(

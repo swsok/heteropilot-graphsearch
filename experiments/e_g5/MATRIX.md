@@ -18,8 +18,11 @@ GPU0-3 on NUMA 0, GPU4-7 on NUMA 1; across NUMA is `SYS`. One NIC, on NUMA 1.
 Two constraints decide most of this document, and both were found by reading
 the code rather than by assuming:
 
-**(A) There is one node.** The work order's topology conditions 2 and 3 are
-*노드 간* — between nodes. There is no second node to deploy to.
+**(A) A second node exists as of 2026-09-29, so this is no longer a reason.**
+`s6` is another eight-GPU A40 machine on the same InfiniBand subnet, reachable
+over ssh. E-G4's location (b) has been measured across it. What follows is
+therefore struck as a reason for E-G5's conditions 2 and 3, and only (B)
+remains --- which is sufficient on its own.
 
 **(B) heteropilot cannot deploy a disaggregated P/D pair.**
 `planner/deploy/vllm_cuda.py::build_serve_command` says so in its own
@@ -28,9 +31,13 @@ builds no `--kv-transfer-config`, no `kv_connector`, no producer/consumer
 role. Disaggregation would need a fifth hook PR in that repository, and
 `vendor/heteropilot` is read-only here.
 
-Either constraint alone removes conditions 2 and 3. Both hold. So **the
-registered topology axis is two-thirds undeployable**, and this is stated here,
-before anything ran, rather than discovered in the results.
+(A) no longer holds; (B) does, and it alone removes conditions 2 and 3. So
+**the registered topology axis is still two-thirds undeployable**, for one
+reason instead of two. Stated here rather than discovered in the results.
+
+Writing both reasons down separately is what makes this legible now: had they
+been merged into "we cannot run inter-node P/D", the arrival of a second node
+would have looked like it changed everything, and it changes exactly half.
 
 ### What is run instead, and why it answers the same question
 
@@ -95,7 +102,7 @@ by memory rather than by latency, which is a different part of the bound.
 | combination | status | why |
 | --- | --- | --- |
 | RNGD (furiosa) P/D | **excluded_by_scope** | `planner/deploy/` has `vllm_cuda`, `vllm_ascend`, `kubernetes`. There is no furiosa backend, and this node has no NPU of any kind (`docs/nodes/a40.md`). |
-| inter-node P/D, any model | **unknown_measurement** | one node, and no disaggregation in the deploy backend (§0). Not `impossible_proven`: nothing here shows it cannot work, only that it was not run. |
+| inter-node P/D, any model | **unknown_measurement** | no disaggregation in the deploy backend (§0). A second node exists as of 2026-09-29, so that half of the reason is gone. Not `impossible_proven`: nothing here shows it cannot work, only that it was not run. |
 | Qwen3-32B at TP=1 | **impossible_proven** | 61 GB of bf16 weights on a 45 GB usable device. Arithmetic, not a budget. |
 | Qwen3-32B calibrated p99 | **unknown_measurement** | no A40 accuracy domain for it, and this run may not create one. |
 

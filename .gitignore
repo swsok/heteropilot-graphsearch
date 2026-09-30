@@ -36,3 +36,6 @@ paper/*.blg
 paper/*.fls
 paper/*.fdb_latexmk
 paper/*.synctex.gz
+
+# The P6 instruction file lives on main; it is not part of the draft.
+message_to_claude_code_*.md

@@ -6,3 +6,63 @@
 %% the interconnect and the SLO -- the contract needs goodput and cost too,
 %% which is what heteropilot's H1 hook added (slo.min_goodput_rps).
 \section{Problem statement}
+\label{sec:problem}
+
+\paragraph{Inputs.}
+A service specification fixes the model and dtype, the traffic (arrival rate,
+burstiness, input and output token distributions) and the service level
+objectives: a percentile and a limit for time to first token and for time per
+output token, and---when the operator states one---a minimum goodput in
+requests per second. A cluster specification fixes the nodes, their
+accelerators with model, memory and price, the links between them with
+bandwidth, latency and direction, and the resources several links contend for,
+each with a capacity and the share already reserved by traffic this planner
+does not control.
+
+\paragraph{A candidate is a complete plan, not a device subset.}
+A candidate fixes which devices run which role at which tensor- and
+pipeline-parallel degree, with how many replicas, under which scheduler knobs,
+and with which routing policy. Two candidates that differ only in which
+devices they occupy are two candidates. This is the point at which this work
+departs from the planner it extends, which enumerates over islands and so
+cannot express the difference.
+
+\paragraph{Objective.}
+Minimise cost per hour among candidates that meet every declared constraint.
+Where a cluster does not price its devices the objective is not approximated:
+a plan touching an unpriced device cannot be scored on cost at all, and a
+partial sum would rank the under-priced plan cheapest. Such a result is
+reported as uncomputed rather than as zero.
+
+% claim: C2
+% claim: C3
+\paragraph{Five states, which never merge.}
+Every candidate ends in exactly one of five states, and the distinction between
+them is the discipline the rest of this paper depends on.
+
+\begin{itemize}
+  \item \textbf{\texttt{impossible\_proven}} --- arithmetic that is optimistic
+    on every uncertain term still misses a declared constraint.
+  \item \textbf{\texttt{excluded\_by\_scope}} --- removed by a budget or a
+    stated scope cut, not by a property of the hardware.
+  \item \textbf{\texttt{deferred\_heuristic}} --- rejected by a rule that
+    cannot be shown to be a relaxation. It is not called proved.
+  \item \textbf{\texttt{unknown\_measurement}} --- the evaluator was asked and
+    did not answer; the simulator failed, or no measurement exists for a
+    condition the candidate needs.
+  \item \textbf{\texttt{evaluated}} --- a verdict from the evaluator.
+\end{itemize}
+
+\emph{Unevaluated is not infeasible.} A search that returns a recommendation
+and silently omits what it never reached has made a claim about the whole space
+on evidence from part of it. Every result in Section~\ref{sec:eval} therefore
+reports, beside the recommendation, how many representatives went unjudged and
+how many placements they stand for.
+
+\paragraph{Two correctness numbers.}
+Throughout, \texttt{false\_infeasible} counts candidates the search eliminated
+that an exhaustive oracle finds feasible, and \texttt{mismerged\_pairs} counts
+pairs of placements folded into one representative that the oracle prices
+differently. Both must be zero. They are conditions, not targets: a non-zero
+value is not a worse score but a broken invariant, and the registered response
+is to stop and report rather than to relax the test.

@@ -15,3 +15,75 @@
 %% contention BETWEEN candidates; and a simulation at 128 devices is not a
 %% hardware accuracy result.
 \section{Limitations}
+\label{sec:limits}
+
+Each of these was registered before the experiment that could have revealed it,
+which is what allows the section to be written plainly rather than defensively.
+
+% claim: C4
+\paragraph{The compression has a precondition, and clusters can fail it.}
+Exact equivalence folds placements only where the cluster has repeated
+structure. On a fully asymmetric cluster it folds almost nothing: at 128
+devices the ratio is \egsixRatioAsym, against \egsixRatioSym{} on a fully
+symmetric one. The asymmetric configuration is in the corpus precisely so the
+number is reported. Where the isomorphism check costs more than the simulation
+it saves, the registered response is to demote exact compression to a cache key
+rather than to argue the cost away.
+
+% claim: C13
+% claim: C14
+% pending
+\paragraph{Six to eight per cent of placements never simulate.}
+They are reported as \texttt{unknown\_measurement} and are not counted as
+infeasible, but the cause is not established, and until it is, every
+correctness result in this paper is a statement about the placements the
+simulator judged. \pending{P1.5: SIM\_ERROR cause}
+
+% claim: C15
+\paragraph{The contention model is fluid, and has an upper message size.}
+It is processor sharing over declared shared resources, recomputed when a flow
+starts or finishes. It is not packet-level; it does not model contention
+\emph{between} candidates, which are alternatives rather than co-tenants; and
+above a message size the hardware overlaps the two directions of one link in a
+way processor sharing does not capture, making the model optimistic there by
+about a third. That boundary is stated rather than absorbed into a fitted
+capacity.
+
+\paragraph{The simulator is not told what the search decided on.}
+The adapter cannot express shared resources to the simulator, so the very
+distinction the equivalence relation preserves is invisible to the evaluator
+that prices it. The adapter reports what it could not pass on, which makes the
+gap legible but does not close it. Closing it needs either a simulator with a
+link graph or a model that folds the effect into the numbers it passes---and
+the second would make the simulator's output unattributable, which is why it
+was not done.
+
+% claim: C22
+% pending
+\paragraph{The hardware campaign covers one accelerator kind, and one of its
+two node-count limits has lifted.}
+The contention measurements now cover both an intra-node bus and an inter-node
+NIC across two machines. What is still not run is inter-node \emph{P/D}, and
+the reason is no longer that there is one machine: it is that the deployment
+backend builds a configuration for a single aggregated engine, with no
+disaggregated prefill. Deployment to the NPU in the design's scope is likewise
+impossible, because no backend for it exists. \pending{E-G5: inter-node P/D}
+
+\paragraph{Every fixture but one is fictional.}
+The toy clusters and the synthetic scaling clusters are invented and say so in
+their headers; a result computed from one is a result about the search, never
+about hardware. The single exception is the node description generated from the
+microbenchmark's raw files. A simulation at 128 devices is not a large-scale
+accuracy result and is not offered as one.
+
+\paragraph{What a certificate certifies.}
+Where the search can certify that nothing unevaluated could have been better,
+that statement is bounded by the declared candidate space and by the evaluation
+model. It does not say that no better deployment exists; it says that none
+exists among candidates this specification admits, judged by this evaluator.
+
+\paragraph{Deferred by scope.}
+A single tensor-parallel group spanning two accelerator vendors, and KV-cache
+format conversion between them, are outside this work. Learned rankers and
+mixed parallelism degrees within one group are future work. These are stated as
+scope rather than as difficulty: nothing here shows they cannot be done.

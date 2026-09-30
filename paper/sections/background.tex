@@ -8,3 +8,45 @@
 %% contention) / the hooks H1-H5. A reader must be able to tell, per claim,
 %% which repository the code is in.
 \section{Background}
+\label{sec:background}
+
+\paragraph{Execution islands.}
+The planner this work extends describes a cluster as a set of \emph{execution
+islands}: maximal groups of accelerators of one model, joined by one kind of
+intra-island interconnect, that can host a single serving engine. A candidate
+names an island and a parallelism degree; the deployer then resolves the island
+to its device list and lets the runtime take the devices it needs.
+
+That abstraction is already a compression, and an unstated one. Enumerating
+candidates over islands rather than over device subsets collapses every
+placement within an island into a single candidate, which is sound exactly when
+the devices of an island are interchangeable. They are interchangeable in model
+and in memory by the definition of an island. They are not necessarily
+interchangeable in what their traffic crosses, and nothing in the island
+definition requires them to be.
+
+\paragraph{Approximate merging already present.}
+The planner also merges performance envelopes: two configurations whose
+\emph{twin} keys agree share a cached prediction. That merge is approximate by
+design---it is a cache key, chosen for hit rate---and the work here does not
+replace it. The distinction matters for reading the two together: an
+approximate merge that is wrong costs accuracy in a prediction, while an
+equivalence that is wrong costs a candidate its verdict.
+
+\paragraph{The simulator, and what it is not told.}
+Latency predictions come from a discrete-event simulator driven by an
+analytical network backend. It accepts a link bandwidth and a latency per
+collective, and it has no representation of a link graph: there is no way to
+tell it that two groups share a wire, or that something outside the deployment
+is already using part of one. Anything the search knows about shared resources
+must therefore either be folded into the numbers it passes, or reported as
+lost. Section~\ref{sec:adapter} takes the second route and says why.
+
+\paragraph{What is reused and what is new.}
+Section~\ref{sec:limits} carries the module-level table. In summary: the
+inventory, candidate generator, predictor interface, optimiser and deployment
+backends are the existing planner's and are used unmodified; five hooks were
+added to it, each recorded as a numbered deviation in that repository; and the
+graph representation, equivalence, elimination, ranking, adaptive budget,
+simulator adapter and restoration are new. No behaviour of the existing planner
+changes when the hooks are not used, which its own golden tests check.

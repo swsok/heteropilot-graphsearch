@@ -5,3 +5,34 @@
 %% and P/D where the runtime is confirmed to support it. Deferred and said so:
 %% a single TP group spanning GPU and NPU, and KV-cache format conversion.
 \section{Conclusion}
+\label{sec:conclusion}
+
+% claim: C24
+Placement is a decision a serving planner has to make and, when it enumerates
+over islands rather than over devices, has no language for. This work gives it
+one: an equivalence relation over placements that folds only what a graph
+isomorphism confirms interchangeable, and that carries the shared communication
+boundary so that two placements alike in every local attribute but crossing
+different contended links are kept apart. Removing the boundary from the
+signature produces mis-merges the full relation does not.
+
+% claim: C2
+Elimination is a relaxation of the feasibility test or it is not called
+elimination, and each check publishes the optimistic assumptions it made. Across
+every experiment reported here, no feasible candidate was wrongly removed and no
+two differently-priced placements were folded together; both numbers are
+reported for every arm rather than summarised once, because they are conditions
+rather than scores.
+
+% claim: C11
+The budget is adaptive and, more importantly, honest about itself: the output
+names how many representatives went unjudged and how many placements they stand
+for. Under the real simulator the compression saved more time than it cost,
+with its own hashing and isomorphism checks charged against it.
+
+% pending
+What remains is the hardware campaign. One of its results is already measured
+and is the reason the rest is worth running: two placements of a single
+template, differing only in which interconnect their collective crosses, differ
+in served tail latency by enough to move the load at which the service still
+meets its objectives. \pending{E-G5}

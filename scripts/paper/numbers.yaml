@@ -1,0 +1,47 @@
+# name -> which cell of which results file. `scripts/paper/numbers.py` turns
+# each into a \newcommand in paper/numbers.tex.
+#
+# Add an entry before writing a number into prose. A literal in a section is
+# caught by `make check`, which is the point: a number in the body is a number
+# that will be wrong after the next re-run and nobody will notice.
+
+# --- E-G3: correctness under the real simulator ---------------------------
+egthreeEmbeddingsAbcde:   {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: embeddings}
+egthreeRepsAbcde:         {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: representatives}
+egthreeRatioAbcde:        {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: compression_ratio}
+egthreeUnjudgedAbcde:     {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: unjudged}
+egthreeSavingAbcde:       {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, column: saving_s, format: "{:.0f}"}
+egthreeSimOracleAbcde:    {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, column: t_sim_oracle_s, format: "{:.0f}"}
+egthreeSimProposedAbcde:  {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, column: t_sim_proposed_s, format: "{:.0f}"}
+egthreeRatioLab:          {file: e_g3_real_sim_oracle.md, table: 0, row: heterogeneous-lab, column: compression_ratio}
+egthreeSavingLab:         {file: e_g3_real_sim_oracle.md, table: 1, row: heterogeneous-lab, column: saving_s, format: "{:.0f}"}
+
+# --- E-G6: scale -----------------------------------------------------------
+# 128 devices appears three times, once per symmetry. `where` says which.
+egsixEmbeddingsLarge:     {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "0.0"}, column: embeddings}
+egsixRepsAsym:            {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "0.0"}, column: representatives}
+egsixRatioAsym:           {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "0.0"}, column: compression_ratio}
+egsixRepsSym:             {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "1.0"}, column: representatives}
+egsixRatioSym:            {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "1.0"}, column: compression_ratio}
+egsixEnumerateLarge:      {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "0.0"}, column: t_enumerate_s, format: "{:.0f}"}
+
+# --- E-G7: holdout ---------------------------------------------------------
+egsevenHoldoutEmbeddings: {file: e_g7_holdout.md, table: 0, row: synth-holdout-1, column: embeddings}
+egsevenHoldoutReps:       {file: e_g7_holdout.md, table: 0, row: synth-holdout-1, column: representatives}
+egsevenHoldoutRatio:      {file: e_g7_holdout.md, table: 0, row: synth-holdout-1, column: compression_ratio}
+
+# --- E-G4: the contention model against the wire ---------------------------
+# The cells are composite ("93.1% / 90.9% p90"); `pattern` takes one field.
+egfourFluidPlannedSame:  {file: e_g4_microbench.md, table: 2, row: as_planned, where: {condition: two-same}, column: fluid, pattern: "^([0-9.]+)%"}
+egfourNullPlannedSame:   {file: e_g4_microbench.md, table: 2, row: as_planned, where: {condition: two-same}, column: "null", pattern: "^([0-9.]+)%"}
+egfourFluidMeasuredSame: {file: e_g4_microbench.md, table: 2, row: as_measured, where: {condition: two-same}, column: fluid, pattern: "^([0-9.]+)%"}
+egfourFluidMeasuredBidi: {file: e_g4_microbench.md, table: 2, row: as_measured, where: {condition: bidirectional}, column: fluid, pattern: "^([0-9.]+)%"}
+egfourNullMeasuredBidi:  {file: e_g4_microbench.md, table: 2, row: as_measured, where: {condition: bidirectional}, column: "null", pattern: "^([0-9.]+)%"}
+# One path, three questions -- the table E-G4 carries so the body can cite them.
+egfourPeerBridge:  {file: e_g4_microbench.md, table: 1, row: "peer copy across the PCIe bridge", column: "GB/s"}
+egfourBusbwTwo:    {file: e_g4_microbench.md, table: 1, row: "all-reduce busbw across the same bridge", column: "GB/s"}
+egfourBusbwFour:   {file: e_g4_microbench.md, table: 1, row: "all-reduce busbw, the TP=4 group", column: "GB/s"}
+egfourPeerNvlink:  {file: e_g4_microbench.md, table: 1, row: "peer copy over NVLink", column: "GB/s"}
+# Location (b) -- the inter-node NIC.
+egfourNicSingle:   {file: e_g4_microbench.md, table: 0, row: single, column: "median Gbit/s"}
+egfourNicTwoSame:  {file: e_g4_microbench.md, table: 0, row: two-same, column: "median Gbit/s", pattern: "^([0-9.]+)"}
