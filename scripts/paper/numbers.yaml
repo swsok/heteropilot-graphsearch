@@ -53,3 +53,11 @@ egfourCollNodeTwo:  {file: e_g4_microbench.md, find: ["ranks", "busbw plateau"],
 # rule cannot see, because it matches digits and not words.
 egthreeUnjudgedLab:   {file: e_g3_real_sim_oracle.md, find: [fixture, embeddings, unjudged], row: heterogeneous-lab, column: unjudged}
 egthreeEmbeddingsLab: {file: e_g3_real_sim_oracle.md, find: [fixture, embeddings, unjudged], row: heterogeneous-lab, column: embeddings}
+
+# --- E-G5: the placement, and whether the search's verdict on it holds -----
+# From the rerun after GS-30. `vs T1` is the median p99 TTFT ratio; the
+# agreement table counts rows whose placement was simulated to a verdict.
+egfiveTtwoOverTone:     {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T2, column: "vs T1", pattern: "^([0-9.]+)x$"}
+egfiveAgreeRows:        {file: e_g5_real_hardware.md, find: ["placement", "agree"], row: all, column: agree}
+egfiveAllRows:          {file: e_g5_real_hardware.md, find: ["placement", "agree"], row: all, column: rows}
+egfiveTthreeDisagree:   {file: e_g5_real_hardware.md, find: ["placement", "agree"], row: T3, column: disagree}

@@ -18,7 +18,7 @@
   "dataset_path": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps55.jsonl",
   "dataset_hash": "f7f82c0dfd59db83660d1f1294620d7630d70cfaf71f4d7ad04c983e03c86628",
   "num_requests": 150,
-  "started_at": "2026-09-29T11:01:33.384650Z",
-  "finished_at": "2026-09-29T11:02:26.436963Z",
+  "started_at": "2026-09-30T09:41:22.508927Z",
+  "finished_at": "2026-09-30T09:42:15.665420Z",
   "tick_seconds": 1.0
 }

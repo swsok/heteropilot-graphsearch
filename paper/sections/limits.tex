@@ -55,14 +55,18 @@ way processor sharing does not capture, making the model optimistic there by
 about a third. That boundary is stated rather than absorbed into a fitted
 capacity.
 
-\paragraph{The simulator is not told what the search decided on.}
-The adapter cannot express shared resources to the simulator, so the very
-distinction the equivalence relation preserves is invisible to the evaluator
-that prices it. The adapter reports what it could not pass on, which makes the
-gap legible but does not close it. Closing it needs either a simulator with a
-link graph or a model that folds the effect into the numbers it passes---and
-the second would make the simulator's output unattributable, which is why it
-was not done.
+\paragraph{The simulator is told a placement's bandwidth, not what it shares.}
+For each placement the adapter replaces the simulator's link figures with that
+placement's own path bottleneck, reservations subtracted, and the hardware
+rerun shows the simulator responds to it: two placements of one template get
+different predictions and, on the two tensor-parallel pairs, the verdict the
+hardware reached. What the adapter cannot pass on is which \emph{shared
+resource} a flow crosses, so contention between a candidate's own flows on one
+port or NIC is invisible to the evaluator. The adapter names every resource it
+dropped, which makes the gap legible but does not close it. Closing it needs a
+simulator with a link graph, or a model that folds contention into the numbers
+passed---and the second would make the simulator's output unattributable,
+which is why it was not done.
 
 % claim: C22
 % pending

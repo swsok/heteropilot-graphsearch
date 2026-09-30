@@ -253,12 +253,13 @@ the next node's prediction wrong silently.
 \subsection{Hardware}
 
 % claim: C18
-Table~\ref{tab:e_g5_real_hardware} reports one template's recommendation at
-three placements of itself, three repetitions each, against the same latency
-target. **On one wire it meets that target and on another it misses it
-sevenfold**, with the same model, trace, scheduler knobs, seed and plan; the
-ranges do not overlap, and time per output token and goodput clear their
-targets at every placement, so the latency axis is the one that decides.
+Table~\ref{tab:e_g5_real_hardware} reports the recommendation at three
+placements, three repetitions each, against the same latency target: one
+tensor-parallel pair on two different pairs of devices, and a four-way group.
+\textbf{On one wire the pair meets that target and on the other it misses it
+by \egfiveTtwoOverTone{}x}, with the same model, trace, scheduler knobs, seed
+and plan; the ranges do not overlap, and time per output token and goodput
+clear their targets at both, so the latency axis is the one that decides.
 
 The planner being extended cannot express the difference between those two
 placements at all. It names a template, and the choice this experiment shows
@@ -266,15 +267,26 @@ to be decisive is one it has no language for. That is the paper's claim in its
 strongest available form, and it is a hardware measurement rather than an
 argument.
 
+% claim: C33
+\textbf{Asked about the placement it is deployed on, the search tells the two
+pairs apart.} Each row's prediction is the search's verdict on that placement
+itself, and it matches the hardware's verdict in \egfiveAgreeRows{} of
+\egfiveAllRows{} rows: at both pairs, and not at the four-way group, where all
+\egfiveTthreeDisagree{} disagreements are a predicted \emph{met} that the
+hardware misses. A false \emph{met} is the direction that matters to a planner,
+and it is reported as a miss. An earlier version of this experiment printed
+the search's own pick beside every measurement, so the two pairs carried one
+identical prediction and looked indistinguishable to the evaluator; that
+reading was a defect of the harness, not a property of the simulator, and it is
+withdrawn.
+
 % claim: C19
 % claim: C20
 The two boundary alternatives are deployed against the bounds that ranked or
 rejected them, each offered the rate \emph{its own} spec declares so that a
 predicted and a measured column answer the same question. The prediction is
-optimistic on both axes---and identical across the three placements, which is
-the concrete form of the adapter limitation Section~\ref{sec:adapter}
-reports: the evaluator cannot see the distinction the search is deciding on.
-This experiment does not separate the candidate causes---prediction error, the
+optimistic on time to first token in most rows, not all of them. This
+experiment does not separate the candidate causes---prediction error, the
 contention model, the engine's scheduler---and does not choose the most
 flattering one.
 

@@ -47,7 +47,8 @@ exists to prevent.
 | C15 | A processor-sharing contention model predicts measured transfer time better than pricing each flow alone | `experiments/results/e_g4_microbench.md` | hardware | Established, **at location (a) only, and within 4–64 MiB**[^eg4] |
 | C16 | The A40's intra-node PCIe path is **not** a shared resource: two concurrent peer copies between disjoint device pairs each sustain the single-copy rate | `experiments/results/e_g4_microbench.md` | hardware | Established |
 | C17 | A two-rank and a four-rank all-reduce over one path are different measurements, so `world_size` belongs in the measurement key | `experiments/results/e_g4_microbench.md` (19.34 against 8.71 GB/s busbw) | hardware | Established |
-| C18 | Whether the recommendation meets its SLOs on hardware **depends on the placement**, which the planner cannot choose: the same plan meets its latency target on one wire and misses it sevenfold on another | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^eg5ttft] |
+| C18 | Whether the recommendation meets its SLOs on hardware **depends on the placement**, which the planner cannot choose: the same plan meets its latency target on one wire and misses it by a factor of eight on another | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^eg5ttft] |
+| C33 | Asked about the placement deployed, the search's verdict matches the hardware's at both TP=2 placements and not at the TP=4 one, where it predicts the target met and the hardware misses it | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^eg5verdict] |
 | C19 | The throughput upper bound's optimistic ceiling sits an order of magnitude above measured capacity | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^eg5bound] |
 | C20 | A candidate proved impossible really does miss the constraint it was proved to miss, on hardware | `experiments/results/e_g5_real_hardware.md` | hardware | Established, **on one candidate, and the test is weak by construction**[^eg5bound] |
 | C21 | Two placements differing only in which wire their tensor-parallel all-reduce crosses differ measurably in served TTFT | `experiments/e_g5/raw/pilot/` | hardware | Established, **intra-node, by a placement the planner cannot name**[^eg5p] |
@@ -132,13 +133,22 @@ exists to prevent.
     a disaggregated prefill pair cannot be deployed at all. That is a hook PR to
     that repository, not a measurement waiting to be taken.
 
-[^eg5ttft]: Nine repetitions, three per placement, of one template's
-    recommendation against a 550 ms target. On the NVLink pair the measured
-    $p99$ TTFT is 379.3 ms and the target is **met**; across the PCIe bridge it
-    is 2,891.3 ms and **missed**, a factor of 7.6, with the same model, trace,
-    knobs, seed and plan. The ranges do not overlap. TPOT and goodput clear
-    their targets at every placement, so the latency axis is the one that
-    decides, and the placement is what decides it.
+[^eg5verdict]: 21 of 27 rows agree; all six disagreements are T3's
+    recommendation and feasible-marginal rows, predicted met and measured
+    missed. Before GS-30 this could not be asked: every row carried the
+    search's own pick, so T1 and T2 had identical predictions. The T3 miss is
+    reported as a miss --- a false *met* is the direction that matters to a
+    planner --- and is not attributed to a cause this experiment did not
+    separate.
+
+[^eg5ttft]: Rerun after GS-30, three repetitions per placement, against a
+    550 ms target. On the NVLink pair (T1) the median measured $p99$ TTFT is
+    404.5 ms and the target is **met**; the same TP=2 plan across the PCIe
+    bridge (T2) measures 3,341.1 ms and **misses**, 8.3x, with the same model,
+    trace, knobs, seed and plan. The ranges do not overlap. TPOT and goodput
+    clear their targets at both, so latency is the axis that decides. The first
+    campaign measured 379.3 and 2,891.3 ms (7.6x); both runs are in the raw
+    history and the claim rests on the rerun.
 
     An earlier reading of one condition alone had this row as *Not
     established*, because the first placement measured happened to be one that

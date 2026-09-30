@@ -77,13 +77,31 @@
         "this_harness_uses": "0,2",
         "why": "T2: PCIe across the host bridge, measured 25.12 GB/s p2p"
       },
+      "placement_verdict": {
+        "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=628.01949693), Violation(metric='slo_goodput_rps', target=2.3, predicted=2.1716933622010908)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+        "devices": [
+          "a40x8/gpu0",
+          "a40x8/gpu2"
+        ],
+        "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@673ab68d0a1d",
+        "feasible": false,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated"
+      },
       "plan_id": "hp-00004",
       "predicted": {
+        "p99_tpot_ms": 55.70723952,
+        "p99_ttft_ms": 628.01949693,
+        "slo_goodput_rps": 2.1716933622010908
+      },
+      "returncode": 0,
+      "search_recommendation_predicted": {
+        "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@857398a0d1b9",
+        "note": "the search's own pick for a candidate of this size, which need not be the placement deployed; NOT the prediction for this row (GS-30)",
         "p99_tpot_ms": 50.281320099999995,
         "p99_ttft_ms": 456.5386824499997,
         "slo_goodput_rps": 2.374754492278399
       },
-      "returncode": 0,
       "state": "measured",
       "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl"
     },
@@ -159,13 +177,31 @@
         "this_harness_uses": "0,2",
         "why": "T2: PCIe across the host bridge, measured 25.12 GB/s p2p"
       },
+      "placement_verdict": {
+        "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=628.01949693), Violation(metric='slo_goodput_rps', target=2.3, predicted=2.1716933622010908)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+        "devices": [
+          "a40x8/gpu0",
+          "a40x8/gpu2"
+        ],
+        "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@673ab68d0a1d",
+        "feasible": false,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated"
+      },
       "plan_id": "hp-00005",
       "predicted": {
+        "p99_tpot_ms": 55.70723952,
+        "p99_ttft_ms": 628.01949693,
+        "slo_goodput_rps": 2.1716933622010908
+      },
+      "returncode": 0,
+      "search_recommendation_predicted": {
+        "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@86d623362a51",
+        "note": "the search's own pick for a candidate of this size, which need not be the placement deployed; NOT the prediction for this row (GS-30)",
         "p99_tpot_ms": 50.281320099999995,
         "p99_ttft_ms": 456.5386824499997,
         "slo_goodput_rps": 2.374754492278399
       },
-      "returncode": 0,
       "state": "measured",
       "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl"
     },
@@ -241,13 +277,31 @@
         "this_harness_uses": "0,2",
         "why": "T2: PCIe across the host bridge, measured 25.12 GB/s p2p"
       },
+      "placement_verdict": {
+        "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=35947.33368083), Violation(metric='p99_tpot_ms', target=60.0, predicted=65.26885331), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+        "devices": [
+          "a40x8/gpu0",
+          "a40x8/gpu2"
+        ],
+        "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+        "feasible": false,
+        "search_state": "impossible_proven (by a bound; never simulated)",
+        "state": "evaluated"
+      },
       "plan_id": "boundary-cuda-a40-a40x8-tp2-dp1-s128-t2048",
       "predicted": {
+        "p99_tpot_ms": 65.26885331,
+        "p99_ttft_ms": 35947.33368083,
+        "slo_goodput_rps": 0.0
+      },
+      "returncode": 0,
+      "search_recommendation_predicted": {
+        "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+        "note": "the search's own pick for a candidate of this size, which need not be the placement deployed; NOT the prediction for this row (GS-30)",
         "p99_tpot_ms": 60.0,
         "p99_ttft_ms": 550.0,
         "slo_goodput_rps": 55.0
       },
-      "returncode": 0,
       "state": "measured",
       "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps55.jsonl"
     }
@@ -258,21 +312,21 @@
   "hf_model": "NousResearch/Meta-Llama-3.1-8B",
   "level": "knee",
   "loadavg_after": [
-    4.67,
-    4.16,
-    4.1
+    4.56,
+    3.77,
+    3.23
   ],
   "model": "llama31-8b",
   "model_substitution_note": "the planner is given the gated `meta-llama/...` id that heteropilot's profiles name; the engine serves the ungated NousResearch mirror of the same weights",
   "pattern": "normal",
   "planner_model": "meta-llama/Llama-3.1-8B",
   "preconditions": {
-    "checked_at": "2026-09-29T10:49:43.329863+00:00",
+    "checked_at": "2026-09-30T09:28:54.203280+00:00",
     "gpu_tenants_before": [],
     "loadavg_before": [
-      4.57,
-      4.22,
-      4.15
+      3.42,
+      3.16,
+      3.0
     ],
     "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
     "problems": [],
@@ -296,5 +350,5 @@
     "tp": 2
   },
   "topology_key": "T2",
-  "written_at": "2026-09-29T10:55:10.746131+00:00"
+  "written_at": "2026-09-30T09:34:57.196775+00:00"
 }
