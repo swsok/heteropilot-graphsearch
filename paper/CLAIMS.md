@@ -19,8 +19,8 @@ cannot quietly reacquire it.
 
 **A status may be qualified, and the qualification travels with the claim.**
 E-G3's correctness row reads "Established, for the placements the simulator
-judged" because `complete` is False on all three fixtures: 6–8 % of placements
-came back `SIM_ERROR` and have no verdict either way. Dropping the clause would
+judged" because `complete` is False on all three fixtures: between 4.5 % and
+21 % of placements came back `SIM_ERROR` and have no verdict either way. Dropping the clause would
 turn a bounded result into an unbounded one, which is the failure this file
 exists to prevent.
 
@@ -42,8 +42,8 @@ exists to prevent.
 | C10 | The correctness result survives replacing the mock with LLMServingSim | `experiments/results/e_g3_real_sim_oracle.md` | real-sim | Established, **for the placements the simulator judged** |
 | C11 | The compression's own cost is smaller than the simulation time it saves | `experiments/results/e_g3_real_sim_oracle.md` (`saving_s`) | real-sim | Established |
 | C12 | The compression ratio is a property of the graph, not of the predictor | `e_g1_toy_pilot.md` and `e_g3_real_sim_oracle.md` agree to four decimals on all three shared fixtures | mock + real-sim | Established |
-| C13 | 6–8 % of placements fail to simulate at all (`SIM_ERROR`), and are reported as `unknown_measurement` rather than infeasible | `experiments/results/e_g3_real_sim_oracle.md` (`unjudged`, `complete`) | real-sim | Established as a limitation; cause **not** established |
-| C14 | The cause of those `SIM_ERROR` failures | — (P1.5) | real-sim | Pending |
+| C13 | Between 4.5 % and 21 % of placements fail to simulate at all (`SIM_ERROR`), and are reported as `unknown_measurement` rather than infeasible | `experiments/results/e_g3_real_sim_oracle.md` (`unjudged`, `complete`) | real-sim | Established as a limitation; cause **not** established |
+| C14 | Those failures have **two** causes, not one: a missing profile for a tensor-parallel degree, and a decode instance exhausting its KV mid-run | `experiments/results/e_g3_sim_error_causes.md` | real-sim | Established[^simerr] |
 | C15 | A processor-sharing contention model predicts measured transfer time better than pricing each flow alone | `experiments/results/e_g4_microbench.md` | hardware | Established, **at location (a) only, and within 4–64 MiB**[^eg4] |
 | C16 | The A40's intra-node PCIe path is **not** a shared resource: two concurrent peer copies between disjoint device pairs each sustain the single-copy rate | `experiments/results/e_g4_microbench.md` | hardware | Established |
 | C17 | A two-rank and a four-rank all-reduce over one path are different measurements, so `world_size` belongs in the measurement key | `experiments/results/e_g4_microbench.md` (19.34 against 8.71 GB/s busbw) | hardware | Established |
@@ -162,6 +162,32 @@ exists to prevent.
     is already the bottleneck. Two different mixtures of two wires; the
     contributions are not decomposed and the result file says so. What the rows
     establish is the keying, in either direction, not an ordering.
+
+
+[^simerr]: Established by re-running E-G3's oracle arm with the simulator's
+    working directory preserved and reading the tracebacks. All three fixtures
+    reproduced their recorded counts exactly.
+
+    | fixture | failures | exception |
+    | --- | --- | --- |
+    | graph-toy-abcde | 24 | `FileNotFoundError` |
+    | graph-toy-shared-nic | 18 | `FileNotFoundError` |
+    | heterogeneous-lab | 24 | `RuntimeError` |
+
+    The first is **no profile data** for tp=2 on that hardware --- the bundle
+    holds tp1 only --- and the simulator refuses rather than extrapolating,
+    which is the right refusal. The second is the simulator's memory model
+    finding a decode instance out of KV mid-run and raising instead of
+    returning a verdict; every one of those is a P/D candidate with prefill on
+    the 96 GB device and decode on the 24 GB one, and the **reverse direction
+    succeeds**.
+
+    **Both stay `unknown_measurement`.** A missing profile is not a property of
+    the placement and a crash is not a verdict. The memory bound is not at
+    fault for the second either: it checks weights plus *one median request's*
+    KV and declares that relaxation in its own proof, so it cannot reject on
+    steady-state KV without assuming a concurrency the most optimistic
+    arithmetic does not force.
 
 
 ## Retracted

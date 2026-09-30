@@ -58,14 +58,22 @@ oracle prices differently were folded together.
 
 % claim: C13
 The \texttt{complete} column is \textbf{False} on all three, and that
-qualification travels with the result everywhere it is quoted. Between six and
-eight per cent of placements failed to simulate at all. They are reported as
+qualification travels with the result everywhere it is quoted. The share of
+placements that failed to simulate at all ranges from a twentieth of the
+largest corpus to \egthreeUnjudgedLab{} of the \egthreeEmbeddingsLab{}
+placements on the smallest. They are reported as
 \texttt{unknown\_measurement}---the evaluator was asked and did not
 answer---and not as infeasible. The correctness claim is therefore about the
 placements the simulator judged, which is a narrower statement than it would be
-if those failures had been counted as rejections. Their cause is not
-established and is listed as an open item in Section~\ref{sec:limits}.
-\pending{P1.5: SIM\_ERROR cause}
+if those failures had been counted as rejections. % claim: C14
+Their cause is now established, and it is two causes rather than one. On the
+toy corpora every failure is a missing profile: no measurement exists for that
+tensor-parallel degree on that hardware, and the simulator refuses rather than
+extrapolating. On the heterogeneous fixture every failure is instead a decode
+instance running out of KV mid-run---all of them prefill on the larger device
+feeding decode on the smaller, with the reverse direction succeeding. Both
+remain \texttt{unknown\_measurement}: a missing profile is not a property of
+the placement, and a crash is not a verdict.
 
 \input{e_g3_real_sim_oracle_2}
 

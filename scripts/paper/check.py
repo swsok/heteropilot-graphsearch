@@ -3,10 +3,11 @@
 
 Four checks, each for a failure that is invisible on a casual read:
 
-1. **No numeric literal in a body section.** A number typed into prose is a
-   number whose provenance was dropped on the way in, and it goes stale
-   silently the next time an experiment re-runs. Every figure comes from
-   `numbers.tex`, generated from named cells of named results files.
+1. **No numeric literal in a body section, in digits or in words.** A number
+   typed into prose is a number whose provenance was dropped on the way in, and
+   it goes stale silently the next time an experiment re-runs. Spelling it out
+   does not help: "six to eight per cent" stood in this draft while the
+   fixtures measured 4.5, 6.2 and 21, and the digit rule could not see it.
 2. **No forbidden phrasing.** The research design names two claims this work
    may not make: that it is the first to represent a cluster as a graph, and
    that a top-K procedure guarantees a global optimum.
@@ -59,6 +60,24 @@ FORBIDDEN: tuple[tuple[str, str], ...] = (
 #: almost always a decimal or a percentage, and those must come from
 #: `numbers.tex`.
 LITERAL = re.compile(r"(?<![\w\\{[.])(\d+\.\d+|\d+\s*\\?%)(?![\w}\]])")
+
+#: **A measured quantity spelled out in words.** The digit rule cannot see
+#: these, and one got through: "six to eight per cent of placements never
+#: simulate" stood in the draft while the fixtures measured 4.5 %, 6.2 % and
+#: 21 % -- a figure that was wrong, inherited from an earlier result file, and
+#: invisible to a checker looking for digits.
+#:
+#: Only patterns that name a QUANTITY are listed. Ordinary prose uses number
+#: words constantly ("one of the five conditions", "two reasons"), and a rule
+#: that flagged those would be turned off within a day.
+WORDED = re.compile(
+    r"\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|"
+    r"twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|"
+    r"twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)"
+    r"(?:[\s-]+(?:to|and|or)[\s-]+\w+)?[\s-]+(?:per\s+cent|percent|"
+    r"times|fold|milliseconds?|seconds?|gigabytes?|GB/s|Gbit/s|rps)\b",
+    re.I,
+)
 
 #: Sections exempt from the literal check, with the reason. Empty on purpose:
 #: an exemption is a decision, and the file records who made it and why rather
@@ -160,6 +179,12 @@ def main(argv: list[str] | None = None) -> int:
                 failures.append(
                     f"{rel}: numeric literal {match.group(0)!r} in prose. Add "
                     f"it to scripts/paper/numbers.yaml and cite the macro."
+                )
+            for match in WORDED.finditer(prose):
+                failures.append(
+                    f"{rel}: measured quantity spelled out as "
+                    f"{match.group(0)!r}. Spelling a number does not give it "
+                    f"provenance -- cite the macro."
                 )
 
         flat = re.sub(r"\s+", " ", prose)
