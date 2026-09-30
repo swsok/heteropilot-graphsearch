@@ -294,7 +294,17 @@ class NicBackground:
         self.stop.set()
         self.thread.join(timeout=90)
         self.t1 = time.monotonic()
-        ssh(f"kill -- -{self.server_pgid} 2>/dev/null; pkill -f 'ib_send_bw.*{BG_PORT}' ; true")
+        # The process GROUP, never a `pkill -f` pattern: a pattern that names
+        # ib_send_bw also matches the remote shell running the command, which
+        # then kills itself and ssh exits 255 -- the first shared run of this
+        # arm failed exactly that way. setsid made the loop's pid its group id,
+        # so the loop and its ib_send_bw child go together. Teardown must not
+        # raise: an exception here would skip the record of what ran.
+        subprocess.run(
+            ["ssh", "-p", str(SSH_PORT), "-o", "BatchMode=yes", S6_IP,
+             f"kill -- -{self.server_pgid} 2>/dev/null; true"],
+            capture_output=True, text=True, timeout=60,
+        )
         return False
 
     def record(self) -> dict:

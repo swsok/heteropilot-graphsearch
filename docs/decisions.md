@@ -1494,6 +1494,24 @@ carries both directions as `measured`. With `analyze.py`'s new direction
 filter switched off, E-G4's `single` row silently became 89.12 --- which is
 the evidence that the filter is needed, not a guess that it might be.
 
+**Addendum, after the first run: two instrument defects, and the first run
+discarded.** The first `pd-independent` run completed 150 of 150 requests, but
+eight of them streamed fewer chunks than their target length, always short.
+The router had taken the first token at the first chunk with *non-empty*
+text; a token can decode to an empty string (part of a multi-byte character),
+so whenever the first token was such a fragment, TTFT was stamped one token
+late. That is a bias in the measured quantity, not a counting nicety. The
+router now counts a chunk with empty text as a token unless it only closes the
+stream, and records the server's own `completion_tokens` through
+`stream_options.include_usage` to check each request's length. The first
+`pd-shared` run then failed while stopping its background: the teardown's
+`pkill -f 'ib_send_bw...'` matched the remote shell that ran it, which killed
+itself (ssh 255); the engines were still torn down by the outer context. It
+now kills the background's process group only and cannot raise. Tested on its
+own before the rerun: achieved duty cycle 0.601 against 0.6, 87.91 Gbit/s per
+burst, nothing left running on `s6`. **Both first runs are discarded, and all
+six are run with the corrected instrument**, so no row mixes two instruments.
+
 **What it affects.** `experiments/e_g5/{pd_arm,pd_router,build_cluster_s8s6,
 deploy_and_bench}.py`, `experiments/microbench/{run_nic,analyze}.py`,
 `fixtures/clusters/real-s8s6{,-shared}.v2.yaml`, heteropilot D128.

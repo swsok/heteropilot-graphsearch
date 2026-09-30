@@ -315,7 +315,10 @@ def pd_latencies(path: Path) -> dict:
             met += 1
     return {
         "requests": len(reqs), "completed": len(ok), "failed": len(reqs) - len(ok),
-        "token_count_off": sum(1 for r in ok if r["streamed_tokens"] != r["output_toks"]),
+        "length_off": sum(
+            1 for r in ok
+            if (r.get("completion_tokens") if r.get("completion_tokens") is not None
+                else r["streamed_tokens"]) != r["output_toks"]),
         "p50_ttft_ms": percentile(sorted(ttft), 50) if ttft else None,
         "p99_ttft_ms": percentile(sorted(ttft), 99) if ttft else None,
         "p99_tpot_ms": percentile(sorted(tpot), 99) if tpot else None,

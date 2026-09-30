@@ -46,7 +46,8 @@ async def one(client, idx: int, req: dict, t0: float, args, out: list) -> None:
         "request_id": f"pd-{idx}", "input_toks": int(req["input_toks"]),
         "output_toks": n_out, "scheduled_ts": None,
         "first_token_ts": None, "last_token_ts": None,
-        "prefill_done_ts": None, "streamed_tokens": 0, "error": None,
+        "prefill_done_ts": None, "streamed_tokens": 0, "completion_tokens": None,
+        "error": None,
     }
     t_send = time.monotonic()
     rec["arrival_time"] = rec["queued_ts"] = t_send
@@ -62,15 +63,28 @@ async def one(client, idx: int, req: dict, t0: float, args, out: list) -> None:
             raise RuntimeError("the prefill instance returned no kv_transfer_params")
         async with client.stream("POST", f"{args.decode}/v1/completions", json={
             **base, "max_tokens": n_out, "min_tokens": n_out, "stream": True,
+            "stream_options": {"include_usage": True},
             "kv_transfer_params": params,
         }) as s:
             s.raise_for_status()
             async for line in s.aiter_lines():
                 if not line.startswith("data: ") or line == "data: [DONE]":
                     continue
-                choice = (json.loads(line[6:]).get("choices") or [{}])[0]
-                if choice.get("text"):
-                    now = time.monotonic()
+                now = time.monotonic()
+                event = json.loads(line[6:])
+                if event.get("usage"):
+                    rec["completion_tokens"] = event["usage"].get("completion_tokens")
+                choices = event.get("choices") or []
+                if not choices:
+                    continue            # the usage-only chunk
+                choice = choices[0]
+                # A token can decode to an EMPTY string (part of a multi-byte
+                # character), so an empty `text` is still a token unless the
+                # chunk only closes the stream. Timing the first NON-EMPTY
+                # chunk instead put TTFT one token late whenever the first
+                # token was such a fragment -- which the first run of this
+                # arm showed as streamed counts short of the target.
+                if choice.get("text") or choice.get("finish_reason") is None:
                     if rec["first_token_ts"] is None:
                         rec["first_token_ts"] = now
                     rec["last_token_ts"] = now
@@ -108,8 +122,15 @@ def main(argv: list[str] | None = None) -> int:
         "".join(json.dumps(r, sort_keys=True) + "\n" for r in records)
     )
     failed = sum(1 for r in records if r["error"])
-    short = sum(1 for r in records if not r["error"] and r["streamed_tokens"] != r["output_toks"])
-    print(f"requests {len(records)}, failed {failed}, token count off {short}")
+    # The server's own count, when it gave one, is the authority; the chunk
+    # count is kept beside it because it is what the timestamps were taken on.
+    wrong = sum(1 for r in records if not r["error"]
+                and (r["completion_tokens"] if r["completion_tokens"] is not None
+                     else r["streamed_tokens"]) != r["output_toks"])
+    chunks = sum(1 for r in records if not r["error"]
+                 and r["streamed_tokens"] != r["output_toks"])
+    print(f"requests {len(records)}, failed {failed}, "
+          f"length != target {wrong}, chunk count != target {chunks}")
     return 0
 
 
