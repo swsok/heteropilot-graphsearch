@@ -1,0 +1,137 @@
+{
+  "allreduce": [
+    {
+      "algbw_gbps": 0.06262079807361212,
+      "busbw_gbps": 0.09393119711041818,
+      "bytes": 8192,
+      "seconds": 0.0001308191567659378,
+      "tokens": 1
+    },
+    {
+      "algbw_gbps": 0.11912046020161966,
+      "busbw_gbps": 0.1786806903024295,
+      "bytes": 16384,
+      "seconds": 0.00013754144310951233,
+      "tokens": 2
+    },
+    {
+      "algbw_gbps": 0.21939771082031329,
+      "busbw_gbps": 0.3290965662304699,
+      "bytes": 32768,
+      "seconds": 0.00014935433864593506,
+      "tokens": 4
+    },
+    {
+      "algbw_gbps": 0.3700346229526734,
+      "busbw_gbps": 0.5550519344290101,
+      "bytes": 65536,
+      "seconds": 0.00017710775136947632,
+      "tokens": 8
+    },
+    {
+      "algbw_gbps": 0.4810222447034247,
+      "busbw_gbps": 0.721533367055137,
+      "bytes": 131072,
+      "seconds": 0.0002724863588809967,
+      "tokens": 16
+    },
+    {
+      "algbw_gbps": 0.5163522600640884,
+      "busbw_gbps": 0.7745283900961326,
+      "bytes": 262144,
+      "seconds": 0.0005076844245195389,
+      "tokens": 32
+    },
+    {
+      "algbw_gbps": 1.3232493087495287,
+      "busbw_gbps": 1.984873963124293,
+      "bytes": 524288,
+      "seconds": 0.000396212562918663,
+      "tokens": 64
+    },
+    {
+      "algbw_gbps": 0.9882313710099675,
+      "busbw_gbps": 1.4823470565149512,
+      "bytes": 1048576,
+      "seconds": 0.0010610632598400116,
+      "tokens": 128
+    },
+    {
+      "algbw_gbps": 1.0898582930901333,
+      "busbw_gbps": 1.6347874396352,
+      "bytes": 2097152,
+      "seconds": 0.0019242428243160248,
+      "tokens": 256
+    },
+    {
+      "algbw_gbps": 5.0165856419444514,
+      "busbw_gbps": 7.524878462916677,
+      "bytes": 4194304,
+      "seconds": 0.0008360873907804489,
+      "tokens": 512
+    },
+    {
+      "algbw_gbps": 5.34156260214452,
+      "busbw_gbps": 8.01234390321678,
+      "bytes": 8388608,
+      "seconds": 0.0015704408288002014,
+      "tokens": 1024
+    },
+    {
+      "algbw_gbps": 3.787938688957687,
+      "busbw_gbps": 5.68190803343653,
+      "bytes": 16777216,
+      "seconds": 0.004429114982485771,
+      "tokens": 2048
+    },
+    {
+      "algbw_gbps": 3.7486052308017217,
+      "busbw_gbps": 5.622907846202582,
+      "bytes": 33554432,
+      "seconds": 0.008951177820563316,
+      "tokens": 4096
+    },
+    {
+      "algbw_gbps": 5.926139873243147,
+      "busbw_gbps": 8.88920980986472,
+      "bytes": 67108864,
+      "seconds": 0.011324211955070496,
+      "tokens": 8192
+    }
+  ],
+  "banner": "REAL HARDWARE -- two nodes over InfiniBand. NCCL all-reduce; the busbw plateau is the figure comparable with a link rate.",
+  "condition": "collective",
+  "label": "b-world4",
+  "location": "(b) inter-node NIC",
+  "method": "torch 2.10.0+cu128 + NCCL 2.27.5, link_probe.py under torch.distributed.run across two nodes, NCCL_SOCKET_IFNAME=ibs8 NCCL_IB_HCA=mlx5_0",
+  "nccl_p2p_disable": null,
+  "nccl_version": "2.27.5",
+  "nodes": {
+    "fabric": "InfiniBand 192.168.210.0/24, Mellanox MT4123 each end",
+    "far": "s6",
+    "near": "s8"
+  },
+  "note_p2p": "the `p2p` block is rank 0's LOCAL peer copies, not inter-node. link_probe.py measures them on whichever node holds rank 0; they are kept because they show the local bus was behaving normally during the inter-node run, and they are not a location (b) figure.",
+  "p2p": {
+    "0-1": {
+      "bandwidth_gbps": 52.22647160058384,
+      "copy_64MiB_s": 0.0012849587947130203,
+      "latency_2B_us": 28.72385084629059,
+      "peer_access": true
+    },
+    "0-2": {
+      "bandwidth_gbps": 25.013536099677005,
+      "copy_64MiB_s": 0.002682901918888092,
+      "latency_2B_us": 28.695911169052124,
+      "peer_access": true
+    }
+  },
+  "ranks": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "torch": "2.10.0+cu128",
+  "world_size": 4
+}

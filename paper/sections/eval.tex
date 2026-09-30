@@ -208,11 +208,18 @@ bidirectional case says the same thing twice: the intra-node pair reaches only
 a third again as much as a single direction, while the NIC exceeds twice it,
 because that wire really is full duplex.
 
-Two of the five registered conditions remain unanswered at this location, for
-reasons that do not merge. Two concurrent flows over \emph{disjoint} NICs is
-impossible on this hardware---each machine has exactly one InfiniBand
-device---while the collective is deferred, needing an NCCL environment the peer
-node does not yet have. \pending{E-G4: collective at location (b)}
+% claim: C31
+The collective says the same thing a third time. An all-reduce at two ranks
+reaches \egfourCollNicTwo~GB/s of bus bandwidth across the NIC against
+\egfourCollNodeTwo~inside one node; at four ranks, where half the traffic
+stays local, the two are within a couple of per cent. A bandwidth
+figure is therefore keyed by \emph{where} it was taken as well as by how many
+ranks took part, and neither location answers for the other in either
+direction.
+
+One registered condition remains unanswered, and not for want of effort: two
+concurrent flows over \emph{disjoint} NICs is impossible on this
+hardware---each machine has exactly one InfiniBand device.
 
 % claim: C17
 The model's accuracy domain has an upper end. Above a message size the hardware
