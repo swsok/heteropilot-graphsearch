@@ -55,3 +55,41 @@ def test_failures_are_counted_and_requests_judged_one_by_one(tmp_path: Path) -> 
     assert m["completed"] == 3
     assert m["failed"] == 1
     assert m["slo_attainment"] == 2 / 3
+
+
+def _run(path: Path, n: int, rate: float, service_s: float, extra_ms: float = 0.0):
+    """An unqueued run: request i arrives at i/rate and takes service_s."""
+    rows = []
+    for i in range(n):
+        t0 = i / rate
+        pre = t0 + 0.05
+        first = pre + 0.2 + extra_ms / 1000.0
+        r = _req(i, t0, first, t0 + service_s, 11)
+        r["prefill_done_ts"] = pre
+        rows.append(r)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+
+
+def test_drain_correction_reads_an_unqueued_run_as_unsaturated(tmp_path: Path) -> None:
+    a = _analyze()
+    path = tmp_path / "requests.jsonl"
+    _run(path, 150, 1.0, 25.0)
+    m = a.pd_latencies(path)
+    # E-G5's definition pays the last request's whole service time ...
+    assert m["goodput_rps"] / 1.0 < 0.9
+    # ... and the corrected one does not, because nothing queued.
+    assert abs(m["goodput_drain_corrected_rps"] / 1.0 - 1.0) < 0.02
+
+
+def test_pairs_are_matched_by_request_index(tmp_path: Path) -> None:
+    a = _analyze()
+    root = tmp_path / "pairs"
+    _run(root / "pd-independent" / "42" / "pd" / "requests.jsonl", 20, 1.0, 5.0)
+    _run(root / "pd-shared" / "42" / "pd" / "requests.jsonl", 20, 1.0, 5.0, extra_ms=7.0)
+    for c in ("pd-independent", "pd-shared"):
+        (root / c / "42" / "provenance.json").write_text(json.dumps({"offered_rps": 1.0}))
+    (row,) = a._pair_rows(root)
+    assert row["n"] == 20
+    assert abs(row["diff"] - 7.0) < 1e-6
+    assert row["diff_sd"] < 1e-6

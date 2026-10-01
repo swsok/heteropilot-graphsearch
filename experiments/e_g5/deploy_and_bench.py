@@ -875,13 +875,17 @@ def main(argv: list[str] | None = None) -> int:
                         help="proceed although another tenant holds a GPU. "
                              "Every row is then labelled contaminated.")
     parser.add_argument(
-        "--mode", choices=("aggregated", "pd"), default="aggregated",
+        "--mode", choices=("aggregated", "pd", "pd-select", "pd-predict"),
+        default="aggregated",
         help="`pd`: the inter-node P/D arm (pd_arm.py). --condition is then "
              "pd-independent or pd-shared. Deployed by this harness, not by "
              "heteropilot, which has no router (GS-32).",
     )
+    parser.add_argument("--pilot-label", default=None,
+                        help="--mode pd: a pilot run, written under raw/pd-pilot/ "
+                             "and excluded from validation (preregistration row 7)")
     args = parser.parse_args(argv)
-    if args.mode == "pd":
+    if args.mode.startswith("pd"):
         import pd_arm
 
         return pd_arm.run_pd(args, C, service_spec, workload_at)

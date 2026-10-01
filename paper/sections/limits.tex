@@ -69,20 +69,23 @@ passed---and the second would make the simulator's output unattributable,
 which is why it was not done.
 
 % claim: C22
-% pending
-\paragraph{The hardware campaign covers one accelerator kind, and one of its
-two node-count limits has lifted.}
-The contention measurements now cover both an intra-node bus and an inter-node
-NIC across two machines, and inter-node \emph{P/D} now runs: prefill on one node,
-decode on the other, the KV pulled across the NIC, every request completed. It
-is deployed by the experiment's own harness, because the deployment backend
-this work extends serves a single engine and has no router. What it does not
-yet give is the contention result it was registered for. At the registered
-load the deployed configuration saturates---requests queue for the whole run,
-and time to first token is set by that queue rather than by the path---so a
-change in the NIC's load cannot be seen, and the repetitions did not deploy one
-configuration, so their spread is not noise. Deployment to the NPU in the
-design's scope is impossible, because no backend for it exists. \pending{E-G5: inter-node P/D}
+% claim: C30
+\paragraph{Inter-node contention on a disaggregated deployment is smaller than
+the model predicts.}
+The contention measurements cover an intra-node bus and an inter-node NIC, and
+inter-node \emph{P/D} now runs: prefill on one node, decode on the other, the
+KV pulled across the NIC, every request completed. It is deployed by the
+experiment's own harness, because the deployment backend this work extends
+serves a single engine and has no router. Measured as a paired mean over
+requests, at a load the configuration sustains, a background stream on the
+same NIC lengthened the interval from prefill response to first decoded token
+by \egfivePdEffect{} ms, where the fluid model predicted \egfivePdPredicted{} ms:
+a ratio of \egfivePdRatio{}, outside the registered agreement band. The model
+enters the background as a standing reservation of its duty cycle, which slows
+a transfer more than a competing flow of that duty cycle would; even so, the
+hardware's effect is below what processor sharing with such a flow predicts,
+and this experiment does not separate why. Deployment to the NPU in the
+design's scope is impossible, because no backend for it exists.
 
 \paragraph{Every fixture but one is fictional.}
 The toy clusters and the synthetic scaling clusters are invented and say so in

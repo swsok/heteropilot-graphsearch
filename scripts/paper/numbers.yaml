@@ -61,3 +61,8 @@ egfiveTtwoOverTone:     {file: e_g5_real_hardware.md, find: ["placement", "vs T1
 egfiveAgreeRows:        {file: e_g5_real_hardware.md, find: ["placement", "agree"], row: all, column: agree}
 egfiveAllRows:          {file: e_g5_real_hardware.md, find: ["placement", "agree"], row: all, column: rows}
 egfiveTthreeDisagree:   {file: e_g5_real_hardware.md, find: ["placement", "agree"], row: T3, column: disagree}
+
+# --- E-G5 inter-node P/D arm (preregistration row 7) -----------------------
+egfivePdEffect:     {file: e_g5_real_hardware.md, find: ["quantity", "value"], row: measured change, column: value, pattern: "^\\+?(-?[0-9.]+)$"}
+egfivePdPredicted:  {file: e_g5_real_hardware.md, find: ["quantity", "value"], row: predicted change, column: value, pattern: "^\\+?(-?[0-9.]+)$"}
+egfivePdRatio:      {file: e_g5_real_hardware.md, find: ["quantity", "value"], row: ratio, column: value}

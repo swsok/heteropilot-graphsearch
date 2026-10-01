@@ -1,10 +1,10 @@
 {
   "background": {
     "achieved_duty_cycle": 0.6,
-    "bursts": 138,
+    "bursts": 171,
     "direction": "s8 -> s6 (client here, server on s6)",
     "instrument": "ib_send_bw, as E-G4(b)",
-    "median_gbit_s": 87.99,
+    "median_gbit_s": 87.61,
     "target_duty_cycle": 0.6
   },
   "banner": "REAL HARDWARE -- two nodes, s8 and s6.",
@@ -38,84 +38,13 @@
     "s6": 0,
     "s8": 0
   },
+  "interval_definition": "prefill response received to first token of the decode stream: the KV pull and the decode instance's first step (row 7 c)",
   "num_reqs": 150,
-  "offered_rps": 4.0,
+  "offered_rps": 1.0,
+  "pilot": null,
   "placement": {
     "decode": "s6/gpu0",
     "prefill": "s8/gpu0"
-  },
-  "prediction": {
-    "chosen": {
-      "feasible": false,
-      "p99_tpot_ms": 169.38166430999996,
-      "p99_ttft_ms": 597.0002854902511,
-      "search_state": "unevaluated (the budget did not reach it)",
-      "state": "evaluated",
-      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192"
-    },
-    "independent": {
-      "p50_ttft_ms": 206.81996113195692,
-      "p99_tpot_ms": 169.38166430999996,
-      "p99_ttft_ms": 597.0002854902511,
-      "slo_goodput_rps": 0.23847628330365842
-    },
-    "shared": {
-      "p50_ttft_ms": 219.72229228751755,
-      "p99_tpot_ms": 169.38164275999995,
-      "p99_ttft_ms": 647.9048933389199,
-      "slo_goodput_rps": 0.23847628145966138
-    },
-    "shared_state": "evaluated",
-    "table": [
-      {
-        "feasible": false,
-        "p99_tpot_ms": 68.35206395,
-        "p99_ttft_ms": 1130.83691603025,
-        "search_state": "unevaluated (the budget did not reach it)",
-        "state": "evaluated",
-        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s128-t2048"
-      },
-      {
-        "feasible": false,
-        "p99_tpot_ms": 68.36123225,
-        "p99_ttft_ms": 597.0892984002512,
-        "search_state": "unevaluated (the budget did not reach it)",
-        "state": "evaluated",
-        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s128-t8192"
-      },
-      {
-        "feasible": false,
-        "p99_tpot_ms": 68.35206395,
-        "p99_ttft_ms": 1130.83691603025,
-        "search_state": "unevaluated (the budget did not reach it)",
-        "state": "evaluated",
-        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s256-t2048"
-      },
-      {
-        "feasible": false,
-        "p99_tpot_ms": 68.36123225,
-        "p99_ttft_ms": 597.0892984002512,
-        "search_state": "unevaluated (the budget did not reach it)",
-        "state": "evaluated",
-        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s256-t8192"
-      },
-      {
-        "feasible": false,
-        "p99_tpot_ms": 168.09823305999996,
-        "p99_ttft_ms": 1130.95492703025,
-        "search_state": "unevaluated (the budget did not reach it)",
-        "state": "evaluated",
-        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t2048"
-      },
-      {
-        "feasible": false,
-        "p99_tpot_ms": 169.38166430999996,
-        "p99_ttft_ms": 597.0002854902511,
-        "search_state": "unevaluated (the budget did not reach it)",
-        "state": "evaluated",
-        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192"
-      }
-    ]
   },
   "prefill_argv": [
     "/home/swsok/heteropilot/.venv-vllm/bin/vllm",
@@ -146,13 +75,16 @@
   "router_summary": [
     "requests 150, failed 0, length != target 0, chunk count != target 0"
   ],
+  "selection": "experiments/e_g5/raw/pd-selection.json",
   "served_model": "NousResearch/Meta-Llama-3.1-8B",
   "slo": {
     "tpot_max_ms": 60.0,
     "ttft_max_ms": 550.0
   },
   "state": "measured",
-  "trace": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl",
+  "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192",
+  "trace": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps1.jsonl",
   "ttft_definition": "router prefill-send to first token of the decode stream; includes the prefill, the KV pull across the NIC and the decode instance's first step",
-  "written_at": "2026-09-30T11:29:05.082085+00:00"
+  "validation_set": true,
+  "written_at": "2026-10-01T02:22:07.868182+00:00"
 }

@@ -1,0 +1,150 @@
+{
+  "banner": "REAL HARDWARE -- two nodes, s8 and s6.",
+  "condition": "pd-independent",
+  "decode_argv": [
+    "/home/swsok/.venv-vllm/bin/vllm",
+    "serve",
+    "NousResearch/Meta-Llama-3.1-8B",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8200",
+    "--max-model-len",
+    "8192",
+    "--gpu-memory-utilization",
+    "0.6",
+    "--no-enable-prefix-caching",
+    "--max-num-seqs",
+    "128",
+    "--max-num-batched-tokens",
+    "8192",
+    "--dtype",
+    "bfloat16",
+    "--kv-cache-dtype",
+    "auto",
+    "--kv-transfer-config",
+    "{\"kv_connector\": \"NixlConnector\", \"kv_role\": \"kv_consumer\"}"
+  ],
+  "deployed_by": "this experiment harness (pd_arm.py, pd_router.py), NOT heteropilot planner/deploy/, which has no router (GS-28, GS-32)",
+  "gpu0_tenants_before": {
+    "s6": 0,
+    "s8": 0
+  },
+  "num_reqs": 150,
+  "offered_rps": 4.0,
+  "placement": {
+    "decode": "s6/gpu0",
+    "prefill": "s8/gpu0"
+  },
+  "prediction": {
+    "chosen": {
+      "feasible": false,
+      "p99_tpot_ms": 64.67505898,
+      "p99_ttft_ms": 583.3625855102512,
+      "search_state": "unevaluated (the budget did not reach it)",
+      "state": "evaluated",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s128-t8192"
+    },
+    "independent": {
+      "p50_ttft_ms": 168.13363763195693,
+      "p99_tpot_ms": 64.67505898,
+      "p99_ttft_ms": 583.3625855102512,
+      "slo_goodput_rps": 0.8789013219102889
+    },
+    "shared": {
+      "p50_ttft_ms": 181.03511578751755,
+      "p99_tpot_ms": 64.67505700000001,
+      "p99_ttft_ms": 634.2606894789199,
+      "slo_goodput_rps": 0.8789013170547788
+    },
+    "shared_state": "evaluated",
+    "table": [
+      {
+        "feasible": false,
+        "p99_tpot_ms": 64.64309199,
+        "p99_ttft_ms": 777.7823792002512,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated",
+        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s128-t2048"
+      },
+      {
+        "feasible": false,
+        "p99_tpot_ms": 64.67505898,
+        "p99_ttft_ms": 583.3625855102512,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated",
+        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s128-t8192"
+      },
+      {
+        "feasible": false,
+        "p99_tpot_ms": 64.77351669,
+        "p99_ttft_ms": 777.7823792002512,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated",
+        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s256-t2048"
+      },
+      {
+        "feasible": false,
+        "p99_tpot_ms": 64.826218,
+        "p99_ttft_ms": 583.3625855102512,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated",
+        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s256-t8192"
+      },
+      {
+        "feasible": false,
+        "p99_tpot_ms": 162.02994526,
+        "p99_ttft_ms": 777.4494592002511,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated",
+        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t2048"
+      },
+      {
+        "feasible": false,
+        "p99_tpot_ms": 162.00126870999998,
+        "p99_ttft_ms": 583.4602945402512,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated",
+        "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192"
+      }
+    ]
+  },
+  "prefill_argv": [
+    "/home/swsok/heteropilot/.venv-vllm/bin/vllm",
+    "serve",
+    "NousResearch/Meta-Llama-3.1-8B",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8100",
+    "--max-model-len",
+    "8192",
+    "--gpu-memory-utilization",
+    "0.6",
+    "--no-enable-prefix-caching",
+    "--max-num-seqs",
+    "128",
+    "--max-num-batched-tokens",
+    "8192",
+    "--dtype",
+    "bfloat16",
+    "--kv-cache-dtype",
+    "auto",
+    "--kv-transfer-config",
+    "{\"kv_connector\": \"NixlConnector\", \"kv_role\": \"kv_producer\"}"
+  ],
+  "rep": 43,
+  "router_returncode": 0,
+  "router_summary": [
+    "requests 150, failed 0, length != target 0, chunk count != target 0"
+  ],
+  "served_model": "NousResearch/Meta-Llama-3.1-8B",
+  "slo": {
+    "tpot_max_ms": 60.0,
+    "ttft_max_ms": 550.0
+  },
+  "state": "measured",
+  "trace": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps4.jsonl",
+  "ttft_definition": "router prefill-send to first token of the decode stream; includes the prefill, the KV pull across the NIC and the decode instance's first step",
+  "written_at": "2026-09-30T11:00:10.303029+00:00"
+}

@@ -31,10 +31,10 @@ for. Under the real simulator the compression saved more time than it cost,
 with its own hashing and isomorphism checks charged against it.
 
 % claim: C18
+% claim: C30
 On hardware the point is not subtle. One plan, deployed at two placements of
 itself, meets its latency target on one and misses it by \egfiveTtwoOverTone{}x on the other,
-and the planner this work extends cannot tell the two apart. What remains of
-the campaign is the inter-node case, and what it waits on is not a missing
-disaggregation path but a router: the deployment layer this work extends
-serves one engine, and a split serving architecture is two of them with
-something in front.
+and the planner this work extends cannot tell the two apart. The inter-node case now runs too, through this work's own harness because the
+deployment layer it extends has no router, and there the model's contention
+prediction is far larger than what the hardware shows: a result the
+registered criterion reports as a miss, not a confirmation.

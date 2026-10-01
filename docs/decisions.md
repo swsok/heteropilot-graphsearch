@@ -1556,3 +1556,36 @@ request.
 **What it affects.** `experiments/e_g5/analyze.py`,
 `experiments/results/e_g5_real_hardware.md`, `paper/sections/limits.tex`.
 The `\pending{E-G5: inter-node P/D}` stays pending.
+
+## GS-34 — inter-node P/D contention, measured: far smaller than the model predicts · 2026-10-01
+
+**Result, under preregistration row 7.** Template fixed
+(`…s32-t8192`), 1 rps from the knee pilot, three ABAB pairs, every request
+paired with itself across the two conditions. All six runs: 150/150 requests,
+no failures, every length confirmed by the server, background duty cycle
+0.600 in each shared run.
+
+| pair | KV interval, independent | shared | change | predicted |
+| --- | --- | --- | --- | --- |
+| 42 | 216.40 ms | 219.36 ms | +2.96 ms | +14.45 ms |
+| 43 | 218.22 ms | 220.26 ms | +2.05 ms | +14.45 ms |
+| 44 | 217.77 ms | 217.48 ms | -0.28 ms | +14.45 ms |
+
+Mean change **+1.57 ms** (SD 1.67 ms across pairs) against a predicted
+**+14.45 ms**: ratio **0.11**, same sign, outside the registered 0.5--2 band.
+**The criterion is not met.** p99 TTFT moved -1.4, +9.6 and -9.5 ms against a
+predicted +50.9 ms. With three pairs the measured effect is not
+distinguishable from zero; that it is far below the prediction is.
+
+**What this does and does not say.** The model enters the background as a
+standing reservation of its duty cycle, so it slows the transfer 2.5x; a
+competing flow at that duty cycle would, under processor sharing, slow it
+about 1.6x (+5.8 ms) --- both stated in row 7 before the run. The hardware is
+below even that. Candidate reasons (RDMA READ against SEND arbitration, the
+pull overlapping other work, the transfer not being on the interval's
+critical path) are not separated by anything measured here, and none is
+offered as the explanation.
+
+**On the paper.** The last `\pending` is replaced by this result (C30), the
+conclusion no longer says the inter-node case waits on a router, and the
+claim is written as a miss.
