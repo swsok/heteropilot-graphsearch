@@ -324,12 +324,53 @@ def pd_latencies(path: Path) -> dict:
         "p99_tpot_ms": percentile(sorted(tpot), 99) if tpot else None,
         "goodput_rps": len(ok) / span if span > 0 else 0.0,
         "slo_attainment": met / len(ok) if ok else 0.0,
+        **_pd_extras(ok, span),
     }
 
 
-def pd_rows(raw_root: Path) -> list[dict]:
+#: Row 7 (b). E-G5's goodput divides by the span from the first arrival to the
+#: LAST completion, so even an unqueued run loses the last request's whole
+#: service time to the denominator: with this trace's ~665-token outputs that is
+#: 0.845 at 1 rps and 0.732 at 2, and no pilot rate could reach 0.9. The
+#: drain-corrected figure subtracts the e2e of a request that met no queue --
+#: the median over the first EARLY requests, before one can form.
+EARLY = 15
+
+
+def _pd_extras(ok: list[dict], span: float) -> dict:
+    import statistics
+
+    by_idx = sorted(ok, key=lambda r: int(r["request_id"].split("-")[1]))
+    e2e_early = [r["last_token_ts"] - r["queued_ts"] for r in by_idx[:EARLY]]
+    d_early = statistics.median(e2e_early) if e2e_early else 0.0
+    intervals = [(r["first_token_ts"] - r["prefill_done_ts"]) * 1000.0
+                 for r in ok if r.get("prefill_done_ts") is not None]
+    return {
+        "unqueued_e2e_s": d_early,
+        "goodput_drain_corrected_rps": (
+            len(ok) / (span - d_early) if span - d_early > 0 else 0.0),
+        "interval_mean_ms": statistics.mean(intervals) if intervals else None,
+        "interval_p99_ms": percentile(sorted(intervals), 99) if intervals else None,
+    }
+
+
+def pd_intervals(path: Path) -> dict[int, float]:
+    """Request index -> its KV interval in ms (row 7 c), for completed requests."""
+    out = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        if r.get("error") or r.get("first_token_ts") is None or r.get("prefill_done_ts") is None:
+            continue
+        out[int(r["request_id"].split("-")[1])] = (
+            (r["first_token_ts"] - r["prefill_done_ts"]) * 1000.0)
+    return out
+
+
+def pd_rows(raw_root: Path, sub: str = "pd") -> list[dict]:
     out = []
-    for prov_path in sorted((raw_root / "pd").glob("*/*/provenance.json")):
+    for prov_path in sorted((raw_root / sub).glob("*/*/provenance.json")):
         prov = json.loads(prov_path.read_text())
         req = prov_path.parent / "pd" / "requests.jsonl"
         out.append({
@@ -338,27 +379,25 @@ def pd_rows(raw_root: Path) -> list[dict]:
             "measured": pd_latencies(req) if req.exists() else None,
             "prediction": prov.get("prediction"),
             "background": prov.get("background"),
-            "template": ((prov.get("prediction") or {}).get("chosen") or {}).get("template_id"),
+            "template": prov.get("template_id") or (
+                ((prov.get("prediction") or {}).get("chosen") or {}).get("template_id")),
+            "requests_path": req,
             "offered_rps": prov.get("offered_rps"),
         })
     return out
 
 
-def pd_section(raw_root: Path) -> list[str]:
+def pd_row5_section(raw_root: Path) -> list[str]:
     import statistics
 
-    data = pd_rows(raw_root)
-    out = ["", "## The inter-node P/D arm", "", "> **REAL HARDWARE**, two nodes.", "",
-           PD_BANNER_FIRST, ""]
+    data = pd_rows(raw_root, "pd-row5")
+    out = ["", "### The row-5 runs (GS-33), kept and not validated", ""]
     if not data:
-        out.append("Not run.")
-        return out
+        return []
     out.append(
-        "Prefill on `s8` GPU 0, decode on `s6` GPU 0, `NixlConnector` between "
-        "them. **TTFT is the registered definition**: from the router sending "
-        "the prefill call to the first token of the decode stream, so it "
-        "includes the prefill, the KV pull across the NIC, and the decode "
-        "instance's first step.[^pdtokens]"
+        "Registered by row 5 and run before row 7 existed. Each repetition chose "
+        "its own template and the configuration saturated; they are kept as the "
+        "record of why row 7 was needed, and no verdict is drawn from them."
     )
     out += ["", "| condition | rep | completed | failed | p50 TTFT | p99 TTFT | "
             "p99 TPOT | goodput | SLO attainment | background duty |",
@@ -382,7 +421,7 @@ def pd_section(raw_root: Path) -> list[str]:
 
     # Paired, per repetition: within a repetition both conditions deployed the
     # same template, so this difference is the NIC load and nothing else.
-    out += ["", "### Paired by repetition", "",
+    out += ["", "#### Paired by repetition", "",
             "| rep | template | independent p99 TTFT | shared p99 TTFT | change | "
             "predicted change | goodput / offered |",
             "| --- | --- | --- | --- | --- | --- | --- |"]
@@ -412,7 +451,7 @@ def pd_section(raw_root: Path) -> list[str]:
                 "the KV takes. In that regime a change in the NIC's load is not "
                 "observable, and this arm cannot answer its question."]
 
-    out += ["", "### The registered criterion", ""]
+    out += ["", "#### Row 5's criterion", ""]
     templates = {r["template"] for r in by["pd-independent"] + by["pd-shared"]}
     if not by["pd-independent"] or not by["pd-shared"]:
         out.append("Not computable: both conditions have not been measured.")
@@ -462,14 +501,6 @@ def pd_section(raw_root: Path) -> list[str]:
             f"change inside the spread of the independent repetitions counted "
             f"as none. Verdict: {verdict_text}. Magnitudes are report-only.",
         ]
-    out += [
-        "",
-        "[^pdtokens]: This arm compares **latency and goodput** between two P/D "
-        "conditions, not outputs. A disaggregated greedy token stream is not the "
-        "aggregated one: across these two nodes two of three probe prompts "
-        "diverged, reproducibly (GS-29). No statement about output identity is "
-        "made from these rows.",
-    ]
     return out
 
 
@@ -501,6 +532,153 @@ def agreement_table(data: list[dict]) -> list[str]:
     total = sum(len(v) for v in groups.values())
     agree = sum(1 for v in groups.values() for a, b in v if a == b)
     out.append(f"| all | {total} | {agree} | {total - agree} | - |")
+    return out
+
+
+def _pair_rows(root: Path) -> list[dict]:
+    """Row 7 (d): the two conditions of one repetition, paired request by request.
+
+    Same template, trace and seed, so request i is the same prompt at the same
+    offset in both; its interval difference is the NIC load and nothing else.
+    """
+    import statistics
+
+    out = []
+    for a_dir in sorted((root / "pd-independent").glob("*/")):
+        b_dir = root / "pd-shared" / a_dir.name
+        ra, rb = a_dir / "pd" / "requests.jsonl", b_dir / "pd" / "requests.jsonl"
+        if not (ra.exists() and rb.exists()):
+            continue
+        a, b = pd_intervals(ra), pd_intervals(rb)
+        common = sorted(set(a) & set(b))
+        d = [b[i] - a[i] for i in common]
+        ma, mb = pd_latencies(ra), pd_latencies(rb)
+        out.append({
+            "rep": int(a_dir.name), "n": len(common),
+            "mean_a": statistics.mean(a[i] for i in common),
+            "mean_b": statistics.mean(b[i] for i in common),
+            "diff": statistics.mean(d), "diff_sd": statistics.stdev(d) if len(d) > 1 else 0.0,
+            "p99_a": ma["p99_ttft_ms"], "p99_b": mb["p99_ttft_ms"],
+            "offered": json.loads((a_dir / "provenance.json").read_text())["offered_rps"],
+        })
+    return out
+
+
+def pd_section(raw_root: Path) -> list[str]:
+    import statistics
+
+    out = ["", "## The inter-node P/D arm", "", "> **REAL HARDWARE**, two nodes.", "",
+           PD_BANNER_FIRST, ""]
+    out.append(
+        "**This arm's question is the size of the contention effect and whether "
+        "the model's prediction of it agrees, not whether a P/D deployment meets "
+        "its SLO** (preregistration row 7 f). Prefill on `s8` GPU 0, decode on "
+        "`s6` GPU 0, `NixlConnector`. The primary metric is the per-request "
+        "**interval** from the prefill response to the decode stream's first "
+        "token -- the KV pull plus the decode instance's first step -- as a "
+        "paired mean difference; p99 TTFT is secondary. A constant added to "
+        "every request shows in a mean and is buried in a p99.[^pdtokens]"
+    )
+    sel_path = raw_root / "pd-selection.json"
+    if sel_path.exists():
+        sel = json.loads(sel_path.read_text())
+        out += ["", f"Template, fixed for every run (row 7 a): `{sel['chosen']}`, chosen "
+                f"once at seed {sel['seed']}. **Every P/D template was predicted "
+                f"infeasible on TPOT**"
+                + (" before selection" if sel["all_infeasible"] else "")
+                + ", which is reported as a separate fact and is not this arm's "
+                "question:", "",
+                "| template | predicted p99 TTFT | predicted p99 TPOT | feasible |",
+                "| --- | --- | --- | --- |"]
+        for t in sel["table"]:
+            out.append(f"| `…{t['template_id'][-12:]}` | {t['p99_ttft_ms']:.1f} ms | "
+                       f"{t['p99_tpot_ms']:.1f} ms | {t['feasible']} |")
+
+    # --- the knee pilot (row 7 b), excluded from validation -------------------
+    pilot = raw_root / "pd-pilot"
+    knee = []
+    for d in sorted(pilot.glob("knee-rps*/pd-independent/*/")):
+        req = d / "pd" / "requests.jsonl"
+        if req.exists():
+            prov = json.loads((d / "provenance.json").read_text())
+            knee.append((prov["offered_rps"], pd_latencies(req)))
+    chosen_rate = None
+    if knee:
+        out += ["", "### The knee pilot (excluded from validation)", "",
+                "| offered rps | goodput / offered | drain-corrected | p50 TTFT | "
+                "p99 TTFT | mean interval |", "| --- | --- | --- | --- | --- | --- |"]
+        for rate, m in sorted(knee, key=lambda x: x[0]):
+            corr = m["goodput_drain_corrected_rps"] / rate
+            if corr >= 0.9:
+                chosen_rate = rate
+            out.append(f"| {rate:g} | {m['goodput_rps'] / rate:.3f} | {corr:.3f} | "
+                       f"{m['p50_ttft_ms']:.0f} ms | {m['p99_ttft_ms']:.0f} ms | "
+                       f"{m['interval_mean_ms']:.1f} ms |")
+        out += ["", ("The rerun rate is the highest pilot rate whose drain-corrected "
+                     "goodput is at least 0.9 of offered: "
+                     + (f"**{chosen_rate:g} rps**." if chosen_rate else
+                        "**none qualified**.")
+                     + " E-G5's own goodput divides by the span to the last "
+                     "completion, so an unqueued run of this trace scores 0.845 at "
+                     "1 rps; the corrected figure removes one unqueued request's "
+                     "service time from the span (row 7 b).")]
+
+    # --- the pilot pairs: the SD that sets 3 or 6 repetitions -------------------
+    pp = _pair_rows(pilot / "pairs")
+    if pp:
+        diffs = [r["diff"] for r in pp]
+        sd = statistics.stdev(diffs) if len(diffs) > 1 else None
+        out += ["", "### Pilot pairs (excluded from validation)", "",
+                "| rep | requests paired | interval change (mean) | per-request SD |",
+                "| --- | --- | --- | --- |"]
+        for r in pp:
+            out.append(f"| {r['rep']} | {r['n']} | {r['diff']:+.2f} ms | {r['diff_sd']:.2f} ms |")
+        if sd is not None:
+            out += ["", f"SD of the pair-mean change across pilot pairs: **{sd:.2f} ms**."]
+
+    # --- the validation runs (row 7 d, e) --------------------------------------
+    main = _pair_rows(raw_root / "pd")
+    if not main:
+        out += ["", "The validation runs have not been made."]
+    else:
+        rate = main[0]["offered"]
+        pred_path = raw_root / f"pd-prediction-rps{rate:g}.json"
+        pred = json.loads(pred_path.read_text()) if pred_path.exists() else None
+        pv = pred["predicted_interval_change_ms"] if pred else None
+        pt = pred["predicted_p99_ttft_change_ms"] if pred else None
+        out += ["", f"### The validation pairs, {rate:g} rps", "",
+                "| pair | requests paired | interval mean independent | shared | change | "
+                "predicted change | p99 TTFT independent | shared | change | predicted |",
+                "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+        for r in main:
+            out.append(
+                f"| {r['rep']} | {r['n']} | {r['mean_a']:.2f} ms | {r['mean_b']:.2f} ms | "
+                f"{r['diff']:+.2f} ms | {pv:+.2f} ms | {r['p99_a']:.1f} ms | "
+                f"{r['p99_b']:.1f} ms | {r['p99_b'] - r['p99_a']:+.1f} ms | "
+                f"{pt:+.1f} ms |" if pred else
+                f"| {r['rep']} | {r['n']} | {r['mean_a']:.2f} | {r['mean_b']:.2f} | "
+                f"{r['diff']:+.2f} | - | {r['p99_a']:.1f} | {r['p99_b']:.1f} | - | - |")
+        effect = statistics.mean(r["diff"] for r in main)
+        out += ["", "#### The registered criterion (row 7 e)", ""]
+        if pv is None or pv == 0:
+            out.append("Not computable: no prediction for this rate.")
+        else:
+            ratio = effect / pv
+            same = (effect > 0) == (pv > 0)
+            met = same and 0.5 <= ratio <= 2.0
+            out.append(
+                f"Mean of the pair changes **{effect:+.2f} ms** against a predicted "
+                f"**{pv:+.2f} ms**: ratio **{ratio:.2f}**, "
+                + ("same sign" if same else "opposite sign")
+                + f". Registered: same sign and a ratio between 0.5 and 2. "
+                f"Verdict: **{'met' if met else 'NOT met'}**.")
+    out += pd_row5_section(raw_root)
+    out += ["",
+            "[^pdtokens]: This arm compares **latency** between two P/D conditions, "
+            "not outputs. A disaggregated greedy token stream is not the aggregated "
+            "one: across these two nodes two of three probe prompts diverged, "
+            "reproducibly (GS-29). No statement about output identity is made from "
+            "these rows."]
     return out
 
 

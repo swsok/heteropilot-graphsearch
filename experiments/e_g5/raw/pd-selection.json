@@ -1,0 +1,51 @@
+{
+  "all_infeasible": true,
+  "chosen": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192",
+  "rule": "feasible first, then the lower predicted p99 TTFT, at s8/gpu0 + s6/gpu0 (row 5), applied once (row 7 a)",
+  "seed": 42,
+  "table": [
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.82603774,
+      "p99_ttft_ms": 727.1157526402504,
+      "state": "evaluated",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s128-t2048"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.854539669999994,
+      "p99_ttft_ms": 472.1986596102501,
+      "state": "evaluated",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s128-t8192"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.82603774,
+      "p99_ttft_ms": 727.1157526402504,
+      "state": "evaluated",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s256-t2048"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.854539669999994,
+      "p99_ttft_ms": 472.1986596102501,
+      "state": "evaluated",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s256-t8192"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 160.69126437999998,
+      "p99_ttft_ms": 726.5930396402504,
+      "state": "evaluated",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t2048"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 160.69867652999997,
+      "p99_ttft_ms": 471.9073132802501,
+      "state": "evaluated",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192"
+    }
+  ],
+  "written_at": "2026-10-01T01:01:50.735949+00:00"
+}

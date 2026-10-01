@@ -74,66 +74,125 @@ def gpu0_tenants() -> dict:
 
 # --- 1. predict -----------------------------------------------------------
 
-def predict(spec_path: Path, work: Path, args) -> dict:
+def _plan_args(spec_path: Path, cluster: Path, sub: Path, args, seed: int):
     from types import SimpleNamespace
 
+    return SimpleNamespace(
+        service=str(spec_path), cluster=str(cluster), profiles_root=str(ROOT),
+        predictor=args.predictor, no_enable_pd=False, ranker="service_margin",
+        num_requests=args.num_requests, seed=seed,
+        cache_dir=str(sub / "cache"), work_dir=str(sub / "sim"),
+        timeout=args.sim_timeout, max_workers=args.max_workers,
+        contention="fluid", k_schedule=[4, 8, 16], search_mode="budget",
+        budget_sims=args.budget_sims, budget_seconds=None, epsilon=0.0,
+        max_embeddings_per_template=None, compression="exact", bounds="all",
+        diversity=False, oracle=False, output=None, max_devices=2,
+        # A declared modelling choice (GS-32). Each node is a full PCIe
+        # mesh, so at the default of 8 one s8 -> s6 pair has 41,980 simple
+        # paths and enumeration does not finish. The shortest inter-node
+        # route, gpu -> nic -> nic -> gpu, is exactly 3 hops; a longer one
+        # relays through another GPU, which does not forward NIC traffic.
+        max_hops=3,
+    )
+
+
+DEVICES = frozenset({"s8/gpu0", "s6/gpu0"})
+
+
+def _pd_s8_to_s6(objs) -> list[str]:
+    out = set()
+    for r in objs.representatives:
+        roles = {a.role.value: a.island_id for a in r.exemplar.template.assignments}
+        if roles.get("prefill", "").endswith("-s8") and roles.get("decode", "").endswith("-s6"):
+            out.add(r.template_id)
+    return sorted(out)
+
+
+def _embedding(objs, template_id: str):
+    for r in objs.representatives:
+        if r.template_id != template_id:
+            continue
+        for e in [r.exemplar, *r.embeddings]:
+            if e.devices == DEVICES:
+                return e
+    return None
+
+
+def select_template(spec_path: Path, work: Path, args, seed: int = 42) -> dict:
+    """Preregistration row 7 (a): the template, chosen ONCE and then fixed.
+
+    The row-5 rule -- feasible first, then the lower predicted p99 TTFT, at the
+    placement deployed -- applied a single time at spec S's registered rate and
+    seed 42. Row 5 re-chose per repetition, and the repetitions then deployed
+    two different templates (GS-33).
+    """
     from graphsearch.__main__ import cmd_plan_objects, evaluate_placement
 
-    def plan_args(cluster: Path, sub: str):
-        return SimpleNamespace(
-            service=str(spec_path), cluster=str(cluster), profiles_root=str(ROOT),
-            predictor=args.predictor, no_enable_pd=False, ranker="service_margin",
-            num_requests=args.num_requests, seed=args.rep,
-            cache_dir=str(work / sub / "cache"), work_dir=str(work / sub / "sim"),
-            timeout=args.sim_timeout, max_workers=args.max_workers,
-            contention="fluid", k_schedule=[4, 8, 16], search_mode="budget",
-            budget_sims=args.budget_sims, budget_seconds=None, epsilon=0.0,
-            max_embeddings_per_template=None, compression="exact", bounds="all",
-            diversity=False, oracle=False, output=None, max_devices=2,
-            # A declared modelling choice (GS-32). Each node is a full PCIe
-            # mesh, so at the default of 8 one s8 -> s6 pair has 41,980 simple
-            # paths and enumeration does not finish. The shortest inter-node
-            # route, gpu -> nic -> nic -> gpu, is exactly 3 hops; a longer one
-            # relays through another GPU, which does not forward NIC traffic.
-            max_hops=3,
-        )
-
-    def pd_s8_to_s6(objs) -> list[str]:
-        out = set()
-        for r in objs.representatives:
-            roles = {a.role.value: a.island_id for a in r.exemplar.template.assignments}
-            if roles.get("prefill", "").endswith("-s8") and roles.get("decode", "").endswith("-s6"):
-                out.add(r.template_id)
-        return sorted(out)
-
-    devices = {"s8/gpu0", "s6/gpu0"}
-    base_args = plan_args(CLUSTER, "independent")
-    base = cmd_plan_objects(base_args)
+    pa = _plan_args(spec_path, CLUSTER, work / "select", args, seed)
+    objs = cmd_plan_objects(pa)
     table = []
-    for tid in pd_s8_to_s6(base):
-        v = evaluate_placement(base_args, base, tid, devices)
-        table.append({"template_id": tid, "state": v.state, "feasible": v.feasible,
-                      "search_state": v.search_state,
-                      "p99_ttft_ms": v.plan.predicted.p99_ttft_ms if v.plan else None,
-                      "p99_tpot_ms": v.plan.predicted.p99_tpot_ms if v.plan else None,
-                      "plan": v.plan})
-    judged = [t for t in table if t["plan"] is not None]
+    for tid in _pd_s8_to_s6(objs):
+        v = evaluate_placement(pa, objs, tid, DEVICES)
+        table.append({
+            "template_id": tid, "state": v.state, "feasible": v.feasible,
+            "p99_ttft_ms": v.plan.predicted.p99_ttft_ms if v.plan else None,
+            "p99_tpot_ms": v.plan.predicted.p99_tpot_ms if v.plan else None,
+        })
+    judged = [t for t in table if t["p99_ttft_ms"] is not None]
     if not judged:
-        raise SystemExit("no P/D template with prefill on s8 and decode on s6 was "
-                         "simulated to a result; there is nothing to deploy")
-    # Feasible before infeasible, then the lower predicted p99 TTFT. Recorded
-    # in full so the choice can be checked against the table.
+        raise SystemExit("no P/D template was simulated to a result")
     chosen = min(judged, key=lambda t: (not t["feasible"], t["p99_ttft_ms"]))
-    shared_args = plan_args(CLUSTER_SHARED, "shared")
-    shared = cmd_plan_objects(shared_args)
-    sv = evaluate_placement(shared_args, shared, chosen["template_id"], devices)
-    return {
-        "chosen": chosen,
-        "table": [{k: v for k, v in t.items() if k != "plan"} for t in table],
-        "independent": _metrics(chosen["plan"]),
-        "shared": _metrics(sv.plan) if sv.plan else None,
-        "shared_state": sv.state,
-    }
+    return {"chosen": chosen["template_id"], "seed": seed, "table": table,
+            "all_infeasible": not any(t["feasible"] for t in table),
+            "rule": "feasible first, then the lower predicted p99 TTFT, at "
+                    "s8/gpu0 + s6/gpu0 (row 5), applied once (row 7 a)"}
+
+
+def predict_at(template_id: str, spec_path: Path, work: Path, args,
+               trace: Path, num_reqs: int, seed: int = 42) -> dict:
+    """What the model predicts for the fixed template at the rerun's rate.
+
+    Two numbers per condition: the simulator's p99 TTFT, and the fluid model's
+    KV transfer time over this placement's path (`apply_pd_transfer_cost_
+    embedded`). The primary metric's prediction is the second, as a per-request
+    MEAN: transfer time scales with prompt length, so the per-token time is
+    multiplied by the mean prompt of the requests actually replayed.
+    """
+    import statistics
+
+    from graphsearch.__main__ import cmd_plan_objects, evaluate_placement
+    from graphsearch.adapter import apply_pd_transfer_cost_embedded
+    from graphsearch.contention import contention_model
+
+    reqs = [json.loads(x) for x in Path(trace).read_text().splitlines() if x.strip()]
+    mean_prompt = statistics.mean(r["input_toks"] for r in reqs[:num_reqs])
+    out = {"template_id": template_id, "mean_prompt_tokens": mean_prompt}
+    for name, cluster in (("independent", CLUSTER), ("shared", CLUSTER_SHARED)):
+        pa = _plan_args(spec_path, cluster, work / name, args, seed)
+        objs = cmd_plan_objects(pa)
+        v = evaluate_placement(pa, objs, template_id, DEVICES)
+        emb = _embedding(objs, template_id)
+        if emb is None or v.plan is None:
+            raise SystemExit(f"{name}: {template_id} has no verdict at {sorted(DEVICES)}")
+        _, info = apply_pd_transfer_cost_embedded(
+            emb, v.plan.predicted, objs.spec, objs.graph,
+            contention=contention_model("fluid"),
+        )
+        p50_tokens = objs.spec.traffic.input_tokens.p50
+        per_token = info["xfer_ms_p50"] / p50_tokens
+        out[name] = {
+            "p99_ttft_ms": v.plan.predicted.p99_ttft_ms,
+            "p99_tpot_ms": v.plan.predicted.p99_tpot_ms,
+            "feasible": v.feasible,
+            "xfer_ms_p50": info["xfer_ms_p50"], "p50_prompt_tokens": p50_tokens,
+            "xfer_ms_per_token": per_token,
+            "xfer_ms_mean": per_token * mean_prompt,
+        }
+    out["predicted_interval_change_ms"] = (
+        out["shared"]["xfer_ms_mean"] - out["independent"]["xfer_ms_mean"])
+    out["predicted_p99_ttft_change_ms"] = (
+        out["shared"]["p99_ttft_ms"] - out["independent"]["p99_ttft_ms"])
+    return out
 
 
 def _metrics(plan) -> dict:
@@ -321,44 +380,92 @@ class NicBackground:
 
 # --- the run ----------------------------------------------------------------
 
+SELECTION = HERE / "raw" / "pd-selection.json"
+PILOT = HERE / "raw" / "pd-pilot"
+
+
+def _spec(C, service_spec, rps: float, work: Path) -> Path:
+    S = C.SPECS["service"]
+    return service_spec("llama31-8b", "normal", "knee", rps, work / f"service-rps{rps:g}.yaml",
+                        ttft_max_ms=S["ttft_max_ms"], tpot_max_ms=S["tpot_max_ms"],
+                        min_goodput_rps=S["min_goodput_rps"])
+
+
+def _template(template_id: str, spec_path: Path):
+    from types import SimpleNamespace
+
+    from graphsearch.__main__ import _load, _templates
+
+    spec, cluster, profiles, islands, _graph = _load(SimpleNamespace(
+        service=str(spec_path), cluster=str(CLUSTER), profiles_root=str(ROOT),
+        no_enable_pd=False))
+    for t in _templates(spec, cluster, islands, profiles, True, max_devices=2):
+        if t.id == template_id:
+            return SimpleNamespace(candidate=t)
+    raise SystemExit(f"no template {template_id} on {CLUSTER.name}")
+
+
 def run_pd(args, C, service_spec, workload_at) -> int:
+    work = ROOT / "outputs" / "e_g5" / "pd"
+    work.mkdir(parents=True, exist_ok=True)
+    S = C.SPECS["service"]
+
+    if args.mode == "pd-select":
+        sel = select_template(_spec(C, service_spec, S["arrival_rate_rps"], work), work, args)
+        sel["written_at"] = datetime.now(timezone.utc).isoformat()
+        SELECTION.write_text(json.dumps(sel, indent=2, sort_keys=True) + "\n")
+        say(f"selected {sel['chosen']} "
+            f"(all infeasible: {sel['all_infeasible']}); wrote {SELECTION}")
+        return 0
+
+    if not SELECTION.exists():
+        raise SystemExit(f"{SELECTION} is missing: run --mode pd-select first")
+    template_id = json.loads(SELECTION.read_text())["chosen"]
+    rps = args.rps if args.rps is not None else S["arrival_rate_rps"]
+    trace = workload_at(rps, "llama31-8b", work)
+    spec_path = _spec(C, service_spec, rps, work)
+
+    if args.mode == "pd-predict":
+        pred = predict_at(template_id, spec_path, work / f"predict-rps{rps:g}", args,
+                          trace, C.REQUESTS_PER_RUN)
+        pred["offered_rps"] = rps
+        out = HERE / "raw" / f"pd-prediction-rps{rps:g}.json"
+        out.write_text(json.dumps(pred, indent=2, sort_keys=True) + "\n")
+        say(f"predicted interval change {pred['predicted_interval_change_ms']:+.3f} ms, "
+            f"p99 TTFT change {pred['predicted_p99_ttft_change_ms']:+.1f} ms; wrote {out}")
+        return 0
+
     if args.condition not in CONDITIONS:
         raise SystemExit(f"--mode pd takes --condition {' or '.join(CONDITIONS)}")
-    out = (HERE.parent.parent / "outputs" / "e_g5" / "dry-run" / "pd"
-           if args.dry_run else RAW) / args.condition / str(args.rep)
-    work = ROOT / "outputs" / "e_g5" / "pd" / args.condition / str(args.rep)
+    # Pilot runs are excluded from validation (row 7 b) and live apart.
+    base = (ROOT / "outputs" / "e_g5" / "dry-run" / "pd" if args.dry_run
+            else PILOT / args.pilot_label if args.pilot_label else RAW)
+    out = base / args.condition / str(args.rep)
     out.mkdir(parents=True, exist_ok=True)
-    work.mkdir(parents=True, exist_ok=True)
-    model = "llama31-8b"
-    info = C.MODELS[model]
-    S = C.SPECS["service"]
-    rps = S["arrival_rate_rps"]
-    spec_path = service_spec(model, "normal", "knee", rps, work / "service.yaml",
-                             ttft_max_ms=S["ttft_max_ms"], tpot_max_ms=S["tpot_max_ms"],
-                             min_goodput_rps=S["min_goodput_rps"])
-    say(f"P/D arm {args.condition} rep {args.rep}: predicting")
-    prediction = predict(spec_path, work, args)
-    plan = prediction["chosen"]["plan"]
-    say(f"chosen {plan.candidate.id}: independent "
-        f"{prediction['independent']['p99_ttft_ms']:.1f} ms, shared "
-        f"{(prediction['shared'] or {}).get('p99_ttft_ms')}")
-    trace = workload_at(rps, model, work)
+    info = C.MODELS["llama31-8b"]
+    plan = _template(template_id, spec_path)
+    say(f"P/D {args.condition} rep {args.rep} at {rps:g} rps, template {template_id}"
+        + (f" [pilot {args.pilot_label}]" if args.pilot_label else ""))
     record = {
         "banner": ("DRY RUN -- nothing was launched." if args.dry_run else
                    "REAL HARDWARE -- two nodes, s8 and s6."),
         "deployed_by": "this experiment harness (pd_arm.py, pd_router.py), NOT "
                        "heteropilot planner/deploy/, which has no router (GS-28, GS-32)",
+        "pilot": args.pilot_label,
+        "validation_set": not args.pilot_label,
         "condition": args.condition, "rep": args.rep, "offered_rps": rps,
         "trace": str(trace), "num_reqs": C.REQUESTS_PER_RUN,
+        "template_id": template_id, "selection": str(SELECTION.relative_to(ROOT)),
         "placement": {"prefill": "s8/gpu0", "decode": "s6/gpu0"},
-        "prediction": prediction | {"chosen": {k: v for k, v in prediction["chosen"].items()
-                                               if k != "plan"}},
         "slo": {"ttft_max_ms": S["ttft_max_ms"], "tpot_max_ms": S["tpot_max_ms"]},
         "gpu0_tenants_before": gpu0_tenants(),
         "served_model": info["hf_id"],
         "ttft_definition": ("router prefill-send to first token of the decode "
                             "stream; includes the prefill, the KV pull across the "
                             "NIC and the decode instance's first step"),
+        "interval_definition": ("prefill response received to first token of the "
+                                "decode stream: the KV pull and the decode "
+                                "instance's first step (row 7 c)"),
     }
     if args.dry_run:
         record["state"] = "dry run"
@@ -367,12 +474,12 @@ def run_pd(args, C, service_spec, workload_at) -> int:
     else:
         with Engines(plan, info["hf_id"], out, args.health_timeout) as eng:
             record["prefill_argv"], record["decode_argv"] = eng.prefill_argv, eng.decode_argv
-            bg = NicBackground() if args.condition == "pd-shared" else None
             router = [S8_PY, "-u", str(HERE / "pd_router.py"),
                       "--prefill", f"http://127.0.0.1:{PREFILL_PORT}",
                       "--decode", f"http://{S6_IP}:{DECODE_PORT}",
                       "--model", info["hf_id"], "--trace", str(trace),
                       "--num-reqs", str(C.REQUESTS_PER_RUN), "--out", str(out / "pd")]
+            bg = NicBackground() if args.condition == "pd-shared" else None
             if bg is not None:
                 with bg:
                     r = subprocess.run(router, capture_output=True, text=True,

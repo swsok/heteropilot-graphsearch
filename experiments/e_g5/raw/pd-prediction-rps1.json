@@ -1,0 +1,25 @@
+{
+  "independent": {
+    "feasible": false,
+    "p50_prompt_tokens": 731,
+    "p99_tpot_ms": 39.02537676,
+    "p99_ttft_ms": 356.74855707025137,
+    "xfer_ms_mean": 9.63696878994614,
+    "xfer_ms_p50": 8.600864631956913,
+    "xfer_ms_per_token": 0.011765888689407542
+  },
+  "mean_prompt_tokens": 819.06,
+  "offered_rps": 1.0,
+  "predicted_interval_change_ms": 14.454101576393269,
+  "predicted_p99_ttft_change_ms": 50.89638030866871,
+  "shared": {
+    "feasible": false,
+    "p50_prompt_tokens": 731,
+    "p99_tpot_ms": 39.025376269999995,
+    "p99_ttft_ms": 407.6449373789201,
+    "xfer_ms_mean": 24.09107036633941,
+    "xfer_ms_p50": 21.50095528751753,
+    "xfer_ms_per_token": 0.029413071528751753
+  },
+  "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192"
+}
