@@ -1,0 +1,94 @@
+{
+  "bench_argv": [
+    "/home/swsok/heteropilot/.venv-vllm/bin/python",
+    "-u",
+    "-m",
+    "bench",
+    "run",
+    "--model",
+    "NousResearch/Meta-Llama-3.1-8B",
+    "--dataset",
+    "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps6.jsonl",
+    "--output-dir",
+    "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/pilot-levels/high-floor/T2/bench",
+    "--tensor-parallel-size",
+    "2",
+    "--data-parallel-size",
+    "1",
+    "--max-num-seqs",
+    "128",
+    "--max-num-batched-tokens",
+    "2048",
+    "--dtype",
+    "bfloat16",
+    "--kv-cache-dtype",
+    "auto",
+    "--seed",
+    "42",
+    "--no-enable-prefix-caching",
+    "--num-reqs",
+    "150"
+  ],
+  "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@857398a0d1b9",
+  "gpu_tenants_before": [],
+  "knob_loss": [
+    {
+      "checked_against_vllm": "0.19.0",
+      "differs": false,
+      "knob": "block_size",
+      "planned": 16,
+      "vllm_resolves_to": 16
+    },
+    {
+      "checked_against_vllm": "0.19.0",
+      "differs": false,
+      "knob": "enable_chunked_prefill",
+      "planned": true,
+      "vllm_resolves_to": true
+    },
+    {
+      "checked_against_vllm": "0.19.0",
+      "differs": false,
+      "knob": "prioritize_prefill",
+      "planned": false,
+      "vllm_resolves_to": false
+    },
+    {
+      "checked_against_vllm": "0.19.0",
+      "differs": false,
+      "knob": "pipeline_parallel_size",
+      "planned": 1,
+      "vllm_resolves_to": 1
+    }
+  ],
+  "label": "knee-template-at-high",
+  "loadavg": [
+    3.09,
+    1.58,
+    0.78
+  ],
+  "offered_rps": 6.0,
+  "pilot": "high-floor",
+  "placement_override": {
+    "heteropilot_would_use": "every device of the island",
+    "model_substitution": "the planner keeps the gated id its profiles name; the engine is given the ungated mirror of the same weights",
+    "planner_model": "meta-llama/Llama-3.1-8B",
+    "served_model": "NousResearch/Meta-Llama-3.1-8B",
+    "this_harness_uses": "0,2",
+    "why": "T2: PCIe across the host bridge, measured 25.12 GB/s p2p"
+  },
+  "placement_verdict": null,
+  "plan_id": "hp-00000",
+  "predicted": null,
+  "returncode": 0,
+  "search_recommendation_predicted": {
+    "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@857398a0d1b9",
+    "note": "the search's own pick for a candidate of this size, which need not be the placement deployed; NOT the prediction for this row (GS-30)",
+    "p99_tpot_ms": 41.197484509999995,
+    "p99_ttft_ms": 503.0858152199978,
+    "slo_goodput_rps": 2.464652779122546
+  },
+  "state": "measured",
+  "validation_set": false,
+  "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps6.jsonl"
+}

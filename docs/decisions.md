@@ -1589,3 +1589,72 @@ offered as the explanation.
 **On the paper.** The last `\pending` is replaced by this result (C30), the
 conclusion no longer says the inter-node case waits on a router, and the
 claim is written as a miss.
+
+## GS-35 — the `burst` pattern meant two opposite things, and neither reached the hardware · 2026-10-01
+
+**Decision.** Before E-G5's matrix is widened to the `burst` pattern and the
+`low` / `high` levels, two defects in how a pattern reaches the two halves of
+a condition are fixed, and the goodput floor is made per level.
+
+**1. The hardware trace ignored the pattern.** `workload_at` passed
+`--burstiness 1.0` to `make_workload.py` whatever the condition said, while
+the simulator's spec carried the pattern's value. A `burst` condition would
+have been predicted on one arrival process and measured on another. It now
+passes the pattern; a Poisson trace keeps its old file name, so every row
+already measured still names its trace.
+
+**2. `burstiness` is reciprocal between the two generators.**
+`make_workload.py` follows vLLM: Gamma inter-arrivals with shape =
+`burstiness`, smaller is burstier. heteropilot's `planner/util/workload.py`
+draws shape = **1 / burstiness**, so there larger is burstier. The matrix's
+`burst = 0.2` is vLLM's convention (coefficient of variation sqrt(5) = 2.24);
+written into heteropilot's spec as 0.2 it is shape 5 (CV 0.45) --- arrivals
+*smoother than Poisson*. Even with defect 1 fixed, a `burst` condition would
+have simulated smoothness and measured bursts. `conditions.PATTERNS` is now
+documented as the Gamma shape, `spec_burstiness` writes 1/shape into the spec,
+and `test_the_burst_pattern_means_the_same_thing_to_both_generators` draws
+from both real generators and requires the same CV; with the old spec value it
+fails at 0.447 against 2.236.
+
+**3. The goodput floor was the knee's at every level.** Spec S's
+`min_goodput_rps` = 2.3 is row 4's rule --- 95 % of the lowest measured
+achieved goodput across T1, T2, T3 --- applied at 4 rps. At 2 rps no
+deployment can complete 2.3 requests a second, so every candidate would be
+infeasible on goodput by construction. `conditions.goodput_floor(level)`
+refuses a level with no registered floor. The `low` and `high` floors are
+measured by a pilot (normal pattern, T1--T3, seed 42, floor 0.01, written to
+`raw/pilot-levels/` and excluded from validation) and registered in row 8 by
+row 4's own rule, before the widened matrix's first request.
+
+**What it affects.** `experiments/e_g5/{conditions,deploy_and_bench}.py`,
+`tests/test_e_g5_harness.py`, preregistration row 8.
+
+## GS-36 — the goodput floor follows row 4, and it changes which candidates the search looks at · 2026-10-01
+
+**The instruction and the registration disagreed, and the registration was
+followed.** The work order for E-G5's widening gave the floor as "row 4's rule
+(offered x 0.95)". Row 4 records that 95 % of *offered* (3.8 at the knee) was
+drafted, found unreachable by construction --- a finite trace's drain tail
+keeps achieved goodput below offered even with no queue --- and replaced
+before registration by **95 % of the lowest measured achieved goodput across
+T1, T2, T3** (2.3). Confirmed with the user, who identified the instruction as
+a misquotation. Every level uses row 4's actual rule: `low` 1.6 from its pilot,
+`knee` 2.3 unchanged, `high` from a pilot that deploys the knee's
+recommendation template at 6 rps on each placement, since at `high` there is
+no recommendation of its own to measure.
+
+**The floor's value changes the candidate set the ranker sends to the
+simulator.** At `high`, T1, seed 42, budget 16: with a floor of 0.01 the
+sixteen representatives evaluated were all infeasible (p99 TTFT 3409 ms and
+up); with no floor, a different sixteen were evaluated and four were predicted
+feasible (`tp2-dp1-s256-t8192` among them). Nothing about those four changed:
+the floor enters the ranker's goodput-ratio term and so reorders which
+representatives fill the budget. A near-zero floor is therefore not "no
+floor" to the search. This is recorded as a property of the ranker for later
+diagnosis; the ranker is not changed (GS-31's narrowing stands). Searches run
+with 0.01 or with no floor are not used for any registered result.
+
+**Consequence for the design.** "The search returns no feasible plan of this
+size at `high`" was a statement about a budget, not about the space. Row 8
+therefore evaluates `high`'s scope exhaustively, once, and reports the
+registered budget's recall against it.

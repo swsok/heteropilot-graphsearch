@@ -97,6 +97,7 @@ def rows(raw_root: Path) -> list[dict]:
                 "candidate": dep.get("candidate_id"),
                 "predicted": dep.get("predicted"),
                 "placement_verdict": dep.get("placement_verdict"),
+                "closest_miss": dep.get("closest_miss"),
                 "measured": latencies(measured_path),
                 "slo": prov.get("slo"),
             })
@@ -121,19 +122,28 @@ def verdict(row: dict) -> tuple[str, list[str]]:
     """
     if not row.get("measured"):
         return "not measured", []
-    spec = slo_of("bound_stress" if row["deployment"].endswith("impossible_proven")
-                  else "service")
+    bound = row["deployment"].endswith("impossible_proven")
+    spec = slo_of("bound_stress" if bound else "service")
+    # The service floor is per LEVEL (preregistration row 8): reading the
+    # knee's 2.3 for every row judged `low` against a floor its own spec did
+    # not have, and gave `high` -- which has none -- a goodput axis.
+    floor = spec["min_goodput_rps"] if bound else level_floor(row["condition"])
     m = row["measured"]
     missed = []
     if m["p99_ttft_ms"] > spec["ttft_max_ms"]:
         missed.append(f"TTFT {m['p99_ttft_ms']:.0f} > {spec['ttft_max_ms']:.0f} ms")
     if m["p99_tpot_ms"] > spec["tpot_max_ms"]:
         missed.append(f"TPOT {m['p99_tpot_ms']:.1f} > {spec['tpot_max_ms']:.0f} ms")
-    if m["goodput_rps"] < spec["min_goodput_rps"]:
-        missed.append(
-            f"goodput {m['goodput_rps']:.2f} < {spec['min_goodput_rps']:.2f} rps"
-        )
+    if floor is not None and m["goodput_rps"] < floor:
+        missed.append(f"goodput {m['goodput_rps']:.2f} < {floor:.2f} rps")
     return ("met" if not missed else "MISSED"), missed
+
+
+def level_floor(condition: str):
+    import sys
+    sys.path.insert(0, str(ROOT / "experiments" / "e_g5"))
+    import conditions as C
+    return C.goodput_floor(condition.split("__")[3])
 
 
 def predicted_verdict(row: dict) -> str:
@@ -689,6 +699,60 @@ def pd_section(raw_root: Path) -> list[str]:
     return out
 
 
+def _axis(name: str) -> str:
+    """`p99_ttft_ms` / `TTFT 3341 > 550 ms` -> `ttft`; the same for tpot, goodput."""
+    low = name.lower()
+    for axis in ("ttft", "tpot", "goodput"):
+        if axis in low:
+            return axis
+    return low
+
+
+def closest_miss_table(data: list[dict]) -> list[str]:
+    """Row 8: at `high` the closest miss is deployed in the recommendation's
+    place, and what is tested is the verdict "no feasible plan of this size".
+
+    (i) did the hardware miss its SLO too -- the direction of the verdict;
+    (ii) did it miss on the axes the prediction said it would.
+    """
+    rows = [r for r in data if r["deployment"] == "closest_miss" and r.get("measured")]
+    if not rows:
+        return []
+    head = ["condition", "devices", "offered rps", "p99 TTFT pred", "p99 TTFT meas",
+            "p99 TPOT pred", "p99 TPOT meas", "goodput meas",
+            "predicted violated axes", "measured violated axes",
+            "(i) hardware missed", "(ii) same axes"]
+    out = ["| " + " | ".join(head) + " |", "| " + " | ".join("---" for _ in head) + " |"]
+    agree_i = agree_ii = 0
+    for row in rows:
+        p, m = row["predicted"] or {}, row["measured"]
+        cm = row["closest_miss"] or {}
+        pred_axes = sorted({_axis(v["metric"]) for v in cm.get("predicted_violated_axes", [])})
+        pred_txt = ", ".join(
+            f"{_axis(v['metric'])} +{v['overshoot_ratio'] * 100:.0f} %"
+            for v in sorted(cm.get("predicted_violated_axes", []), key=lambda v: v["metric"]))
+        state, missed = verdict(row)
+        meas_axes = sorted({_axis(x.split()[0]) for x in missed})
+        i_ok = state == "MISSED"
+        ii_ok = i_ok and pred_axes == meas_axes
+        agree_i += i_ok
+        agree_ii += ii_ok
+
+        def f(v, d):
+            return "-" if v is None else f"{v:.{d}f}"
+
+        out.append(
+            f"| {row['condition']} | {row['devices']} | {row['offered_rps']:.1f} | "
+            f"{f(p.get('p99_ttft_ms'), 1)} | {m['p99_ttft_ms']:.1f} | "
+            f"{f(p.get('p99_tpot_ms'), 2)} | {m['p99_tpot_ms']:.2f} | "
+            f"{m['goodput_rps']:.3f} | {pred_txt or '-'} | "
+            f"{', '.join(meas_axes) or 'none'} | {'yes' if i_ok else '**no**'} | "
+            f"{'yes' if ii_ok else '**no**'} |")
+    out += ["", f"(i) the hardware also missed: **{agree_i} of {len(rows)}**. "
+            f"(ii) and on the predicted axes: **{agree_ii} of {len(rows)}**."]
+    return out
+
+
 def markdown(data: list[dict], args) -> str:
     out = ["# E-G5 — the recommendation and the bounds, on hardware", "", BANNER, ""]
     out.append(
@@ -733,6 +797,20 @@ def markdown(data: list[dict], args) -> str:
     )
     out.append("")
     out += agreement_table(data)
+
+    cm = closest_miss_table(data)
+    if cm:
+        out += ["", "## Above the knee: is there really no feasible plan of this size?", ""]
+        out.append(
+            "At `high` the search returns no feasible plan of the condition's size, "
+            "so the recommendation's slot is filled by the **closest miss** -- "
+            "heteropilot's `closest_plan` rule, the infeasible plan with the "
+            "smallest worst normalised overshoot, restricted to the size (row 8). "
+            "What is tested is the verdict \"no feasible plan of this size\", "
+            "within GS-27's scope cut, not a recommendation's SLO."
+        )
+        out.append("")
+        out += cm
 
     out += ["", "## Predicted against measured", ""]
     out += table(data)

@@ -161,7 +161,7 @@ def preconditions(args) -> dict:
 
 def service_spec(
     model: str, pattern: str, level: str, rps: float, out: Path,
-    ttft_max_ms: float, tpot_max_ms: float, min_goodput_rps: float,
+    ttft_max_ms: float, tpot_max_ms: float, min_goodput_rps: float | None,
 ) -> Path:
     """One spec per (model, pattern, level). Generated, never hand-edited."""
     info = C.MODELS[model]
@@ -210,7 +210,7 @@ traffic:
   output_tokens:
     p50: 632
     p95: 780
-  burstiness: {C.PATTERNS[pattern]}
+  burstiness: {C.spec_burstiness(pattern):g}
   prefix_share_ratio: 0.0
 
 slo:
@@ -220,7 +220,7 @@ slo:
   tpot:
     percentile: 99
     max_ms: {tpot_max_ms}
-  min_goodput_rps: {min_goodput_rps}
+  min_goodput_rps: {'null' if min_goodput_rps is None else min_goodput_rps}
 
 objective:
   primary: minimize_active_accelerators
@@ -230,7 +230,14 @@ objective:
     return out
 
 
-def run_plan(spec_path: Path, work: Path, args):
+#: Row 8 (a): k large enough that the adaptive search evaluates every
+#: representative it does not eliminate, so "no feasible plan" is a statement
+#: about the scope and not about a budget.
+EXHAUSTIVE_K = 1_000_000
+
+
+def run_plan(spec_path: Path, work: Path, args, exhaustive: bool = False,
+             budget: int | None = None, cache: Path | None = None):
     """Plan IN PROCESS, because the deploy stage needs objects, not JSON.
 
     `python -m graphsearch plan` writes a YAML summary, and a summary cannot be
@@ -244,10 +251,17 @@ def run_plan(spec_path: Path, work: Path, args):
     """
     from graphsearch.__main__ import cmd_plan_objects
 
-    return cmd_plan_objects(plan_args(spec_path, work, args))
+    return cmd_plan_objects(plan_args(spec_path, work, args, exhaustive, budget, cache))
 
 
-def plan_args(spec_path: Path, work: Path, args):
+#: Row 8 (c): the `high` level's exhaustive evaluation is kept here, so that a
+#: rerun -- and every repetition's single placement simulation -- is a hit.
+HIGH_CACHE = ROOT / "outputs" / "cache-eg5-high"
+HIGH_SCOPE = RAW / "high-scope"
+
+
+def plan_args(spec_path: Path, work: Path, args, exhaustive: bool = False,
+              budget: int | None = None, cache: Path | None = None):
     """The `plan` arguments this harness uses, in one place.
 
     `run_plan` and `placement_prediction` must ask with the same arguments --
@@ -262,10 +276,13 @@ def plan_args(spec_path: Path, work: Path, args):
         profiles_root=str(ROOT), predictor=args.predictor,
         no_enable_pd=False, ranker="service_margin",
         num_requests=args.num_requests, seed=args.rep,
-        cache_dir=str(WORK / "cache"), work_dir=str(work / "sim"),
+        cache_dir=str(cache or WORK / "cache"), work_dir=str(work / "sim"),
         timeout=args.sim_timeout, max_workers=args.max_workers,
-        contention="fluid", k_schedule=[4, 8, 16],
-        search_mode="budget", budget_sims=args.budget_sims,
+        contention="fluid",
+        k_schedule=[4, 8, 16, EXHAUSTIVE_K] if exhaustive else [4, 8, 16],
+        search_mode="budget",
+        budget_sims=(EXHAUSTIVE_K if exhaustive
+                     else budget if budget is not None else args.budget_sims),
         budget_seconds=None, epsilon=0.0,
         max_embeddings_per_template=None, compression="exact",
         bounds="all", diversity=False, oracle=False, output=None,
@@ -352,6 +369,47 @@ def candidates_of_size(objects, devices: int) -> list:
 #: what `false_infeasible` is about.
 TESTABLE_STAGES = ("throughput_upper_bound", "topology_infeasible",
                    "analytical_lower_bound")
+
+
+def scope_record(objects, devices: int, exhaustive: bool) -> dict:
+    """What the search evaluated, and how much of it is feasible (row 8 a)."""
+    audit = objects.audit
+    feasible = audit.feasible_plans
+    out = {
+        "exhaustive": exhaustive,
+        "representatives": audit.representatives,
+        "evaluated": audit.evaluated,
+        "unevaluated": len(audit.unevaluated_ids or []),
+        "feasible": len(feasible),
+        "feasible_of_size": sum(1 for p in feasible if p.candidate.total_devices == devices),
+    }
+    if exhaustive and out["unevaluated"]:
+        # Not silently: a "no feasible plan" over a scope with gaps is not the
+        # statement row 8 registers.
+        out["warning"] = "exhaustive search left representatives unevaluated"
+    return out
+
+
+def closest_miss(infeasible_pairs, devices: int):
+    """heteropilot's `closest_plan`, restricted to the condition's size.
+
+    `planner/optimizer/exhaustive.py` picks the infeasible plan whose
+    `FeasibilityReport.worst_overshoot` -- the largest normalised overshoot
+    over its violated metrics -- is smallest. Not the lowest predicted TTFT:
+    a candidate that misses TTFT by a hair and TPOT by a mile is not close.
+    Restricted to `devices` because a condition names a placement of a fixed
+    size (GS-27); ties are broken by candidate id so the choice is stable
+    (preregistration row 8). Returns `(plan, report)` or None.
+    """
+    sized = [(p, r) for p, r in infeasible_pairs if p.candidate.total_devices == devices]
+    if not sized:
+        return None
+    return min(sized, key=lambda pr: (pr[1].worst_overshoot, pr[0].candidate.id))
+
+
+def _violations(report) -> list[dict]:
+    return [{"metric": v.metric, "target": v.target, "predicted": v.predicted,
+             "overshoot_ratio": v.overshoot_ratio} for v in report.violations]
 
 
 def plan_for(entry, spec):
@@ -696,7 +754,7 @@ def bench_command(plan_obj, topo: C.Topology, model: str, workload: Path,
     return argv, override
 
 
-def workload_at(rps: float, model: str, work: Path) -> Path:
+def workload_at(rps: float, model: str, work: Path, burstiness: float = 1.0) -> Path:
     """A trace re-spaced to `rps`, generated if it is not already there.
 
     `make_workload.py` rewrites only `arrival_time_ns`: every request's tokens
@@ -709,11 +767,17 @@ def workload_at(rps: float, model: str, work: Path) -> Path:
         "sharegpt-llama-3.1-8b-300-sps10.jsonl" if model == "llama31-8b"
         else "sharegpt-qwen3-32b-300-sps10.jsonl"
     )
-    out = ROOT / "outputs" / "e_g5" / "workloads" / f"{model}-rps{rps:g}.jsonl"
+    # The pattern's burstiness is part of the trace. Until it was passed here
+    # every trace was Poisson whatever the condition said, while the
+    # simulator's spec carried the pattern's value -- so a `burst` condition
+    # would have been predicted bursty and measured Poisson. A Poisson trace
+    # keeps its old name, so every row already measured still names its file.
+    tag = "" if burstiness == 1.0 else f"-b{burstiness:g}"
+    out = ROOT / "outputs" / "e_g5" / "workloads" / f"{model}-rps{rps:g}{tag}.jsonl"
     if not out.exists():
         subprocess.run(
             [sys.executable, str(ROOT / "experiments" / "e_g5" / "make_workload.py"),
-             "--input", str(stock), "--rps", str(rps), "--burstiness", "1.0",
+             "--input", str(stock), "--rps", str(rps), "--burstiness", str(burstiness),
              "--out", str(out)],
             check=True, capture_output=True, cwd=ROOT,
         )
@@ -881,6 +945,8 @@ def main(argv: list[str] | None = None) -> int:
              "pd-independent or pd-shared. Deployed by this harness, not by "
              "heteropilot, which has no router (GS-32).",
     )
+    parser.add_argument("--goodput-floor", type=float, default=None,
+                        help="override spec S's min_goodput_rps; for a pilot only")
     parser.add_argument("--pilot-label", default=None,
                         help="--mode pd: a pilot run, written under raw/pd-pilot/ "
                              "and excluded from validation (preregistration row 7)")
@@ -913,7 +979,13 @@ def main(argv: list[str] | None = None) -> int:
     # A dry run measures nothing, so it must not write where measurements
     # live: `raw/` is committed, and a dry run of a condition that was already
     # measured would replace its provenance with a record saying nothing ran.
-    out_dir = (WORK / "dry-run" if args.dry_run else RAW) / args.condition / str(args.rep)
+    out_dir = (
+        WORK / "dry-run" if args.dry_run
+        # A pilot measures what a registration needs and is excluded from
+        # validation, so it lives apart from the rows it informs.
+        else RAW / "pilot-levels" / args.pilot_label if args.pilot_label
+        else RAW
+    ) / args.condition / str(args.rep)
     work = WORK / args.condition / str(args.rep)
     out_dir.mkdir(parents=True, exist_ok=True)
     work.mkdir(parents=True, exist_ok=True)
@@ -935,10 +1007,12 @@ def main(argv: list[str] | None = None) -> int:
     service = C.SPECS["service"]
     stress = C.SPECS["bound_stress"]
 
+    floor = (args.goodput_floor if args.goodput_floor is not None
+             else C.goodput_floor(level))
     spec_path = service_spec(
         model, pattern, level, rps, work / "service.yaml",
         ttft_max_ms=service["ttft_max_ms"], tpot_max_ms=service["tpot_max_ms"],
-        min_goodput_rps=service["min_goodput_rps"],
+        min_goodput_rps=floor,
     )
     stress_path = service_spec(
         model, pattern, level, stress["arrival_rate_rps"],
@@ -948,8 +1022,22 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     say(f"planning S ({args.predictor}) at {rps:.2f} rps, "
-        f"goodput floor {service['min_goodput_rps']}")
-    objects = run_plan(spec_path, work, args)
+        f"goodput floor {floor}")
+    high = None
+    if level == "high":
+        # Row 8: the verdict and the template were fixed ONCE, by the seed-42
+        # exhaustive evaluation (`high_scope.py`). Each repetition deploys that
+        # template and simulates only it, with its own seed; no search runs,
+        # so the budget is zero and the objects carry no verdict of their own.
+        scope_file = HIGH_SCOPE / f"{model}__{pattern}__{topo_key}.json"
+        if not scope_file.exists():
+            raise SystemExit(f"{scope_file} is missing: run high_scope.py first")
+        high = json.loads(scope_file.read_text())
+        objects = run_plan(spec_path, work, args, budget=0, cache=HIGH_CACHE)
+        search_scope = high["scope"]
+    else:
+        objects = run_plan(spec_path, work, args)
+        search_scope = scope_record(objects, len(topo.devices), False)
     say(f"planning B (bound-stress) at {stress['arrival_rate_rps']} rps, "
         f"goodput floor {stress['min_goodput_rps']}")
     stress_objects = run_plan(stress_path, work / "stress", args)
@@ -984,6 +1072,27 @@ def main(argv: list[str] | None = None) -> int:
         f"{k}: {v['why']}" for k, v in sorted(alternatives.items())
     )
     chosen = [("recommendation", sized[0] if sized else None)]
+    if high is not None:
+        # Row 8 (b): feasible in the exhaustive scope -> recommendation and
+        # feasible-marginal; none -> closest miss. B is unchanged below.
+        def rep_of(tid):
+            return next((r for r in objects.representatives if r.template_id == tid), None)
+        if high["branch"] == "recommendation":
+            chosen = [("recommendation", rep_of(high["recommendation"]))]
+            alternatives["feasible_marginal"] = {
+                "representative": rep_of(high["feasible_marginal"])
+                if high.get("feasible_marginal") else None,
+                "why": "fixed by the seed-42 exhaustive evaluation (row 8)",
+            }
+        else:
+            chosen = [("closest_miss", rep_of(high["closest_miss"]["template_id"]))]
+            alternatives["feasible_marginal"] = {
+                "representative": None,
+                "why": "no feasible plan of this size in the exhaustive scope (row 8)",
+            }
+        alternative_kind = "; ".join(
+            f"{k}: {v['why']}" for k, v in sorted(alternatives.items())
+        )
     for kind in ("feasible_marginal", "impossible_proven"):
         entry = alternatives[kind]
         rep = entry.get("representative")
@@ -1011,7 +1120,7 @@ def main(argv: list[str] | None = None) -> int:
         source = stress_objects if label.endswith("impossible_proven") else objects
         plan_obj = plan_for(entry, source.spec)
         offered = float(source.spec.traffic.arrival_rate_rps)
-        trace = workload or workload_at(offered, model, work)
+        trace = workload or workload_at(offered, model, work, C.PATTERNS[pattern])
         need = plan_obj.candidate.total_devices
         if need > len(topo.devices):                        # pragma: no cover
             raise SystemExit(
@@ -1033,10 +1142,16 @@ def main(argv: list[str] | None = None) -> int:
                                        src_work, args)
         say(f"{label}: placement {list(verdict.devices)} -> {verdict.state}"
             f" ({verdict.search_state})")
-        deployments.append(measure(
+        row = measure(
             source, plan_obj, label, placed, model, trace,
             out_dir / label, args, offered=offered, verdict=verdict,
-        ))
+        )
+        if label == "closest_miss":
+            row["closest_miss"] = {
+                **high["closest_miss"],
+                "predicted_violated_axes": verdict.violations,
+            }
+        deployments.append(row)
 
     record = {
         "banner": (
@@ -1082,6 +1197,7 @@ def main(argv: list[str] | None = None) -> int:
             "background_pair": list(topo.background) if topo.background else None,
         },
         "boundary_alternative_kind": alternative_kind,
+        "search_scope": search_scope,
         "deployments": deployments,
         "preconditions": pre,
         "gpu_tenants_after": gpu_tenants(os.getpid()),

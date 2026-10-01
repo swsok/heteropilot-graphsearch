@@ -151,6 +151,11 @@ class SearchAudit:
     #: alternative is chosen on the SIMULATOR's p99s, not on the ranker's
     #: proxy -- the proxy tied 280 candidates at 0.6137.
     feasible_plans: list = field(default_factory=list)
+    #: `(plan, FeasibilityReport)` for every evaluated candidate that failed,
+    #: kept for the same reason and with the same exclusion from provenance.
+    #: E-G5's `closest_miss` (preregistration row 8) is chosen from these by
+    #: heteropilot's own `closest_plan` rule, restricted to the condition's size.
+    infeasible_plans: list = field(default_factory=list)
     compression: dict = field(default_factory=dict)
     residual_splits: list[str] = field(default_factory=list)
     #: How many times each adapter hook fired, and how many of those fired for
@@ -404,6 +409,7 @@ class AdaptiveSearch:
         audit.evaluated = len(evaluated)
         audit.feasible_ids = sorted({p.candidate.id for p in feasible})
         audit.feasible_plans = list(feasible)
+        audit.infeasible_plans = list(infeasible)
         audit.termination = termination
         audit.certificate = certificate
         self._record_hook_evidence(audit)
