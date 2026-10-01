@@ -753,6 +753,46 @@ def closest_miss_table(data: list[dict]) -> list[str]:
     return out
 
 
+def high_scope_table(raw_root: Path, data: list[dict]) -> list[str]:
+    """Row 8 (a)-(c): what the seed-42 exhaustive evaluation found per
+    condition, what was deployed because of it, and the hardware's verdict."""
+    files = sorted((raw_root / "high-scope").glob("*.json"))
+    if not files:
+        return []
+    head = ["condition", "representatives", "evaluated", "feasible of size", "branch",
+            "deployed", "K=16 recall", "hardware (seeds 42 / 43 / 44)"]
+    out = ["| " + " | ".join(head) + " |", "| " + " | ".join("---" for _ in head) + " |"]
+    recalls = []
+    for f in files:
+        sc = json.loads(f.read_text())
+        cond = sc["condition"]
+        s = sc["scope"]
+        k = s.get("budget_k16", {})
+        found, total = k.get("feasible_of_size_found"), k.get("feasible_of_size_in_scope")
+        recall = f"{found}/{total}" if total else "- (none feasible)"
+        if total:
+            recalls.append((cond, found, total))
+        label = "recommendation" if sc["branch"] == "recommendation" else "closest_miss"
+        tid = sc.get("recommendation") or (sc.get("closest_miss") or {}).get("template_id")
+        verdicts = []
+        for rep in (42, 43, 44):
+            row = next((r for r in data if r["condition"] == cond and r["rep"] == rep
+                        and r["deployment"] == label and r.get("measured")), None)
+            verdicts.append(verdict(row)[0] if row else "-")
+        out.append(f"| {cond} | {s['representatives']} | {s['evaluated']} | "
+                   f"{s['feasible_of_size']} | {sc['branch']} | `…{(tid or '')[-16:]}` | "
+                   f"{recall} | {' / '.join(verdicts)} |")
+    if recalls:
+        out += ["", "**The registered adaptive search on a real-hardware spec (row 8 c).** "
+                "K = 16 against the exhaustive feasible set of the condition's size, seed 42: "
+                + "; ".join(f"`{c.split('__')[1]} {c.split('__')[2]}` {a}/{b}"
+                            for c, a, b in recalls)
+                + ". This sits beside GS-31: there the ranker's recall failed a registered "
+                "criterion on the real-lab holdout; here it is measured on the specs the "
+                "hardware campaign actually deployed. The ranker is not changed."]
+    return out
+
+
 def markdown(data: list[dict], args) -> str:
     out = ["# E-G5 — the recommendation and the bounds, on hardware", "", BANNER, ""]
     out.append(
@@ -798,6 +838,19 @@ def markdown(data: list[dict], args) -> str:
     out.append("")
     out += agreement_table(data)
 
+    hs = high_scope_table(RAW, data)
+    if hs:
+        out += ["", "## Above the knee: the exhaustive scope, and what it decided", ""]
+        out.append(
+            "At `high` the verdict is decided once, by evaluating every representative "
+            "of GS-27's scope at seed 42 without a budget; the three repetitions repeat "
+            "the deployment and the measurement of what that decided (row 8). A "
+            "recommendation that saturates here is a false positive of the 6 rps "
+            "prediction; a closest miss that also misses is agreement with the "
+            "infeasibility verdict. They are different claims."
+        )
+        out.append("")
+        out += hs
     cm = closest_miss_table(data)
     if cm:
         out += ["", "## Above the knee: is there really no feasible plan of this size?", ""]

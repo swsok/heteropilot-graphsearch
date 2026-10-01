@@ -1,0 +1,43 @@
+{
+  "branch": "closest_miss",
+  "closest_miss": {
+    "chosen_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@002ce272333c",
+    "heteropilot_closest_plan_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@002ce272333c",
+    "rule": "min worst_overshoot over the exhaustive scope's infeasible plans of 2 devices, ties by candidate id (row 8)",
+    "same_as_heteropilot": true,
+    "template_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192",
+    "violations_at_its_own_placement": [
+      {
+        "metric": "p99_ttft_ms",
+        "overshoot_ratio": 0.29017917301818197,
+        "predicted": 709.5985451600001,
+        "target": 550.0
+      },
+      {
+        "metric": "slo_goodput_rps",
+        "overshoot_ratio": 0.11801569287590816,
+        "predicted": 2.1167623370978204,
+        "target": 2.4
+      }
+    ],
+    "worst_overshoot": 0.29017917301818197
+  },
+  "condition": "llama31-8b__burst__T2__high",
+  "goodput_floor": 2.4,
+  "rate_rps": 6.0,
+  "scope": {
+    "budget_k16": {
+      "evaluated": 16,
+      "feasible_of_size_found": 0,
+      "feasible_of_size_in_scope": 0
+    },
+    "evaluated": 210,
+    "exhaustive": true,
+    "feasible": 0,
+    "feasible_of_size": 0,
+    "representatives": 210,
+    "unevaluated": 0
+  },
+  "seed": 42,
+  "written_at": "2026-10-01T07:24:34.338680+00:00"
+}
