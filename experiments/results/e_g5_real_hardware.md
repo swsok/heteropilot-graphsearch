@@ -147,7 +147,63 @@ The candidate the throughput bound rejected by the smallest margin, deployed and
 
 **Deployed by this experiment's harness, not by heteropilot's `planner/deploy/`**, which has no router and cannot launch a split architecture (GS-28, heteropilot D128). The router is `experiments/e_g5/pd_router.py`, an instrument for this measurement and not a serving component (GS-32).
 
-Prefill on `s8` GPU 0, decode on `s6` GPU 0, `NixlConnector` between them. **TTFT is the registered definition**: from the router sending the prefill call to the first token of the decode stream, so it includes the prefill, the KV pull across the NIC, and the decode instance's first step.[^pdtokens]
+**This arm's question is the size of the contention effect and whether the model's prediction of it agrees, not whether a P/D deployment meets its SLO** (preregistration row 7 f). Prefill on `s8` GPU 0, decode on `s6` GPU 0, `NixlConnector`. The primary metric is the per-request **interval** from the prefill response to the decode stream's first token -- the KV pull plus the decode instance's first step -- as a paired mean difference; p99 TTFT is secondary. A constant added to every request shows in a mean and is buried in a p99.[^pdtokens]
+
+Template, fixed for every run (row 7 a): `pd(cuda-a40-s8-tp1-dp1 P + cuda-a40-s6-tp1-dp1 D)-s32-t8192`, chosen once at seed 42. **Every P/D template was predicted infeasible on TPOT** before selection, which is reported as a separate fact and is not this arm's question:
+
+| template | predicted p99 TTFT | predicted p99 TPOT | feasible |
+| --- | --- | --- | --- |
+| `…)-s128-t2048` | 727.1 ms | 61.8 ms | False |
+| `…)-s128-t8192` | 472.2 ms | 61.9 ms | False |
+| `…)-s256-t2048` | 727.1 ms | 61.8 ms | False |
+| `…)-s256-t8192` | 472.2 ms | 61.9 ms | False |
+| `…D)-s32-t2048` | 726.6 ms | 160.7 ms | False |
+| `…D)-s32-t8192` | 471.9 ms | 160.7 ms | False |
+
+### The knee pilot (excluded from validation)
+
+| offered rps | goodput / offered | drain-corrected | p50 TTFT | p99 TTFT | mean interval |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 0.875 | 1.045 | 336 ms | 668 ms | 217.1 ms |
+| 1.5 | 0.700 | 0.873 | 13404 ms | 20375 ms | 10979.9 ms |
+| 2 | 0.531 | 0.665 | 24121 ms | 42369 ms | 20970.8 ms |
+| 3 | 0.358 | 0.452 | 34064 ms | 64783 ms | 31085.6 ms |
+
+The rerun rate is the highest pilot rate whose drain-corrected goodput is at least 0.9 of offered: **1 rps**. E-G5's own goodput divides by the span to the last completion, so an unqueued run of this trace scores 0.845 at 1 rps; the corrected figure removes one unqueued request's service time from the span (row 7 b).
+
+### Pilot pairs (excluded from validation)
+
+| rep | requests paired | interval change (mean) | per-request SD |
+| --- | --- | --- | --- |
+| 42 | 150 | +3.87 ms | 15.24 ms |
+| 43 | 150 | +1.79 ms | 17.84 ms |
+| 44 | 150 | +1.77 ms | 14.03 ms |
+
+SD of the pair-mean change across pilot pairs: **1.20 ms**.
+
+### The validation pairs, 1 rps
+
+| pair | requests paired | interval mean independent | shared | change | predicted change | p99 TTFT independent | shared | change | predicted |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 42 | 150 | 216.40 ms | 219.36 ms | +2.96 ms | +14.45 ms | 669.2 ms | 667.8 ms | -1.4 ms | +50.9 ms |
+| 43 | 150 | 218.22 ms | 220.26 ms | +2.05 ms | +14.45 ms | 658.9 ms | 668.5 ms | +9.6 ms | +50.9 ms |
+| 44 | 150 | 217.77 ms | 217.48 ms | -0.28 ms | +14.45 ms | 657.0 ms | 647.4 ms | -9.5 ms | +50.9 ms |
+
+#### The registered criterion (row 7 e)
+
+| quantity | value |
+| --- | --- |
+| measured change | +1.57 |
+| SD across pairs | 1.67 |
+| predicted change | +14.45 |
+| ratio | 0.11 |
+| verdict | NOT met |
+
+Mean of the pair changes **+1.57 ms** against a predicted **+14.45 ms**: ratio **0.11**, same sign. Registered: same sign and a ratio between 0.5 and 2. Verdict: **NOT met**.
+
+### The row-5 runs (GS-33), kept and not validated
+
+Registered by row 5 and run before row 7 existed. Each repetition chose its own template and the configuration saturated; they are kept as the record of why row 7 was needed, and no verdict is drawn from them.
 
 | condition | rep | completed | failed | p50 TTFT | p99 TTFT | p99 TPOT | goodput | SLO attainment | background duty |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -158,7 +214,7 @@ Prefill on `s8` GPU 0, decode on `s6` GPU 0, `NixlConnector` between them. **TTF
 | pd-shared | 43 | 150 | 0 | 1239.6 | 24799.9 | 97.57 | 1.560 | 0.147 | 0.600 |
 | pd-shared | 44 | 150 | 0 | 38633.5 | 76717.8 | 41.22 | 1.081 | 0.080 | 0.600 |
 
-### Paired by repetition
+#### Paired by repetition
 
 | rep | template | independent p99 TTFT | shared p99 TTFT | change | predicted change | goodput / offered |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -168,11 +224,11 @@ Prefill on `s8` GPU 0, decode on `s6` GPU 0, `NixlConnector` between them. **TTF
 
 **Saturated in repetitions 42, 43, 44.** Goodput is below 90 % of the offered rate, so requests queue for the whole trace and p99 TTFT is set by that queue, not by the path the KV takes. In that regime a change in the NIC's load is not observable, and this arm cannot answer its question.
 
-### The registered criterion
+#### Row 5's criterion
 
 **Not computable as registered.** The criterion reads the spread of the three independent repetitions as noise, which assumes they are replicates. They are not: each repetition re-ran the search and deployed the template it chose, and the repetitions chose 2 different ones (`…)-s128-t8192`, `…D)-s32-t8192`). The spread is therefore a configuration difference, and a verdict computed from it would be met by construction. It is not reported as met.
 
-[^pdtokens]: This arm compares **latency and goodput** between two P/D conditions, not outputs. A disaggregated greedy token stream is not the aggregated one: across these two nodes two of three probe prompts diverged, reproducibly (GS-29). No statement about output identity is made from these rows.
+[^pdtokens]: This arm compares **latency** between two P/D conditions, not outputs. A disaggregated greedy token stream is not the aggregated one: across these two nodes two of three probe prompts diverged, reproducibly (GS-29). No statement about output identity is made from these rows.
 
 ## Reproducing
 

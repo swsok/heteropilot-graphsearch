@@ -666,6 +666,13 @@ def pd_section(raw_root: Path) -> list[str]:
             ratio = effect / pv
             same = (effect > 0) == (pv > 0)
             met = same and 0.5 <= ratio <= 2.0
+            sd = statistics.stdev(r["diff"] for r in main) if len(main) > 1 else 0.0
+            out += ["| quantity | value |", "| --- | --- |",
+                    f"| measured change | {effect:+.2f} |",
+                    f"| SD across pairs | {sd:.2f} |",
+                    f"| predicted change | {pv:+.2f} |",
+                    f"| ratio | {ratio:.2f} |",
+                    f"| verdict | {'met' if met else 'NOT met'} |", ""]
             out.append(
                 f"Mean of the pair changes **{effect:+.2f} ms** against a predicted "
                 f"**{pv:+.2f} ms**: ratio **{ratio:.2f}**, "

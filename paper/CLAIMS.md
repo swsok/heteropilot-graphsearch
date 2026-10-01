@@ -55,7 +55,7 @@ exists to prevent.
 | C22 | Two concurrent streams over one inter-node NIC take exactly half each, which processor sharing predicts and the intra-node PCIe path does not do | `experiments/results/e_g4_microbench.md` | hardware | Established[^locb] |
 | C29 | The inter-node NIC is full duplex: both directions together exceed twice a single stream, where the intra-node pair reaches 1.33x | `experiments/results/e_g4_microbench.md` | hardware | Established |
 | C31 | A collective's bandwidth is keyed by **where** it ran as well as by how many ranks: at two ranks the same all-reduce is 3.8x slower across the NIC than inside one node | `experiments/results/e_g4_microbench.md` | hardware | Established[^collb] |
-| C30 | Inter-node **P/D** contention, which needs disaggregated prefill | — (E-G5) | hardware | Pending[^disagg] |
+| C30 | On an inter-node P/D deployment, a 0.6-duty background on the shared NIC lengthens the KV interval far less than the fluid model predicts: the registered agreement criterion is **not met** | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^disagg] |
 | C23 | The compression ratio and the search's own cost are reported as a function of device count and cluster symmetry | `experiments/results/e_g6_scale.md` | mock | Established, **report-only**[^eg6] |
 | C24 | Dropping the shared boundary from the signature produces mis-merges | `experiments/results/e_g7_ablation.md` | mock | Established[^eg7] |
 | C25 | The baseline comparison is fair: same candidate space, predictor and cache, with the template-level scoring credited generously to the baseline | `experiments/results/e_g7_baseline_fairness.md` | mock | Established |
@@ -127,11 +127,14 @@ exists to prevent.
     all-reduce over IB needs NCCL, which needs torch on both nodes, and the peer
     has no such environment yet.
 
-[^disagg]: A second node exists, so "one machine" is no longer a reason. The
-    other one stands: `planner/deploy/vllm_cuda.py` builds the argv for "one
-    aggregated engine" with no `kv_connector` and no producer/consumer role, so
-    a disaggregated prefill pair cannot be deployed at all. That is a hook PR to
-    that repository, not a measurement waiting to be taken.
+[^disagg]: Preregistration row 7. Template fixed, 1 rps from a knee
+    pilot (the highest rate not saturated), ABAB pairs paired request by
+    request. The mean pair change is +1.57 ms (SD 1.67 ms over three pairs,
+    so not distinguishable from zero) against a predicted +14.45 ms, ratio
+    0.11; the band was 0.5 to 2. The deployment is the experiment harness's,
+    not heteropilot's, which has no router (D128). Row 5's earlier attempt is
+    kept and not validated: its repetitions deployed two templates and its
+    load saturated them (GS-33).
 
 [^eg5verdict]: 21 of 27 rows agree; all six disagreements are T3's
     recommendation and feasible-marginal rows, predicted met and measured
