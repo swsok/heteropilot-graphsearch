@@ -61,6 +61,7 @@ from graphsearch.oracle import (  # noqa: E402
     run_oracle,
     run_proposed,
 )
+from graphsearch.paths import DEFAULT_POLICY, PathPolicy  # noqa: E402
 from graphsearch.ranker import (  # noqa: E402
     DEFAULT_RANKER_VARIANT,
     RANKER_VARIANTS,
@@ -394,13 +395,17 @@ def cmd_plan_objects(args) -> PlanObjects:
         enabled=args.compression == "exact", conflicts=False
     )
 
+    path_policy = (
+        PathPolicy(max_hops=args.max_hops)
+        if getattr(args, "max_hops", None) is not None else DEFAULT_POLICY
+    )
     embeddings, stats = enumerate_embeddings(
-        templates, by_id, graph, spec, embedding_policy
+        templates, by_id, graph, spec, embedding_policy, path_policy=path_policy
     )
     representatives, _, report = compress(embeddings, graph, compression_policy)
     verdicts, rejections = prune(
         representatives, spec, graph, by_id, profiles, stats,
-        policy=_bound_policy(args.bounds),
+        policy=_bound_policy(args.bounds), path_policy=path_policy,
     )
     contention = contention_model(args.contention)
     quota = DiversityQuota() if args.diversity else None
@@ -458,6 +463,110 @@ def cmd_plan_objects(args) -> PlanObjects:
         profiles=profiles, cluster=cluster, spec=spec,
     )
 
+
+
+@dataclass
+class PlacementVerdict:
+    """What the search says about ONE placement, asked about that placement.
+
+    E-G5 deploys a template at a placement the condition names. The search's
+    recommendation is the best placement it reached, which is not necessarily
+    that one, and printing the recommendation's metrics beside a measurement
+    taken somewhere else is the defect GS-30 records. This is the verdict for
+    the placement actually deployed.
+    """
+
+    embedding_id: str
+    devices: tuple[str, ...]
+    #: How the search's own run treated this placement's representative, in
+    #: the five-state vocabulary: whether the bound judged it, and whether the
+    #: budget reached it. Never merged with `state` below.
+    search_state: str
+    #: The verdict of simulating THIS placement: `evaluated` or
+    #: `unknown_measurement`. Only `evaluated` carries metrics.
+    state: str
+    feasible: bool | None
+    plan: object | None
+    detail: str
+
+
+def evaluate_placement(args, objects: PlanObjects, template_id: str,
+                       devices) -> PlacementVerdict:
+    """Simulate one placement of one template, through the search's own parts.
+
+    Same predictor, same compile hook, same per-candidate cache signature as
+    `cmd_plan_objects` uses, so a placement the search already evaluated is a
+    cache hit with its own metrics, and one it did not reach is simulated now
+    rather than reported as something it is not.
+    """
+    from typing import cast
+
+    from planner.optimizer.exhaustive import evaluate_candidates
+
+    from graphsearch.adaptive import _graph_signature
+    from graphsearch.schema import ResourceGraph
+
+    wanted = frozenset(devices)
+    rep = embedding = None
+    for r in objects.representatives:
+        if r.template_id != template_id:
+            continue
+        for e in [r.exemplar, *r.embeddings]:
+            if e.devices == wanted:
+                rep, embedding = r, e
+                break
+        if embedding is not None:
+            break
+    if embedding is None:
+        return PlacementVerdict(
+            embedding_id="", devices=tuple(sorted(wanted)),
+            search_state="excluded_by_scope", state="excluded_by_scope",
+            feasible=None, plan=None,
+            detail=f"no embedding of {template_id} occupies exactly these devices",
+        )
+
+    assert rep is not None
+    graph = cast(ResourceGraph, objects.graph)
+    bound = cast(dict, objects.verdicts).get(rep.rep_id)
+    reached = rep.exemplar.id not in set(objects.audit.unevaluated_ids or [])
+    feasible_ids = {p.candidate.id for p in objects.audit.feasible_plans}
+    if bound is not None and bound.eliminated:
+        search_state = "impossible_proven (by a bound; never simulated)"
+    elif not reached:
+        search_state = "unevaluated (the budget did not reach it)"
+    elif rep.exemplar.id in feasible_ids:
+        search_state = "evaluated: feasible"
+    else:
+        search_state = "evaluated: not feasible"
+
+    spec, cluster = objects.spec, objects.cluster
+    by_id, profiles = objects.islands_by_id, objects.profiles
+    predictor, cache = _predictor_for(args, spec, cluster, by_id)
+    bind = binder_for(predictor, graph, spec, cluster, by_id, profiles,
+                      contention_model(args.contention))
+    if bind is not None:
+        bind({embedding.id: embedding})
+    if cache is not None:
+        signature = _graph_signature(rep, graph)
+        cache = cache.with_signature_of(lambda c: signature)
+    candidate = embedding.template.model_copy(update={"id": embedding.id})
+    result = evaluate_candidates(
+        [candidate], spec, cluster, by_id, profiles, predictor,
+        cache=cache, pd_transfer=not prices_pd_on_the_path(predictor),
+    )
+    ranks = tuple(v for p in embedding.placements for v in p.ranks)
+    if result.feasible_plans:
+        return PlacementVerdict(embedding.id, ranks, search_state, "evaluated",
+                                True, result.feasible_plans[0], "")
+    if result.infeasible_plans:
+        plan, report = result.infeasible_plans[0]
+        return PlacementVerdict(embedding.id, ranks, search_state, "evaluated",
+                                False, plan, str(getattr(report, "reasons", report)))
+    why = "; ".join(str(r) for r in result.rejections) or "; ".join(result.notes)
+    return PlacementVerdict(
+        embedding.id, ranks, search_state, "unknown_measurement", None, None,
+        why or "the simulator returned no verdict for this placement",
+    )
 
 def _write(output, audit, report, restored, path: Path) -> None:
     import yaml
@@ -555,6 +664,14 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--budget-seconds", type=float, default=None)
     plan.add_argument("--epsilon", type=float, default=0.0)
     plan.add_argument("--max-embeddings-per-template", type=int, default=None)
+    plan.add_argument(
+        "--max-hops", type=int, default=None,
+        help="cap on a path's hop count (default: the library's, 8). Every "
+             "simple path up to the cap is enumerated, so on a cluster whose "
+             "nodes are full PCIe meshes an inter-node pair has tens of "
+             "thousands of them; the cap is then a declared modelling choice, "
+             "recorded by the caller (GS-32).",
+    )
     plan.add_argument("--compression", choices=("exact", "off"), default="exact")
     plan.add_argument("--bounds", default="all")
     plan.add_argument("--diversity", action="store_true")

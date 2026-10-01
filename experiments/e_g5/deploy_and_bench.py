@@ -242,11 +242,22 @@ def run_plan(spec_path: Path, work: Path, args):
     So this calls the same pipeline `cmd_plan` calls, with the same arguments,
     and `tests/test_e_g5_harness.py` pins that the flags stay in step.
     """
-    from types import SimpleNamespace
-
     from graphsearch.__main__ import cmd_plan_objects
 
-    args_for_plan = SimpleNamespace(
+    return cmd_plan_objects(plan_args(spec_path, work, args))
+
+
+def plan_args(spec_path: Path, work: Path, args):
+    """The `plan` arguments this harness uses, in one place.
+
+    `run_plan` and `placement_prediction` must ask with the same arguments --
+    the same cache, the same trace -- or a placement the search evaluated would
+    be simulated again under a different trace and come back as a different
+    number for no reason anyone could see.
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
         service=str(spec_path), cluster=str(CLUSTER),
         profiles_root=str(ROOT), predictor=args.predictor,
         no_enable_pd=False, ranker="service_margin",
@@ -258,6 +269,8 @@ def run_plan(spec_path: Path, work: Path, args):
         budget_seconds=None, epsilon=0.0,
         max_embeddings_per_template=None, compression="exact",
         bounds="all", diversity=False, oracle=False, output=None,
+        # The library's default; the aggregated conditions are one node (GS-32).
+        max_hops=None,
         # The topology condition names a placement, and a placement has a fixed
         # device count -- so the planner is asked "what is the best plan using
         # at most this many devices", and its answer is what gets placed. Left
@@ -267,7 +280,38 @@ def run_plan(spec_path: Path, work: Path, args):
         # file, never a judgement that larger plans are worse.
         max_devices=len(C.TOPOLOGIES[args.topology_key].devices),
     )
-    return cmd_plan_objects(args_for_plan)
+
+
+def device_ids(objects, indices) -> frozenset[str]:
+    """CUDA indices, as the graph names the devices (`a40x8/gpu2`)."""
+    known = {d for r in objects.representatives for d in r.exemplar.devices}
+    out = set()
+    for i in indices:
+        hits = [d for d in known if d.rsplit("/", 1)[-1] == f"gpu{i}"]
+        if len(hits) != 1:
+            raise SystemExit(f"cannot name device {i} in the graph: {hits}")
+        out.add(hits[0])
+    return frozenset(out)
+
+
+def placement_prediction(objects, plan_obj, topo: C.Topology, spec_path: Path,
+                         work: Path, args):
+    """The search's verdict on the placement that is about to be deployed.
+
+    GS-30: `run_plan` names no placement, so its recommendation is the best
+    placement the search reached, and this harness deploys the template at the
+    placement the CONDITION names. Printing the first's prediction beside the
+    second's measurement put an NVLink pair's numbers next to a PCIe pair's
+    measurement, and made T1 and T2 look identical. This asks about the
+    deployed placement itself.
+    """
+    from graphsearch.__main__ import evaluate_placement
+
+    template_id = plan_obj.candidate.id.split("@", 1)[0]
+    return evaluate_placement(
+        plan_args(spec_path, work, args), objects, template_id,
+        device_ids(objects, topo.devices),
+    )
 
 
 def candidates_of_size(objects, devices: int) -> list:
@@ -677,8 +721,17 @@ def workload_at(rps: float, model: str, work: Path) -> Path:
     return out
 
 
+def _metrics(plan_obj) -> dict:
+    return {
+        "p99_ttft_ms": plan_obj.predicted.p99_ttft_ms,
+        "p99_tpot_ms": plan_obj.predicted.p99_tpot_ms,
+        "slo_goodput_rps": plan_obj.predicted.slo_goodput_rps,
+    }
+
+
 def measure(source, plan_obj, label: str, topo: C.Topology, model: str,
-            workload: Path, out_dir: Path, args, offered: float = 0.0) -> dict:
+            workload: Path, out_dir: Path, args, offered: float = 0.0,
+            verdict=None) -> dict:
     """One deployment: run the load, collect, tear down. Always tears down."""
     out_dir.mkdir(parents=True, exist_ok=True)
     argv, override = bench_command(
@@ -694,10 +747,30 @@ def measure(source, plan_obj, label: str, topo: C.Topology, model: str,
         "workload": str(workload),
         "plan_id": plan_obj.plan_id,
         "candidate_id": plan_obj.candidate.id,
-        "predicted": {
-            "p99_ttft_ms": plan_obj.predicted.p99_ttft_ms,
-            "p99_tpot_ms": plan_obj.predicted.p99_tpot_ms,
-            "slo_goodput_rps": plan_obj.predicted.slo_goodput_rps,
+        # GS-30. `predicted` is the verdict on the placement DEPLOYED, and is
+        # None unless that placement was actually simulated to a result. The
+        # search's recommendation is kept beside it under its own name, because
+        # it is a different placement and was the number this field used to
+        # carry.
+        "predicted": _metrics(verdict.plan) if (
+            verdict is not None and verdict.state == "evaluated"
+        ) else None,
+        "placement_verdict": None if verdict is None else {
+            "embedding_id": verdict.embedding_id,
+            "devices": list(verdict.devices),
+            "search_state": verdict.search_state,
+            "state": verdict.state,
+            "feasible": verdict.feasible,
+            "detail": verdict.detail,
+        },
+        "search_recommendation_predicted": {
+            **_metrics(plan_obj),
+            "candidate_id": plan_obj.candidate.id,
+            "note": (
+                "the search's own pick for a candidate of this size, which "
+                "need not be the placement deployed; NOT the prediction for "
+                "this row (GS-30)"
+            ),
         },
     }
     (out_dir / "bench.cmd").write_text(
@@ -801,7 +874,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-tenants", action="store_true",
                         help="proceed although another tenant holds a GPU. "
                              "Every row is then labelled contaminated.")
+    parser.add_argument(
+        "--mode", choices=("aggregated", "pd"), default="aggregated",
+        help="`pd`: the inter-node P/D arm (pd_arm.py). --condition is then "
+             "pd-independent or pd-shared. Deployed by this harness, not by "
+             "heteropilot, which has no router (GS-32).",
+    )
     args = parser.parse_args(argv)
+    if args.mode == "pd":
+        import pd_arm
+
+        return pd_arm.run_pd(args, C, service_spec, workload_at)
 
     model, pattern, topo_key, level = C.parse(args.condition)
     topo = C.TOPOLOGIES[topo_key]
@@ -823,7 +906,10 @@ def main(argv: list[str] | None = None) -> int:
             "labelled with a condition it was not run under."
         )
 
-    out_dir = RAW / args.condition / str(args.rep)
+    # A dry run measures nothing, so it must not write where measurements
+    # live: `raw/` is committed, and a dry run of a condition that was already
+    # measured would replace its provenance with a record saying nothing ran.
+    out_dir = (WORK / "dry-run" if args.dry_run else RAW) / args.condition / str(args.rep)
     work = WORK / args.condition / str(args.rep)
     out_dir.mkdir(parents=True, exist_ok=True)
     work.mkdir(parents=True, exist_ok=True)
@@ -935,9 +1021,17 @@ def main(argv: list[str] | None = None) -> int:
         placed = topo if need == len(topo.devices) else replace(
             topo, devices=tuple(topo.devices[:need])
         )
+        src_spec, src_work = (
+            (stress_path, work / "stress")
+            if label.endswith("impossible_proven") else (spec_path, work)
+        )
+        verdict = placement_prediction(source, plan_obj, placed, src_spec,
+                                       src_work, args)
+        say(f"{label}: placement {list(verdict.devices)} -> {verdict.state}"
+            f" ({verdict.search_state})")
         deployments.append(measure(
             source, plan_obj, label, placed, model, trace,
-            out_dir / label, args, offered=offered,
+            out_dir / label, args, offered=offered, verdict=verdict,
         ))
 
     record = {

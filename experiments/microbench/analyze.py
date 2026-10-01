@@ -334,8 +334,13 @@ def verdict(rows: list[dict]) -> list[dict]:
 
 # --- location (b): the inter-node NIC -------------------------------------
 
-def nic_results(root: Path) -> dict:
+def nic_results(root: Path, only: str | None = None) -> dict:
     """The `run_nic.py` raws, keyed by condition. Empty when none were taken.
+
+    `only` names one raw directory. Without it, directories written by
+    `run_nic.py --reverse` (`*-nic-*-to-*`) are skipped: they hold the same
+    condition names for the OTHER direction, and folding them in would let one
+    direction's `single` silently replace the other's.
 
     A point the harness marked `suspect` is dropped from the medians and named
     in the section: `ib_send_bw -b` sometimes reports the SUM of both
@@ -349,6 +354,10 @@ def nic_results(root: Path) -> dict:
         # `allreduce` list rather than the `sizes` map `ib_send_bw` produces.
         # `nic_collective` reads those; this loader would raise on them.
         if "collective" in path.parent.name:
+            continue
+        if only is not None and path.parent.name != only:
+            continue
+        if only is None and "-to-" in path.parent.name:
             continue
         raw = json.loads(path.read_text())
         rows, suspect = [], []

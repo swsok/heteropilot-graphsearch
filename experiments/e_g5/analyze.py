@@ -43,8 +43,10 @@ VALIDATE = ROOT / "vendor" / "heteropilot" / "bench" / "core" / "validate.py"
 BANNER = (
     "> **REAL HARDWARE.** Every measured column comes from "
     "`experiments/e_g5/raw/`, on the node whose accelerator serials each "
-    "provenance file carries. The predicted columns are the planner's, taken "
-    "from the plan that was deployed. Nothing here is a simulation."
+    "provenance file carries. The predicted columns are graph search's "
+    "verdict on the placement that was deployed (GS-30): each placement "
+    "simulated for itself, not the search's own pick. Only the predicted "
+    "columns are simulations."
 )
 
 
@@ -94,6 +96,7 @@ def rows(raw_root: Path) -> list[dict]:
                 "offered_rps": dep.get("offered_rps"),
                 "candidate": dep.get("candidate_id"),
                 "predicted": dep.get("predicted"),
+                "placement_verdict": dep.get("placement_verdict"),
                 "measured": latencies(measured_path),
                 "slo": prov.get("slo"),
             })
@@ -133,26 +136,41 @@ def verdict(row: dict) -> tuple[str, list[str]]:
     return ("met" if not missed else "MISSED"), missed
 
 
+def predicted_verdict(row: dict) -> str:
+    """The search's verdict on THIS placement, in the SLO's words."""
+    v = row.get("placement_verdict")
+    if not v:
+        return "not recorded (before GS-30)"
+    if v.get("state") != "evaluated":
+        return v.get("state", "-")
+    return "met" if v.get("feasible") else "MISSED"
+
+
 def table(data: list[dict]) -> list[str]:
     head = ["condition", "deployment", "devices", "offered rps",
             "p99 TTFT pred", "p99 TTFT meas", "p99 TPOT pred", "p99 TPOT meas",
-            "goodput meas", "SLO"]
+            "goodput meas", "predicted", "measured"]
     out = ["| " + " | ".join(head) + " |",
            "| " + " | ".join("---" for _ in head) + " |"]
     for row in data:
         if not row.get("measured"):
             out.append(
                 f"| {row['condition']} | {row['deployment']} | - | - | - | - | "
-                f"- | - | - | {row.get('state', 'not run')} |"
+                f"- | - | - | - | {row.get('state', 'not run')} |"
             )
             continue
         p, m = row["predicted"], row["measured"]
         state, _missed = verdict(row)
+
+        def f(v, d):
+            return "-" if v is None else f"{v:.{d}f}"
+
         out.append(
             f"| {row['condition']} | {row['deployment']} | {row['devices']} | "
-            f"{row['offered_rps']:.1f} | {p['p99_ttft_ms']:.1f} | "
-            f"{m['p99_ttft_ms']:.1f} | {p['p99_tpot_ms']:.2f} | "
-            f"{m['p99_tpot_ms']:.2f} | {m['goodput_rps']:.3f} | **{state}** |"
+            f"{row['offered_rps']:.1f} | {f(p and p['p99_ttft_ms'], 1)} | "
+            f"{m['p99_ttft_ms']:.1f} | {f(p and p['p99_tpot_ms'], 2)} | "
+            f"{m['p99_tpot_ms']:.2f} | {m['goodput_rps']:.3f} | "
+            f"{predicted_verdict(row)} | **{state}** |"
         )
     return out
 
@@ -173,25 +191,316 @@ def placement_table(data: list[dict]) -> list[str]:
         topo = row["condition"].split("__")[2]
         groups.setdefault(topo, []).append(row)
 
-    head = ["placement", "devices", "reps", "p99 TTFT median", "range",
-            "p99 TPOT median", "goodput median", "SLO"]
+    head = ["placement", "devices", "reps", "p99 TTFT pred", "predicted",
+            "p99 TTFT median", "vs T1", "range", "p99 TPOT median",
+            "goodput median", "measured"]
     out = ["| " + " | ".join(head) + " |",
            "| " + " | ".join("---" for _ in head) + " |"]
+    base = (statistics.median(r["measured"]["p99_ttft_ms"] for r in groups["T1"])
+            if "T1" in groups else None)
     for topo in sorted(groups):
         rows_ = groups[topo]
         ttft = sorted(r["measured"]["p99_ttft_ms"] for r in rows_)
+        ratio = f"{statistics.median(ttft) / base:.1f}x" if base else "-"
         tpot = [r["measured"]["p99_tpot_ms"] for r in rows_]
         good = [r["measured"]["goodput_rps"] for r in rows_]
         state, _ = verdict(rows_[0])
         states = {verdict(r)[0] for r in rows_}
         state = "met" if states == {"met"} else "MISSED"
+        preds = [r["predicted"]["p99_ttft_ms"] for r in rows_ if r.get("predicted")]
+        pverdicts = {predicted_verdict(r) for r in rows_}
+        pred = f"{statistics.median(preds):.1f} ms" if preds else "-"
         out.append(
-            f"| {topo} | {rows_[0]['devices']} | {len(rows_)} | "
-            f"{statistics.median(ttft):.1f} ms | "
+            f"| {topo} | {rows_[0]['devices']} | {len(rows_)} | {pred} | "
+            f"{' / '.join(sorted(pverdicts))} | "
+            f"{statistics.median(ttft):.1f} ms | {ratio} | "
             f"[{min(ttft):.1f}, {max(ttft):.1f}] | "
             f"{statistics.median(tpot):.2f} ms | "
             f"{statistics.median(good):.3f} rps | **{state}** |"
         )
+    return out
+
+
+def _recommendations(data: list[dict]) -> dict[str, list[dict]]:
+    groups: dict[str, list[dict]] = {}
+    for row in data:
+        if row["deployment"] == "recommendation" and row.get("measured"):
+            groups.setdefault(row["condition"].split("__")[2], []).append(row)
+    return groups
+
+
+def placement_sentence(data: list[dict]) -> str:
+    """The T1/T2 comparison, computed from the rows rather than written once."""
+    import statistics
+
+    g = _recommendations(data)
+    if "T1" not in g or "T2" not in g:
+        return "T1 and T2 were not both measured, so they are not compared here."
+    med = {t: statistics.median(r["measured"]["p99_ttft_ms"] for r in g[t])
+           for t in ("T1", "T2")}
+    rng = {t: (min(r["measured"]["p99_ttft_ms"] for r in g[t]),
+               max(r["measured"]["p99_ttft_ms"] for r in g[t])) for t in ("T1", "T2")}
+    state = {t: "met" if all(verdict(r)[0] == "met" for r in g[t]) else "missed"
+             for t in ("T1", "T2")}
+    overlap = rng["T1"][1] >= rng["T2"][0] and rng["T2"][1] >= rng["T1"][0]
+    return (
+        f"**T1 {state['T1']} the latency target and T2 {state['T2']} it**: median "
+        f"p99 TTFT {med['T1']:.0f} ms against {med['T2']:.0f} ms, "
+        f"{med['T2'] / med['T1']:.1f}x, with the same model, trace, scheduler "
+        f"knobs, seed and plan. The only difference is which wire the "
+        f"tensor-parallel all-reduce crosses. {len(g['T1'])} and {len(g['T2'])} "
+        f"repetitions, and the ranges "
+        f"{'overlap' if overlap else 'do not overlap'}."
+    )
+
+
+def direction_sentence(served: list[dict]) -> str:
+    """Optimistic, pessimistic or mixed -- from the ratios, per axis."""
+    ttft = [r["measured"]["p99_ttft_ms"] / r["predicted"]["p99_ttft_ms"]
+            for r in served if r["predicted"]["p99_ttft_ms"]]
+    tpot = [r["measured"]["p99_tpot_ms"] / r["predicted"]["p99_tpot_ms"]
+            for r in served if r["predicted"]["p99_tpot_ms"]]
+
+    def word(xs):
+        if not xs:
+            return "not computable"
+        if all(x > 1 for x in xs):
+            return "optimistic in every row"
+        if all(x < 1 for x in xs):
+            return "pessimistic in every row"
+        return f"optimistic in {sum(x > 1 for x in xs)} of {len(xs)} rows"
+
+    return (
+        f"On p99 TTFT the simulator is **{word(ttft)}**; on p99 TPOT it is "
+        f"**{word(tpot)}**. No margin from this data is fitted here and none "
+        "may be: a domain built from E-G5 could not then be tested by E-G5."
+    )
+
+
+# --- the inter-node P/D arm (preregistration rows 5-6, GS-32) -------------
+
+PD_BANNER_FIRST = (
+    "**Deployed by this experiment's harness, not by heteropilot's "
+    "`planner/deploy/`**, which has no router and cannot launch a split "
+    "architecture (GS-28, heteropilot D128). The router is "
+    "`experiments/e_g5/pd_router.py`, an instrument for this measurement and "
+    "not a serving component (GS-32)."
+)
+
+
+def pd_latencies(path: Path) -> dict:
+    """`latencies`, over the requests that completed; failures are counted.
+
+    A failed request has no first or last token, so it cannot enter a
+    percentile and cannot anchor the span. It is reported as a count beside
+    the metrics instead of being dropped without a trace.
+    """
+    spec = importlib.util.spec_from_file_location("hp_validate", VALIDATE)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    reqs = [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
+    ok = [r for r in reqs if not r.get("error") and r.get("last_token_ts") is not None]
+    ttft, tpot, _ = module._bench_latencies(ok)
+    span = max(r["last_token_ts"] for r in ok) - min(r["queued_ts"] for r in ok) if ok else 0
+    slo = slo_of("service")
+    # Per request, not by zipping the two lists: `_bench_latencies` adds no
+    # TPOT for a one-token request, so the lists can differ in length and a
+    # zip would pair one request's TTFT with another's TPOT.
+    met = 0
+    for r in ok:
+        one_ttft, one_tpot, _ = module._bench_latencies([r])
+        if one_ttft and one_ttft[0] <= slo["ttft_max_ms"] and (
+            not one_tpot or one_tpot[0] <= slo["tpot_max_ms"]
+        ):
+            met += 1
+    return {
+        "requests": len(reqs), "completed": len(ok), "failed": len(reqs) - len(ok),
+        "length_off": sum(
+            1 for r in ok
+            if (r.get("completion_tokens") if r.get("completion_tokens") is not None
+                else r["streamed_tokens"]) != r["output_toks"]),
+        "p50_ttft_ms": percentile(sorted(ttft), 50) if ttft else None,
+        "p99_ttft_ms": percentile(sorted(ttft), 99) if ttft else None,
+        "p99_tpot_ms": percentile(sorted(tpot), 99) if tpot else None,
+        "goodput_rps": len(ok) / span if span > 0 else 0.0,
+        "slo_attainment": met / len(ok) if ok else 0.0,
+    }
+
+
+def pd_rows(raw_root: Path) -> list[dict]:
+    out = []
+    for prov_path in sorted((raw_root / "pd").glob("*/*/provenance.json")):
+        prov = json.loads(prov_path.read_text())
+        req = prov_path.parent / "pd" / "requests.jsonl"
+        out.append({
+            "condition": prov["condition"], "rep": prov["rep"],
+            "state": prov.get("state"),
+            "measured": pd_latencies(req) if req.exists() else None,
+            "prediction": prov.get("prediction"),
+            "background": prov.get("background"),
+            "template": ((prov.get("prediction") or {}).get("chosen") or {}).get("template_id"),
+            "offered_rps": prov.get("offered_rps"),
+        })
+    return out
+
+
+def pd_section(raw_root: Path) -> list[str]:
+    import statistics
+
+    data = pd_rows(raw_root)
+    out = ["", "## The inter-node P/D arm", "", "> **REAL HARDWARE**, two nodes.", "",
+           PD_BANNER_FIRST, ""]
+    if not data:
+        out.append("Not run.")
+        return out
+    out.append(
+        "Prefill on `s8` GPU 0, decode on `s6` GPU 0, `NixlConnector` between "
+        "them. **TTFT is the registered definition**: from the router sending "
+        "the prefill call to the first token of the decode stream, so it "
+        "includes the prefill, the KV pull across the NIC, and the decode "
+        "instance's first step.[^pdtokens]"
+    )
+    out += ["", "| condition | rep | completed | failed | p50 TTFT | p99 TTFT | "
+            "p99 TPOT | goodput | SLO attainment | background duty |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+
+    def f(v, d=1):
+        return "-" if v is None else f"{v:.{d}f}"
+
+    for r in data:
+        m, b = r["measured"] or {}, r["background"] or {}
+        out.append(
+            f"| {r['condition']} | {r['rep']} | {m.get('completed', '-')} | "
+            f"{m.get('failed', '-')} | {f(m.get('p50_ttft_ms'))} | "
+            f"{f(m.get('p99_ttft_ms'))} | {f(m.get('p99_tpot_ms'), 2)} | "
+            f"{f(m.get('goodput_rps'), 3)} | {f(m.get('slo_attainment'), 3)} | "
+            f"{f(b.get('achieved_duty_cycle'), 3) if b else 'none'} |"
+        )
+
+    by = {c: [r for r in data if r["condition"] == c and r["measured"]]
+          for c in ("pd-independent", "pd-shared")}
+
+    # Paired, per repetition: within a repetition both conditions deployed the
+    # same template, so this difference is the NIC load and nothing else.
+    out += ["", "### Paired by repetition", "",
+            "| rep | template | independent p99 TTFT | shared p99 TTFT | change | "
+            "predicted change | goodput / offered |",
+            "| --- | --- | --- | --- | --- | --- | --- |"]
+    reps = sorted({r["rep"] for r in data})
+    saturated = []
+    for rep in reps:
+        a = next((r for r in by["pd-independent"] if r["rep"] == rep), None)
+        b = next((r for r in by["pd-shared"] if r["rep"] == rep), None)
+        if not a or not b:
+            continue
+        pa = a["prediction"]["independent"]["p99_ttft_ms"]
+        pb = (b["prediction"].get("shared") or {}).get("p99_ttft_ms")
+        ratio = a["measured"]["goodput_rps"] / a["offered_rps"] if a["offered_rps"] else 0
+        if ratio < 0.9:
+            saturated.append(rep)
+        out.append(
+            f"| {rep} | `…{(a['template'] or '')[-12:]}` | "
+            f"{a['measured']['p99_ttft_ms']:.1f} ms | {b['measured']['p99_ttft_ms']:.1f} ms | "
+            f"{b['measured']['p99_ttft_ms'] - a['measured']['p99_ttft_ms']:+.1f} ms | "
+            + (f"{pb - pa:+.1f} ms" if pb is not None else "-")
+            + f" | {ratio:.2f} |"
+        )
+    if saturated:
+        out += ["", f"**Saturated in repetitions {', '.join(map(str, saturated))}.** "
+                "Goodput is below 90 % of the offered rate, so requests queue for "
+                "the whole trace and p99 TTFT is set by that queue, not by the path "
+                "the KV takes. In that regime a change in the NIC's load is not "
+                "observable, and this arm cannot answer its question."]
+
+    out += ["", "### The registered criterion", ""]
+    templates = {r["template"] for r in by["pd-independent"] + by["pd-shared"]}
+    if not by["pd-independent"] or not by["pd-shared"]:
+        out.append("Not computable: both conditions have not been measured.")
+    elif len(templates) > 1:
+        out.append(
+            "**Not computable as registered.** The criterion reads the spread of "
+            "the three independent repetitions as noise, which assumes they are "
+            "replicates. They are not: each repetition re-ran the search and "
+            f"deployed the template it chose, and the repetitions chose "
+            f"{len(templates)} different ones ("
+            + ", ".join(f"`…{t[-12:]}`" for t in sorted(templates))
+            + "). The spread is therefore a configuration difference, and a "
+            "verdict computed from it would be met by construction. It is not "
+            "reported as met."
+        )
+    else:
+        mi = [r["measured"]["p99_ttft_ms"] for r in by["pd-independent"]]
+        ms = [r["measured"]["p99_ttft_ms"] for r in by["pd-shared"]]
+        pi = [r["prediction"]["independent"]["p99_ttft_ms"] for r in by["pd-independent"]]
+        ps = [r["prediction"]["shared"]["p99_ttft_ms"] for r in by["pd-shared"]
+              if r["prediction"].get("shared")]
+        spread = max(mi) - min(mi)
+        d_meas = statistics.median(ms) - statistics.median(mi)
+        d_pred = (statistics.median(ps) - statistics.median(pi)) if ps else None
+        if d_pred is None:
+            verdict_text = "not computable: the shared prediction did not simulate"
+        elif abs(d_meas) <= spread:
+            verdict_text = ("**met**" if abs(d_pred) <= spread else "**NOT met**") + (
+                f": the measured change is inside the independent spread "
+                f"({spread:.1f} ms), so it counts as no change, and the "
+                f"predicted change is {abs(d_pred):.1f} ms")
+        else:
+            same = (d_meas > 0) == (d_pred > 0) and d_pred != 0
+            verdict_text = ("**met**" if same else "**NOT met**") + (
+                ": the predicted and measured changes have "
+                + ("the same sign" if same else "different signs"))
+        out += [
+            "| | independent | shared | change |",
+            "| --- | --- | --- | --- |",
+            f"| predicted p99 TTFT (median) | {statistics.median(pi):.1f} ms | "
+            f"{statistics.median(ps):.1f} ms | {d_pred:+.1f} ms |" if ps else
+            "| predicted p99 TTFT | - | - | - |",
+            f"| measured p99 TTFT (median) | {statistics.median(mi):.1f} ms | "
+            f"{statistics.median(ms):.1f} ms | {d_meas:+.1f} ms |",
+            "",
+            f"Registered: the two changes have the same sign, with a measured "
+            f"change inside the spread of the independent repetitions counted "
+            f"as none. Verdict: {verdict_text}. Magnitudes are report-only.",
+        ]
+    out += [
+        "",
+        "[^pdtokens]: This arm compares **latency and goodput** between two P/D "
+        "conditions, not outputs. A disaggregated greedy token stream is not the "
+        "aggregated one: across these two nodes two of three probe prompts "
+        "diverged, reproducibly (GS-29). No statement about output identity is "
+        "made from these rows.",
+    ]
+    return out
+
+
+def agreement_table(data: list[dict]) -> list[str]:
+    """Whether the search's verdict on each placement matches the hardware's.
+
+    Only rows whose placement was simulated to a verdict are counted; a row
+    recorded before GS-30, or one the simulator returned nothing for, is not
+    an agreement and not a disagreement.
+    """
+    groups: dict[str, list[tuple[str, str]]] = {}
+    for row in data:
+        if not row.get("measured"):
+            continue
+        pv = predicted_verdict(row)
+        if pv not in ("met", "MISSED"):
+            continue
+        topo = row["condition"].split("__")[2]
+        groups.setdefault(topo, []).append((pv, verdict(row)[0]))
+    head = ["placement", "rows", "agree", "disagree", "disagreements"]
+    out = ["| " + " | ".join(head) + " |",
+           "| " + " | ".join("---" for _ in head) + " |"]
+    for topo in sorted(groups):
+        pairs = groups[topo]
+        agree = sum(1 for a, b in pairs if a == b)
+        kinds = sorted({f"predicted {a}, measured {b}" for a, b in pairs if a != b})
+        out.append(f"| {topo} | {len(pairs)} | {agree} | {len(pairs) - agree} | "
+                   f"{'; '.join(kinds) or '-'} |")
+    total = sum(len(v) for v in groups.values())
+    agree = sum(1 for v in groups.values() for a, b in v if a == b)
+    out.append(f"| all | {total} | {agree} | {total - agree} | - |")
     return out
 
 
@@ -210,20 +519,16 @@ def markdown(data: list[dict], args) -> str:
     )
     out += ["", "## The placement decides whether the SLO is met", ""]
     out.append(
-        "One template, three placements of it, nine repetitions. The rows "
-        "below are the recommendation at each placement, and the target is "
-        "the same 550 ms in every one."
+        "Three placements, three repetitions each: T1 and T2 are one TP=2 "
+        "template on two different pairs of devices, and T3 is the TP=4 "
+        "template on four. The rows below are the recommendation at each, the "
+        "target is the same 550 ms in every one, and `predicted` is the "
+        "search's verdict on that placement itself (GS-30)."
     )
     out.append("")
     out += placement_table(data)
     out.append("")
-    out.append(
-        "**T1 meets the latency target and T2 does not**, by a factor of "
-        "about seven, with the same model, the same trace, the same scheduler "
-        "knobs, the same seed and the same plan. The only difference is which "
-        "wire the tensor-parallel all-reduce crosses. Three repetitions per "
-        "cell and the ranges do not overlap."
-    )
+    out.append(placement_sentence(data))
     out.append("")
     out.append(
         "The planner being extended **cannot express that difference at "
@@ -233,6 +538,16 @@ def markdown(data: list[dict], args) -> str:
         "T1 and T2 are two placements of that one template, and the choice "
         "between them decides whether the service meets its objectives."
     )
+
+    out += ["", "## Does the search's verdict on a placement match the hardware's?", ""]
+    out.append(
+        "Before GS-30 every row carried the search's own pick, so T1 and T2 "
+        "had the same prediction and this question could not be put. Each row "
+        "now carries the verdict on the placement deployed, and the table "
+        "counts whether it is the verdict the hardware reached."
+    )
+    out.append("")
+    out += agreement_table(data)
 
     out += ["", "## Predicted against measured", ""]
     out += table(data)
@@ -270,12 +585,7 @@ def markdown(data: list[dict], args) -> str:
                 f"prediction | {tpot:.1f}x |"
             )
         out.append("")
-        out.append(
-            "The simulator is **optimistic on both axes**, which is the "
-            "direction its own accuracy domain already records at low served "
-            "concurrency. No margin from this data is fitted here and none may "
-            "be: a domain built from E-G5 could not then be tested by E-G5."
-        )
+        out.append(direction_sentence(served))
 
     bound_rows = [r for r in data
                   if r.get("measured") and r["deployment"].endswith("impossible_proven")]
@@ -315,6 +625,8 @@ def markdown(data: list[dict], args) -> str:
             "little: the looseness is the price of soundness and this is its "
             "size on this node."
         )
+
+    out += pd_section(RAW)
 
     out += ["", "## Reproducing", ""]
     out.append("```bash")

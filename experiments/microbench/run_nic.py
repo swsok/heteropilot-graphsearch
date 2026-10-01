@@ -172,14 +172,29 @@ def one_stream(peer: str, port: int, size: int, ib_port: int, args,
     if bidirectional:
         common.append("-b")
 
-    server = subprocess.Popen(
-        ["ib_send_bw", *common],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-    )
-    time.sleep(1.5)                      # let the server bind before dialling
-    remote = " ".join(shlex.quote(c) for c in ["ib_send_bw", *common, args.local_ip])
-    client_out = ssh(peer, args.ssh_port, remote,
-                     timeout=args.duration + 120)
+    if getattr(args, "reverse", False):
+        # --reverse: the server on the PEER and the client -- the sender --
+        # here, so the data crosses here -> peer. Same tool, same arguments,
+        # the other direction of the same port.
+        remote = " ".join(shlex.quote(c) for c in ["ib_send_bw", *common])
+        server = subprocess.Popen(
+            ["ssh", "-p", str(args.ssh_port), "-o", "BatchMode=yes", peer, remote],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        )
+        time.sleep(2.5)                  # ssh plus bind, before dialling
+        client_out = subprocess.run(
+            ["ib_send_bw", *common, args.peer_ip], capture_output=True, text=True,
+            timeout=args.duration + 120,
+        ).stdout
+    else:
+        server = subprocess.Popen(
+            ["ib_send_bw", *common],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        )
+        time.sleep(1.5)                  # let the server bind before dialling
+        remote = " ".join(shlex.quote(c) for c in ["ib_send_bw", *common, args.local_ip])
+        client_out = ssh(peer, args.ssh_port, remote,
+                         timeout=args.duration + 120)
     try:
         server_out, _ = server.communicate(timeout=args.duration + 60)
     except subprocess.TimeoutExpired:
@@ -235,8 +250,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--label", required=True)
     parser.add_argument("--out-root", type=Path, default=None)
     parser.add_argument("--allow-tenants", action="store_true")
+    parser.add_argument(
+        "--reverse", action="store_true",
+        help="put the ib_send_bw server on the peer and send from here. Without "
+             "it the peer sends and the data crosses peer -> here, which is the "
+             "direction E-G4(b)'s 2026-09-29 files measured.",
+    )
+    parser.add_argument("--peer-ip", default=None,
+                        help="the peer's InfiniBand IP; required with --reverse")
     args = parser.parse_args(argv)
 
+    if args.reverse and not args.peer_ip:
+        parser.error("--reverse needs --peer-ip")
     if args.condition in IMPOSSIBLE:
         print(f"{args.condition}: {IMPOSSIBLE[args.condition]}", file=sys.stderr)
         return 2
@@ -343,6 +368,14 @@ def main(argv: list[str] | None = None) -> int:
         ),
         "near": here,
         "far": there,
+        # Which way the bytes went. The server is the receiver; the client, the
+        # sender. Recorded because the E-G4(b) files of 2026-09-29 do not say it
+        # and it had to be recovered from the code.
+        "direction": (
+            f"{here['hostname']} -> {there['hostname']} (client here, server on the peer)"
+            if args.reverse else
+            f"{there['hostname']} -> {here['hostname']} (client on the peer, server here)"
+        ),
         "gpu_tenants": tenants,
         "loadavg_before": load_before,
         "loadavg_after": {"here": load_average(None, args.ssh_port),
@@ -360,8 +393,11 @@ def main(argv: list[str] | None = None) -> int:
         "not_run_here": IMPOSSIBLE,
     }
     root = args.out_root or (
-        Path(__file__).parent / "raw" / f"{payload['date']}-nic-"
-        f"{here['hostname']}-{there['hostname']}"
+        Path(__file__).parent / "raw" / (
+            f"{payload['date']}-nic-{here['hostname']}-to-{there['hostname']}"
+            if args.reverse else
+            f"{payload['date']}-nic-{here['hostname']}-{there['hostname']}"
+        )
     )
     root.mkdir(parents=True, exist_ok=True)
     out = root / f"{args.label}.json"

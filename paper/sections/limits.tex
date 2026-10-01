@@ -55,27 +55,34 @@ way processor sharing does not capture, making the model optimistic there by
 about a third. That boundary is stated rather than absorbed into a fitted
 capacity.
 
-\paragraph{The simulator is not told what the search decided on.}
-The adapter cannot express shared resources to the simulator, so the very
-distinction the equivalence relation preserves is invisible to the evaluator
-that prices it. The adapter reports what it could not pass on, which makes the
-gap legible but does not close it. Closing it needs either a simulator with a
-link graph or a model that folds the effect into the numbers it passes---and
-the second would make the simulator's output unattributable, which is why it
-was not done.
+\paragraph{The simulator is told a placement's bandwidth, not what it shares.}
+For each placement the adapter replaces the simulator's link figures with that
+placement's own path bottleneck, reservations subtracted, and the hardware
+rerun shows the simulator responds to it: two placements of one template get
+different predictions and, on the two tensor-parallel pairs, the verdict the
+hardware reached. What the adapter cannot pass on is which \emph{shared
+resource} a flow crosses, so contention between a candidate's own flows on one
+port or NIC is invisible to the evaluator. The adapter names every resource it
+dropped, which makes the gap legible but does not close it. Closing it needs a
+simulator with a link graph, or a model that folds contention into the numbers
+passed---and the second would make the simulator's output unattributable,
+which is why it was not done.
 
 % claim: C22
 % pending
 \paragraph{The hardware campaign covers one accelerator kind, and one of its
 two node-count limits has lifted.}
 The contention measurements now cover both an intra-node bus and an inter-node
-NIC across two machines. What is still not run is inter-node \emph{P/D}, and
-the reason is no longer that there is one machine, nor that the serving stack
-lacks the mechanism---it was exercised on this hardware, and the KV crossed.
-It is that the deployment backend serves a single aggregated engine and has no
-router, so a split architecture has no way to be launched through it.
-Deployment to the NPU in the design's scope is likewise impossible, because no
-backend for it exists. \pending{E-G5: inter-node P/D}
+NIC across two machines, and inter-node \emph{P/D} now runs: prefill on one node,
+decode on the other, the KV pulled across the NIC, every request completed. It
+is deployed by the experiment's own harness, because the deployment backend
+this work extends serves a single engine and has no router. What it does not
+yet give is the contention result it was registered for. At the registered
+load the deployed configuration saturates---requests queue for the whole run,
+and time to first token is set by that queue rather than by the path---so a
+change in the NIC's load cannot be seen, and the repetitions did not deploy one
+configuration, so their spread is not noise. Deployment to the NPU in the
+design's scope is impossible, because no backend for it exists. \pending{E-G5: inter-node P/D}
 
 \paragraph{Every fixture but one is fictional.}
 The toy clusters and the synthetic scaling clusters are invented and say so in
