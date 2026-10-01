@@ -793,7 +793,76 @@ def high_scope_table(raw_root: Path, data: list[dict]) -> list[str]:
     return out
 
 
+def _core(data: list[dict]) -> list[dict]:
+    """The registered core the paper's E-G5 claims are about: normal x knee.
+
+    The widened matrix (row 8) is reported in its own section. Pooling it into
+    these tables silently moved the paper's macros -- the T2/T1 ratio read
+    1.6 instead of 8.3, because low and high rows joined each placement's
+    median -- so every figure the paper takes from here is the core's.
+    """
+    return [r for r in data if r["condition"].split("__")[1:4:2] == ["normal", "knee"]]
+
+
+def widened_section(data: list[dict]) -> list[str]:
+    """Row 8: every pattern x level, its own rows, never pooled."""
+    import statistics
+
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for r in data:
+        _, pattern, _, level = r["condition"].split("__")
+        groups.setdefault((pattern, level), []).append(r)
+    if len(groups) <= 1:
+        return []
+    out = ["", "## The widened matrix, by pattern and level (row 8)", "",
+           "The recommendation (or, at `high` without a feasible plan, the closest "
+           "miss) per placement; medians over the three repetitions. `n/a` means "
+           "the search offered no candidate of the condition's size to deploy.", "",
+           "| pattern | level | placement | deployed | predicted (42/43/44) | measured (42/43/44) "
+           "| median p99 TTFT | ratio to T1 at this level |",
+           "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+    order = [("normal", "low"), ("normal", "knee"), ("normal", "high"),
+             ("burst", "low"), ("burst", "knee"), ("burst", "high")]
+    for key in order:
+        rows = groups.get(key, [])
+        meds = {}
+        lines = []
+        for topo in ("T1", "T2", "T3"):
+            mains = [r for r in rows if r["condition"].split("__")[2] == topo
+                     and r["deployment"] in ("recommendation", "closest_miss")]
+            kind = ", ".join(sorted({r["deployment"] for r in mains})) or "none"
+            pv, mv, ttft = [], [], []
+            for rep in (42, 43, 44):
+                m = next((r for r in mains if r["rep"] == rep), None)
+                if m and m.get("measured"):
+                    pv.append(predicted_verdict(m))
+                    mv.append(verdict(m)[0])
+                    ttft.append(m["measured"]["p99_ttft_ms"])
+                else:
+                    pv.append("n/a")
+                    mv.append("n/a")
+            meds[topo] = statistics.median(ttft) if ttft else None
+            lines.append((topo, kind, pv, mv))
+        for topo, kind, pv, mv in lines:
+            med = meds[topo]
+            ratio = (f"{med / meds['T1']:.1f}x" if med and meds.get("T1") else "-")
+            med_txt = f"{med:.0f} ms" if med else "-"
+            head = f"| {key[0]} | {key[1]} | {topo} | {kind} | {' / '.join(pv)} | "
+            out.append(head +
+                       f"{' / '.join(mv)} | {med_txt} | {ratio} |")
+    out += ["", "| pattern | level | rows judged | verdicts agreeing |",
+            "| --- | --- | --- | --- |"]
+    for key in order:
+        rows = [r for r in groups.get(key, []) if r.get("measured")
+                and predicted_verdict(r) in ("met", "MISSED")]
+        agree = sum(1 for r in rows if predicted_verdict(r) == verdict(r)[0])
+        out.append(f"| {key[0]} | {key[1]} | {len(rows)} | {agree} |")
+    return out
+
+
 def markdown(data: list[dict], args) -> str:
+    everything = data
+    data = _core(data)
     out = ["# E-G5 — the recommendation and the bounds, on hardware", "", BANNER, ""]
     out.append(
         "Each deployment is offered the rate **its own spec** declares: the "
@@ -838,7 +907,7 @@ def markdown(data: list[dict], args) -> str:
     out.append("")
     out += agreement_table(data)
 
-    hs = high_scope_table(RAW, data)
+    hs = high_scope_table(RAW, everything)
     if hs:
         out += ["", "## Above the knee: the exhaustive scope, and what it decided", ""]
         out.append(
@@ -851,7 +920,7 @@ def markdown(data: list[dict], args) -> str:
         )
         out.append("")
         out += hs
-    cm = closest_miss_table(data)
+    cm = closest_miss_table(everything)
     if cm:
         out += ["", "## Above the knee: is there really no feasible plan of this size?", ""]
         out.append(
@@ -865,7 +934,9 @@ def markdown(data: list[dict], args) -> str:
         out.append("")
         out += cm
 
-    out += ["", "## Predicted against measured", ""]
+    out += widened_section(everything)
+
+    out += ["", "## Predicted against measured (normal x knee)", ""]
     out += table(data)
 
     missing = [(r, verdict(r)[1]) for r in data if r.get("measured")]

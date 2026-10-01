@@ -1,0 +1,376 @@
+{
+  "arrival_rate_rps": 6.0,
+  "banner": "REAL HARDWARE -- node serials in `preconditions`.",
+  "boundary_alternative_kind": "feasible_marginal: fixed by the seed-42 exhaustive evaluation (row 8); impossible_proven: impossible_proven, tightest: stage throughput_upper_bound, margin 0.0104, bound 55.000 requests/s against a ceiling of 54.433",
+  "calibration": "existing a40.accuracy.yaml only; no new domain may be created from this run",
+  "condition": "llama31-8b__normal__T3__high",
+  "deployments": [
+    {
+      "bench_argv": [
+        "/home/swsok/heteropilot/.venv-vllm/bin/python",
+        "-u",
+        "-m",
+        "bench",
+        "run",
+        "--model",
+        "NousResearch/Meta-Llama-3.1-8B",
+        "--dataset",
+        "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps6.jsonl",
+        "--output-dir",
+        "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__high/44/recommendation/bench",
+        "--tensor-parallel-size",
+        "4",
+        "--data-parallel-size",
+        "1",
+        "--max-num-seqs",
+        "128",
+        "--max-num-batched-tokens",
+        "8192",
+        "--dtype",
+        "bfloat16",
+        "--kv-cache-dtype",
+        "auto",
+        "--seed",
+        "44",
+        "--no-enable-prefix-caching",
+        "--num-reqs",
+        "150"
+      ],
+      "candidate_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "knob_loss": [
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "block_size",
+          "planned": 16,
+          "vllm_resolves_to": 16
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "enable_chunked_prefill",
+          "planned": true,
+          "vllm_resolves_to": true
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "prioritize_prefill",
+          "planned": false,
+          "vllm_resolves_to": false
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "pipeline_parallel_size",
+          "planned": 1,
+          "vllm_resolves_to": 1
+        }
+      ],
+      "label": "recommendation",
+      "offered_rps": 6.0,
+      "placement_override": {
+        "heteropilot_would_use": "every device of the island",
+        "model_substitution": "the planner keeps the gated id its profiles name; the engine is given the ungated mirror of the same weights",
+        "planner_model": "meta-llama/Llama-3.1-8B",
+        "served_model": "NousResearch/Meta-Llama-3.1-8B",
+        "this_harness_uses": "0,1,2,3",
+        "why": "T3: TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2"
+      },
+      "placement_verdict": {
+        "detail": "",
+        "devices": [
+          "a40x8/gpu0",
+          "a40x8/gpu1",
+          "a40x8/gpu2",
+          "a40x8/gpu3"
+        ],
+        "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192@8afde48cfcae",
+        "feasible": true,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated"
+      },
+      "plan_id": "boundary-cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "predicted": {
+        "p99_tpot_ms": 22.180615749999998,
+        "p99_ttft_ms": 209.37931635999993,
+        "slo_goodput_rps": 4.031911200171041
+      },
+      "returncode": 0,
+      "search_recommendation_predicted": {
+        "candidate_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+        "note": "the search's own pick for a candidate of this size, which need not be the placement deployed; NOT the prediction for this row (GS-30)",
+        "p99_tpot_ms": 60.0,
+        "p99_ttft_ms": 550.0,
+        "slo_goodput_rps": 2.4
+      },
+      "state": "measured",
+      "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps6.jsonl"
+    },
+    {
+      "bench_argv": [
+        "/home/swsok/heteropilot/.venv-vllm/bin/python",
+        "-u",
+        "-m",
+        "bench",
+        "run",
+        "--model",
+        "NousResearch/Meta-Llama-3.1-8B",
+        "--dataset",
+        "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps6.jsonl",
+        "--output-dir",
+        "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__high/44/boundary:feasible_marginal/bench",
+        "--tensor-parallel-size",
+        "1",
+        "--data-parallel-size",
+        "4",
+        "--max-num-seqs",
+        "128",
+        "--max-num-batched-tokens",
+        "2048",
+        "--dtype",
+        "bfloat16",
+        "--kv-cache-dtype",
+        "auto",
+        "--seed",
+        "44",
+        "--no-enable-prefix-caching",
+        "--num-reqs",
+        "150"
+      ],
+      "candidate_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048",
+      "knob_loss": [
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "block_size",
+          "planned": 16,
+          "vllm_resolves_to": 16
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "enable_chunked_prefill",
+          "planned": true,
+          "vllm_resolves_to": true
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "prioritize_prefill",
+          "planned": false,
+          "vllm_resolves_to": false
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "pipeline_parallel_size",
+          "planned": 1,
+          "vllm_resolves_to": 1
+        }
+      ],
+      "label": "boundary:feasible_marginal",
+      "offered_rps": 6.0,
+      "placement_override": {
+        "heteropilot_would_use": "every device of the island",
+        "model_substitution": "the planner keeps the gated id its profiles name; the engine is given the ungated mirror of the same weights",
+        "planner_model": "meta-llama/Llama-3.1-8B",
+        "served_model": "NousResearch/Meta-Llama-3.1-8B",
+        "this_harness_uses": "0,1,2,3",
+        "why": "T3: TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2"
+      },
+      "placement_verdict": {
+        "detail": "",
+        "devices": [
+          "a40x8/gpu0",
+          "a40x8/gpu1",
+          "a40x8/gpu2",
+          "a40x8/gpu3"
+        ],
+        "embedding_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048@6c53cf433379",
+        "feasible": true,
+        "search_state": "unevaluated (the budget did not reach it)",
+        "state": "evaluated"
+      },
+      "plan_id": "boundary-cuda-a40-a40x8-tp1-dp4-s128-t2048",
+      "predicted": {
+        "p99_tpot_ms": 47.79221472,
+        "p99_ttft_ms": 477.5086289199999,
+        "slo_goodput_rps": 2.662067212246729
+      },
+      "returncode": 0,
+      "search_recommendation_predicted": {
+        "candidate_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048",
+        "note": "the search's own pick for a candidate of this size, which need not be the placement deployed; NOT the prediction for this row (GS-30)",
+        "p99_tpot_ms": 60.0,
+        "p99_ttft_ms": 550.0,
+        "slo_goodput_rps": 2.4
+      },
+      "state": "measured",
+      "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps6.jsonl"
+    },
+    {
+      "bench_argv": [
+        "/home/swsok/heteropilot/.venv-vllm/bin/python",
+        "-u",
+        "-m",
+        "bench",
+        "run",
+        "--model",
+        "NousResearch/Meta-Llama-3.1-8B",
+        "--dataset",
+        "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps55.jsonl",
+        "--output-dir",
+        "/home/swsok/heteropilot-graphsearch/experiments/e_g5/raw/llama31-8b__normal__T3__high/44/boundary:impossible_proven/bench",
+        "--tensor-parallel-size",
+        "2",
+        "--data-parallel-size",
+        "1",
+        "--max-num-seqs",
+        "128",
+        "--max-num-batched-tokens",
+        "2048",
+        "--dtype",
+        "bfloat16",
+        "--kv-cache-dtype",
+        "auto",
+        "--seed",
+        "44",
+        "--no-enable-prefix-caching",
+        "--num-reqs",
+        "150"
+      ],
+      "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "knob_loss": [
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "block_size",
+          "planned": 16,
+          "vllm_resolves_to": 16
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "enable_chunked_prefill",
+          "planned": true,
+          "vllm_resolves_to": true
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "prioritize_prefill",
+          "planned": false,
+          "vllm_resolves_to": false
+        },
+        {
+          "checked_against_vllm": "0.19.0",
+          "differs": false,
+          "knob": "pipeline_parallel_size",
+          "planned": 1,
+          "vllm_resolves_to": 1
+        }
+      ],
+      "label": "boundary:impossible_proven",
+      "offered_rps": 55.0,
+      "placement_override": {
+        "heteropilot_would_use": "every device of the island",
+        "model_substitution": "the planner keeps the gated id its profiles name; the engine is given the ungated mirror of the same weights",
+        "planner_model": "meta-llama/Llama-3.1-8B",
+        "served_model": "NousResearch/Meta-Llama-3.1-8B",
+        "this_harness_uses": "0,1",
+        "why": "T3: TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2"
+      },
+      "placement_verdict": {
+        "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=32582.161747389997), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.07345204349319216)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+        "devices": [
+          "a40x8/gpu0",
+          "a40x8/gpu1"
+        ],
+        "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+        "feasible": false,
+        "search_state": "impossible_proven (by a bound; never simulated)",
+        "state": "evaluated"
+      },
+      "plan_id": "boundary-cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32582.161747389997,
+        "slo_goodput_rps": 0.07345204349319216
+      },
+      "returncode": 0,
+      "search_recommendation_predicted": {
+        "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+        "note": "the search's own pick for a candidate of this size, which need not be the placement deployed; NOT the prediction for this row (GS-30)",
+        "p99_tpot_ms": 60.0,
+        "p99_ttft_ms": 550.0,
+        "slo_goodput_rps": 55.0
+      },
+      "state": "measured",
+      "workload": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps55.jsonl"
+    }
+  ],
+  "dry_run": false,
+  "gpu_tenants_after": [],
+  "has_accuracy_domain": true,
+  "hf_model": "NousResearch/Meta-Llama-3.1-8B",
+  "level": "high",
+  "loadavg_after": [
+    6.21,
+    5.08,
+    4.22
+  ],
+  "model": "llama31-8b",
+  "model_substitution_note": "the planner is given the gated `meta-llama/...` id that heteropilot's profiles name; the engine serves the ungated NousResearch mirror of the same weights",
+  "pattern": "normal",
+  "planner_model": "meta-llama/Llama-3.1-8B",
+  "preconditions": {
+    "checked_at": "2026-10-01T16:07:01.173799+00:00",
+    "gpu_tenants_before": [],
+    "loadavg_before": [
+      6.17,
+      5.25,
+      4.16
+    ],
+    "node_serials": "GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919+GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595+GPU-3696898a-3170-2649-364e-2051672e3b35+GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb+GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be+GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982+GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20+GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115",
+    "problems": [],
+    "submodule_pristine": true
+  },
+  "rep": 44,
+  "scope_cut": {
+    "max_devices": 4,
+    "state": "excluded_by_scope",
+    "why": "the topology condition places this many devices, so the planner was asked for the best plan of that size. Larger plans were not considered -- not considered and rejected (GS-27)."
+  },
+  "search_scope": {
+    "budget_k16": {
+      "evaluated": 16,
+      "feasible_of_size_found": 16,
+      "feasible_of_size_in_scope": 676
+    },
+    "evaluated": 1302,
+    "exhaustive": true,
+    "feasible": 732,
+    "feasible_of_size": 676,
+    "representatives": 1302,
+    "unevaluated": 0
+  },
+  "topology": {
+    "background_pair": [
+      5,
+      7
+    ],
+    "devices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "key": "T3",
+    "link": "TP=4 over two NVLink pairs bridged by PCIe, measured 8.71 GB/s busbw at world 4 against 19.34 at world 2",
+    "substitutes": "inter-node P/D, shared uplink + 60 % background load",
+    "tp": 4
+  },
+  "topology_key": "T3",
+  "written_at": "2026-10-01T16:15:28.420811+00:00"
+}

@@ -29,7 +29,71 @@ Before GS-30 every row carried the search's own pick, so T1 and T2 had the same 
 | T3 | 9 | 3 | 6 | predicted met, measured MISSED |
 | all | 27 | 21 | 6 | - |
 
-## Predicted against measured
+## Above the knee: the exhaustive scope, and what it decided
+
+At `high` the verdict is decided once, by evaluating every representative of GS-27's scope at seed 42 without a budget; the three repetitions repeat the deployment and the measurement of what that decided (row 8). A recommendation that saturates here is a false positive of the 6 rps prediction; a closest miss that also misses is agreement with the infeasibility verdict. They are different claims.
+
+| condition | representatives | evaluated | feasible of size | branch | deployed | K=16 recall | hardware (seeds 42 / 43 / 44) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| llama31-8b__burst__T1__high | 210 | 210 | 0 | closest_miss | `…1-dp2-s128-t8192` | - (none feasible) | MISSED / MISSED / MISSED |
+| llama31-8b__burst__T2__high | 210 | 210 | 0 | closest_miss | `…1-dp2-s128-t8192` | - (none feasible) | MISSED / MISSED / MISSED |
+| llama31-8b__burst__T3__high | 1302 | 1302 | 172 | recommendation | `…4-dp1-s128-t8192` | 0/172 | MISSED / MISSED / MISSED |
+| llama31-8b__normal__T1__high | 210 | 210 | 4 | recommendation | `…2-dp1-s256-t8192` | 4/4 | met / met / met |
+| llama31-8b__normal__T2__high | 210 | 210 | 4 | recommendation | `…2-dp1-s256-t8192` | 4/4 | MISSED / MISSED / MISSED |
+| llama31-8b__normal__T3__high | 1302 | 1302 | 676 | recommendation | `…4-dp1-s128-t8192` | 16/676 | MISSED / MISSED / MISSED |
+
+**The registered adaptive search on a real-hardware spec (row 8 c).** K = 16 against the exhaustive feasible set of the condition's size, seed 42: `burst T3` 0/172; `normal T1` 4/4; `normal T2` 4/4; `normal T3` 16/676. This sits beside GS-31: there the ranker's recall failed a registered criterion on the real-lab holdout; here it is measured on the specs the hardware campaign actually deployed. The ranker is not changed.
+
+## Above the knee: is there really no feasible plan of this size?
+
+At `high` the search returns no feasible plan of the condition's size, so the recommendation's slot is filled by the **closest miss** -- heteropilot's `closest_plan` rule, the infeasible plan with the smallest worst normalised overshoot, restricted to the size (row 8). What is tested is the verdict "no feasible plan of this size", within GS-27's scope cut, not a recommendation's SLO.
+
+| condition | devices | offered rps | p99 TTFT pred | p99 TTFT meas | p99 TPOT pred | p99 TPOT meas | goodput meas | predicted violated axes | measured violated axes | (i) hardware missed | (ii) same axes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| llama31-8b__burst__T1__high | 0,1 | 6.0 | 709.6 | 1009.1 | 59.40 | 66.61 | 2.555 | ttft +29 %, goodput +12 % | tpot, ttft | yes | **no** |
+| llama31-8b__burst__T1__high | 0,1 | 6.0 | 907.4 | 1009.9 | 61.56 | 65.62 | 2.557 | tpot +3 %, ttft +65 %, goodput +28 % | tpot, ttft | yes | **no** |
+| llama31-8b__burst__T1__high | 0,1 | 6.0 | 685.4 | 1010.6 | 66.49 | 66.06 | 2.554 | tpot +11 %, ttft +25 %, goodput +65 % | tpot, ttft | yes | **no** |
+| llama31-8b__burst__T2__high | 0,2 | 6.0 | 709.6 | 1009.9 | 59.40 | 66.32 | 2.556 | ttft +29 %, goodput +12 % | tpot, ttft | yes | **no** |
+| llama31-8b__burst__T2__high | 0,2 | 6.0 | 907.4 | 1006.6 | 61.56 | 66.17 | 2.552 | tpot +3 %, ttft +65 %, goodput +28 % | tpot, ttft | yes | **no** |
+| llama31-8b__burst__T2__high | 0,2 | 6.0 | 685.4 | 1007.0 | 66.49 | 65.66 | 2.556 | tpot +11 %, ttft +25 %, goodput +65 % | tpot, ttft | yes | **no** |
+
+(i) the hardware also missed: **6 of 6**. (ii) and on the predicted axes: **0 of 6**.
+
+## The widened matrix, by pattern and level (row 8)
+
+The recommendation (or, at `high` without a feasible plan, the closest miss) per placement; medians over the three repetitions. `n/a` means the search offered no candidate of the condition's size to deploy.
+
+| pattern | level | placement | deployed | predicted (42/43/44) | measured (42/43/44) | median p99 TTFT | ratio to T1 at this level |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| normal | low | T1 | recommendation | n/a / met / n/a | n/a / met / n/a | 301 ms | 1.0x |
+| normal | low | T2 | recommendation | n/a / met / n/a | n/a / met / n/a | 343 ms | 1.1x |
+| normal | low | T3 | recommendation | met / met / met | met / met / met | 394 ms | 1.3x |
+| normal | knee | T1 | recommendation | met / met / met | met / met / met | 405 ms | 1.0x |
+| normal | knee | T2 | recommendation | MISSED / MISSED / MISSED | MISSED / MISSED / MISSED | 3341 ms | 8.3x |
+| normal | knee | T3 | recommendation | met / met / met | MISSED / MISSED / MISSED | 1948 ms | 4.8x |
+| normal | high | T1 | recommendation | met / MISSED / MISSED | met / met / met | 498 ms | 1.0x |
+| normal | high | T2 | recommendation | MISSED / MISSED / MISSED | MISSED / MISSED / MISSED | 691 ms | 1.4x |
+| normal | high | T3 | recommendation | met / met / met | MISSED / MISSED / MISSED | 13341 ms | 26.8x |
+| burst | low | T1 | recommendation | n/a / n/a / n/a | n/a / n/a / n/a | - | - |
+| burst | low | T2 | recommendation | n/a / n/a / n/a | n/a / n/a / n/a | - | - |
+| burst | low | T3 | recommendation | met / met / met | MISSED / MISSED / MISSED | 1276 ms | - |
+| burst | knee | T1 | recommendation | n/a / n/a / n/a | n/a / n/a / n/a | - | - |
+| burst | knee | T2 | recommendation | n/a / n/a / n/a | n/a / n/a / n/a | - | - |
+| burst | knee | T3 | recommendation | met / met / met | MISSED / MISSED / MISSED | 8488 ms | - |
+| burst | high | T1 | closest_miss | MISSED / MISSED / MISSED | MISSED / MISSED / MISSED | 1010 ms | 1.0x |
+| burst | high | T2 | closest_miss | MISSED / MISSED / MISSED | MISSED / MISSED / MISSED | 1007 ms | 1.0x |
+| burst | high | T3 | recommendation | met / met / met | MISSED / MISSED / MISSED | 17060 ms | 16.9x |
+
+| pattern | level | rows judged | verdicts agreeing |
+| --- | --- | --- | --- |
+| normal | low | 19 | 19 |
+| normal | knee | 27 | 21 |
+| normal | high | 27 | 20 |
+| burst | low | 15 | 9 |
+| burst | knee | 15 | 9 |
+| burst | high | 21 | 15 |
+
+## Predicted against measured (normal x knee)
 
 | condition | deployment | devices | offered rps | p99 TTFT pred | p99 TTFT meas | p99 TPOT pred | p99 TPOT meas | goodput meas | predicted | measured |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

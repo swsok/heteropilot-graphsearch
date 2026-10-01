@@ -1658,3 +1658,72 @@ with 0.01 or with no floor are not used for any registered result.
 size at `high`" was a statement about a budget, not about the space. Row 8
 therefore evaluates `high`'s scope exhaustively, once, and reports the
 registered budget's recall against it.
+
+## GS-37 — the widened E-G5 matrix: the TP=4 group is the simulator's blind spot · 2026-10-02
+
+**What ran.** Row 8's 45 added conditions, all completed with no refusal and
+no failure. Another tenant held all eight GPUs on both nodes from 18:05 to
+about 22:32 on 2026-10-01; nothing was measured beside it --- a watcher
+started the grid only after ten quiet minutes, and every provenance file
+records zero GPU tenants after its run.
+
+**Verdict agreement, by pattern and level** (rows whose deployed placement was
+simulated to a verdict, against the hardware's):
+
+| pattern | level | rows | agree |
+| --- | --- | --- | --- |
+| normal | low | 19 | 19 |
+| normal | knee | 27 | 21 |
+| normal | high | 27 | 20 |
+| burst | low | 15 | 9 |
+| burst | knee | 15 | 9 |
+| burst | high | 21 | 15 |
+
+**The four-way group is predicted to meet its target almost everywhere and
+misses it almost everywhere.** T3's recommendation is predicted *met* at every
+level of both patterns; the hardware meets it only at normal-low (394 ms) and
+misses at normal-knee (1.9 s), normal-high (13.3 s), burst-low (1.3 s),
+burst-knee (8.5 s) and burst-high (17.1 s). At `high` that is, in row 8 (e)'s
+words, a **false positive of the 6 rps prediction**, six rows of six. The two
+TP=2 placements are predicted correctly far more often; the one T1 exception is
+`normal-high`, where seeds 43 and 44 were predicted to miss (554, 841 ms) and
+the hardware met (497, 501 ms) --- a false negative, the opposite direction.
+
+**The closest miss: right direction, wrong axes.** burst-high T1 and T2 have no
+feasible plan of their size in the exhaustive scope; the closest miss
+(`tp1-dp2-s128-t8192`, `worst_overshoot` 0.29, the same candidate as
+heteropilot's `closest_plan`) missed on hardware in 6 of 6 rows --- the
+infeasibility verdict holds --- but on the predicted axes in 0 of 6: predicted
+TTFT and goodput, measured TTFT and TPOT.
+
+**K = 16 against the exhaustive scope** (row 8 c, seed 42): normal T1 and T2
+4/4; normal T3 16/676, every candidate it evaluated being feasible, so bounded
+by the budget rather than missed; **burst T3 0/172**.
+
+**Conditions with nothing to deploy.** normal-low seeds 42 and 44 (T1, T2) and
+burst-low and burst-knee (T1, T2, every seed) returned no feasible candidate of
+the condition's size within K = 16, so only their bound-stress rows were
+measured. For normal-low the cause is measured: the simulator predicts an SLO
+goodput of 1.525 at seed 42 against a floor of 1.6 that row 4's rule derived
+from the *hardware's* 1.714, so every candidate fails on goodput by
+prediction. For burst-low and burst-knee it is not diagnosed here, and those
+levels were not evaluated exhaustively.
+
+**Two defects, recorded and not fixed mid-run.**
+
+- *Pooling would have rewritten the paper.* The analysis grouped every
+  recommendation by placement regardless of level, so with the widened rows
+  the paper's T2/T1 ratio macro moved from 8.3 to 1.6 and the agreement macros
+  from 21/27 to 93/124. The primary tables now read normal x knee only, and the
+  widened matrix has its own section and column names; the macros are back to
+  their registered values.
+- *The feasible-marginal alternative repeats the recommendation.*
+  `feasible_marginal` excludes the recommendation's **embedding** id but not its
+  **template**, so it can select the same template at another placement, which
+  the condition then deploys at the same devices: the two rows are one
+  configuration measured twice. That has been so since the first E-G5 run.
+
+**What it affects.** `experiments/e_g5/analyze.py`,
+`experiments/results/e_g5_real_hardware.md`, the raw directories of the 45
+conditions. The paper's numbers are unchanged; the widened findings are for P7
+to place.
