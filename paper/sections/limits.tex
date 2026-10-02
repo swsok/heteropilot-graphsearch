@@ -84,7 +84,10 @@ For a tensor-parallel group of more than two ranks the compression's demand
 labels still read the first rank pair, as the earlier adapter did, so on such
 groups the label and the evaluator shared one blind spot, and the zero
 mis-merge count there is not independent evidence that the labels are
-sufficient.
+sufficient. The same first-pair read remains in the fluid contention model's
+choice of a flow's path and in the ranker's cut margin; neither decides what
+the simulator is told, and correcting them would change which candidates the
+registered runs reached, so they are recorded rather than changed here.
 
 % claim: C22
 % claim: C30
