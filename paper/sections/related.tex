@@ -35,17 +35,19 @@ prices the transfer between the phases as a flow over the graph, which is what
 makes the counterexample in Section~\ref{sec:candidates} expressible at
 all---two prefill groups sending to one decode group differ only in the uplink
 they cross. It does not contribute a disaggregation policy, and the hardware
-campaign here could not deploy one, for the reason Section~\ref{sec:limits}
-gives.
+campaign deploys one only through its own experiment harness, because the
+deployment backend this work extends has no router
+(Section~\ref{sec:limits}).
 
 \paragraph{Simulation.}
 Vidur and LLMServingSim provide simulators for LLM serving; Frontier argues for
 more comprehensive and accurate simulation, including of disaggregated
 architectures. The dependence here is direct---the evaluator is LLMServingSim
 with an analytical backend---and so is the limitation: that simulator has no
-representation of a link graph, so the distinction this search maintains is
-invisible to the evaluator that prices it. Section~\ref{sec:adapter} reports
-what could not be expressed rather than folding it into a bandwidth number.
+representation of a link graph, so the evaluator sees a placement's own
+bottleneck as a bandwidth but not which resources it shares.
+Section~\ref{sec:adapter} reports what could not be expressed rather than
+folding it into a bandwidth number.
 This work measures search accuracy with prediction accuracy held fixed, which
 is a different question from the one a simulator paper asks.
 

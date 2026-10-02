@@ -43,13 +43,14 @@ This is the trap the representation exists to avoid, and it is not a footnote.
 One wire answers different questions with different numbers depending on what
 crosses it. Measured on the eight-GPU node used in
 Section~\ref{sec:eval}, one PCIe path between two accelerators sustains
-\egfourPeerBridge~GB/s for a direct peer copy, \egfourBusbwTwo~GB/s of bus
-bandwidth for a two-rank all-reduce, and \egfourBusbwFour~GB/s for the
-four-rank all-reduce a tensor-parallel group of four actually runs.
+\egfourPeerBridge~GB/s for a direct peer copy and \egfourBusbwTwo~GB/s of bus
+bandwidth for a two-rank all-reduce across it; a tensor-parallel group of four,
+on two NVLink pairs joined by that bridge, runs its all-reduce at
+\egfourBusbwFour~GB/s.
 
 % claim: C17
-Those are three measurements of one path, and the last two differ by more than
-a factor of two. A measurement is therefore keyed by what was run---the collective,
+The first two are two measurements of one path, and the two all-reduces, both
+bound by the bridge, differ by more than a factor of two. A measurement is therefore keyed by what was run---the collective,
 the number of ranks, the message-size band and how the measuring process was
 bound to the node---and a figure recorded under one key is never substituted for
 another. The number of ranks in particular is part of the key and not a note

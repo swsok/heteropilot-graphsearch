@@ -25,15 +25,14 @@ differ in the interconnect their tensor-parallel collective crosses, and that
 difference reaches the served latency.
 
 % claim: C18
-% claim: C21
 The size of the difference is easy to underestimate. On the eight-GPU node used
 here, one plan---same engine, model, trace, scheduler knobs and seed---deployed
-at two placements of itself meets its latency target on one and misses it by a
-factor of seven on the other. It is not that the slower wire costs some
-latency: it moves the saturation knee, and with it the load at which the
-service still meets its objectives. Section~\ref{sec:eval} reports the
-measurement, over three repetitions per placement whose ranges do not
-overlap.
+at two placements of itself has a median $p99$ time to first token
+\egfiveTtwoOverTone{}x apart at the load knee, over \egfiveReps{} repetitions per
+placement whose ranges do not overlap. Against a latency target registered
+beforehand from the faster placement's own pilot, one meets it and the other
+does not; Section~\ref{sec:eval} reports the measurement, how the target was
+chosen, and how the ratio changes with load.
 
 A planner that enumerates configurations rather than placements cannot make
 that choice, because it has no name for the thing being chosen. The planner
@@ -67,8 +66,8 @@ communication boundary.} Placements are folded only after a graph isomorphism
 check confirms their candidate graphs agree, and those graphs carry the shared
 resources their traffic crosses along with the capacity each one has left.
 Dropping the boundary from the signature is an ablation, and it produces
-mis-merges that the full relation does not
-(Section~\ref{sec:eval}).
+a mis-merge on the counterexample pair the relation exists for, which the
+full relation does not (Section~\ref{sec:eval}).
 
 % claim: C2
 \textbf{B. Elimination that is a relaxation of the feasibility test.} A
@@ -76,9 +75,11 @@ candidate is removed only when arithmetic that is optimistic on every uncertain
 term still misses a declared constraint; each check publishes the relaxations
 it made. Anything that cannot be shown to be a relaxation is a heuristic and is
 reported in a different state, because a candidate that was never evaluated is
-not a candidate that was shown to be infeasible. Across every experiment in
-this paper the count of feasible candidates wrongly eliminated is zero, and it
-is reported for every arm of every table rather than summarised once.
+not a candidate that was shown to be infeasible. In every experiment that runs
+an exhaustive oracle the count of feasible placements wrongly eliminated is
+zero among those the evaluator judged, and it is reported for every arm of
+those tables rather than summarised once; on hardware the bound is tested on
+one rejected candidate.
 
 % claim: C11
 % claim: C26

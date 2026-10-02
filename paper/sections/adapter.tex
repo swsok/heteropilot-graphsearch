@@ -16,13 +16,19 @@
 \paragraph{Compiling a placement, and naming what was lost.}
 The adapter turns a placed candidate into a simulator configuration. The
 simulator accepts a bandwidth and a latency per collective and has no
-representation of a link graph, so several things the search decided on cannot
-be expressed to it: which resources two groups share, how much of a resource an
-external reservation already holds, and the difference between two placements
-that cross different uplinks.
+representation of a link graph. What can be expressed is passed per placement:
+a tensor-parallel group is given its own bottleneck---over every rank pair,
+from the measured all-reduce figure at the group's number of ranks where one
+exists, capped by what reservations leave---so two placements of one template
+on different wires compile to different inputs. What cannot be expressed is
+which resources two flows share: two placements whose bottlenecks are equal but
+which cross different shared resources compile to the same input.
 
-The adapter therefore emits, with every compiled plan, a report of what it
-could not pass on. This is the alternative to the two tempting options, both
+The adapter therefore emits, with every compiled plan, a report of the shared
+resources it could not pass on. The report covers that loss and no other: an
+earlier version of the adapter read only a group's first rank pair, and the
+report did not say so, because it was not written to look for it
+(Section~\ref{sec:limits}). This is the alternative to the two tempting options, both
 worse: folding the shared-resource effect into the bandwidth number, which
 would make the simulator's output unattributable, or saying nothing, which
 would let the search distinguish two candidates that the evaluator then judges
@@ -46,8 +52,11 @@ representative can never disagree---so \texttt{mismerged\_pairs} is
 structurally zero and the correctness check is vacuous. The oracle and the
 search therefore bind the predictor to each embedding before evaluating, and
 the binding is a named function rather than an optional attribute, so its
-absence is visible. A cache signature that does not include the embedding's
-identity has the same effect for the same reason, and does not.
+absence is visible. The oracle's result cache would have the same effect if
+its key did not lead with the embedding's identity, and it does. This is a
+different cache from the bucket key of Section~\ref{sec:candidates}: there,
+sharing a prediction within an equivalence class is the saving being claimed;
+here, in the baseline that audits it, every placement gets its own entry.
 
 % claim: C15
 \paragraph{Contention.}

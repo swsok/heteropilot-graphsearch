@@ -31,7 +31,7 @@ carries `% pending`.
 
 Contribution C needs it and it is written by hand into `tables/reuse.tex`,
 because none of it is a measurement: three columns for heteropilot modules
-reused, hooks H1-H5 with their deviation ids (D120-D126), and the thirteen new
+reused, hooks H1-H4 with their deviation ids (D120-D126; no H5 was made, GS-32), and the thirteen new
 `graphsearch` modules.
 
 ## What this paper does not claim

@@ -39,7 +39,7 @@ help:
 	@echo "              marked pending, and the list of \\pending markers"
 	@echo "make clean    remove build artefacts and generated tables"
 
-paper: tables figures pdf
+paper: tables numbers figures pdf
 
 # Tectonic first, on purpose: it resolves its own package set from a pinned
 # bundle, so the same source builds the same way on a machine that has no TeX
@@ -70,8 +70,14 @@ tables: $(RESULTS)
 	@mkdir -p tables
 	$(PYTHON) $(ROOT)/scripts/paper/md_to_tex.py --all --out-dir $(CURDIR)/tables
 
+# contention.py reads outputs/e_g4/microbench.json, which is gitignored but is
+# derived from committed raw files in under a second -- so it is derived here,
+# and a fresh clone's `make figures` draws from the raw rather than skipping.
+# The --out copy goes to outputs/, not over the committed results file.
 figures:
 	@mkdir -p figures
+	cd $(ROOT) && $(PYTHON) experiments/microbench/analyze.py \
+	    --out outputs/e_g4/microbench.md --json-out outputs/e_g4/microbench.json
 	@if [ -z "$(FIGURE_SCRIPTS)" ]; then \
 	    echo "make figures: no generators in scripts/paper/figures/ yet (P4, P6.3)"; \
 	else \

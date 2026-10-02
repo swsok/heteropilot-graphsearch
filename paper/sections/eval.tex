@@ -30,19 +30,27 @@ the same physics as the elimination bounds, which is what makes a disagreement
 between the search and an exhaustive oracle meaningful; it is not a
 performance model and no figure produced by it is a measurement.
 \emph{LLMServingSim} with an analytical network backend is the real simulator.
-\emph{Hardware} is an eight-GPU node whose accelerator serial numbers every raw
-file records. Every table carries its provenance in the caption.
+\emph{Hardware} is an eight-GPU node, joined for the inter-node measurements by
+a second node of the same accelerator over one InfiniBand link; every raw file
+records the accelerator serial numbers it ran on. Every table carries its
+provenance in the caption.
 
 Every fixture in the accompanying repository is fictional and says so in its
-header, with one exception: the hardware cluster description is generated from
-the microbenchmark's own raw files, so that each figure marked as measured is
-traceable to a file recording the node's serials, the process binding, the load
-average and which other processes held a GPU.
+header, with three exceptions. The descriptions of the eight-GPU node and of
+the two-node pair are generated from the microbenchmarks' own raw files, so
+that each figure marked as measured is traceable to a file recording the
+node's serials, the process binding, the load average and which other
+processes held a GPU; figures not measured there are marked as placeholders.
+The third is a holdout derived from the eight-GPU description by one assumed
+reservation, which is a variation of the topology and not a measurement.
 
 The success criteria, the numeric limits, and the interval a threshold was
 chosen from were registered before the corresponding experiment ran, and the
 registration is append-only. Where a limit was derived from a measurement, the
 runs it was derived from are named and excluded from the set that tests it.
+Analyses added after a result was known---the hardware re-prediction of
+Section~\ref{sec:eval-hw} among them---are labelled post hoc wherever they
+appear, and none of them tests a registered prediction.
 
 \subsection{Correctness under the real simulator}
 
@@ -103,14 +111,20 @@ symmetry, for a mock evaluator, at 32, 64 and 128 devices.
 The symmetry axis carries the result. At 128 devices the same
 \egsixEmbeddingsLarge{} embeddings compress to \egsixRepsAsym{} representatives
 on a fully asymmetric cluster and to \egsixRepsSym{} on a fully symmetric one.
-The asymmetric ratio is \egsixRatioAsym---that is, the compression finds almost
-nothing to fold, and the corpus reports that rather than omitting the
-configuration. A method whose benefit depends on a property of the input should
-be shown on inputs that lack it.
+The asymmetric ratio, \egsixRatioAsym, is still a substantial fold; the case
+where nothing folds is the toy corpus's asymmetric fixture, at
+\egoneRatioAsym{} in Table~\ref{tab:e_g1_toy_pilot}, where no two placements
+are isomorphic. Both are reported rather than the configurations omitted. A
+method whose benefit depends on a property of the input should be shown on
+inputs that lack it.
 
 This experiment has no success target and is registered as report-only, with a
 single failure condition: the compression must not cost more than it saves on a
-fully symmetric cluster. It does not. The grid is driven by the mock, and a
+fully symmetric cluster. This table cannot evaluate that condition: the grid is
+driven by the mock, where a simulation costs microseconds and any compression
+loses against it. The question is answered at toy scale, under the real
+simulator, by Table~\ref{tab:e_g3_real_sim_oracle_2}; what this grid adds is
+how the compression's own cost and its ratio grow with the cluster. A
 simulation at this scale is not offered as validation of accuracy at scale.
 
 \subsection{Contribution A: the boundary in the signature}
@@ -118,11 +132,18 @@ simulation at this scale is not offered as validation of accuracy at scale.
 % claim: C24
 \input{e_g7_ablation}
 
-Table~\ref{tab:e_g7_ablation} reports the ablation. With the shared boundary in
-the equivalence signature the corpus yields no mis-merged pairs. With
-\texttt{no\_boundary}---every other label retained---two placements that differ
-only in which uplink they cross are folded into one representative, and the
-oracle prices them apart.
+Table~\ref{tab:e_g7_ablation} reports the ablation. Across the corpus, under
+the fixed tight specification, every arm reports no mis-merged pairs,
+\texttt{no\_boundary} included, even where it folds more: every placement there
+is infeasible, so the oracle cannot tell a wrong fold from a right one. The
+claim is tested on the counterexample pair it is about. There, with
+\texttt{no\_boundary}---every other label retained---the two placements that
+differ only in which uplink they cross are folded into one representative and
+the oracle prices them apart, a mis-merged pair; the full relation keeps them
+as two representatives and mis-merges nothing
+(Table~\ref{tab:e_g7_ablation_4}).
+
+\input{e_g7_ablation_4}
 
 The threshold that decides ``prices them apart'' is derived from the oracle's
 own distribution rather than fixed in advance. An earlier form of this
@@ -135,19 +156,26 @@ derivation is stated with the count.
 
 % claim: C5
 % claim: C6
+% claim: C32
 \input{e_g1b_topk}
 \input{e_g2_topk_holdout}
 \begin{figure}[t]\centering
   \includegraphics[width=\linewidth]{topk_holdout.pdf}
-  \caption{Feasible recall against the simulation budget, both arms, on the holdout fixtures~\sourcetag{MOCK}. The oracle's level is the dotted line. At $K=4$ the graph search is behind, which the curve shows without the reader comparing two rows.}
+  \caption{Feasible recall against the simulation budget, both arms, on the holdout fixtures~\sourcetag{MOCK}. The oracle's level is the dotted line. At $K=4$ the graph search ties on one holdout and is behind on the other, which the curve shows without the reader comparing two rows.}
   \label{fig:topk}
 \end{figure}
 
+% claim: C5
+% claim: C6
+% claim: C32
 Table~\ref{tab:e_g1b_topk} and Table~\ref{tab:e_g2_topk_holdout} report
 feasible recall against the existing planner's surrogate top-$K$ under a
-specification whose SLOs bind. At $K = 8$ and $K = 16$ this search reaches
-higher recall. At $K = 4$ it does not---it ties on one holdout fixture and
-trails on the other---and that is the row to read before the others.
+specification whose SLOs bind. On the toy corpus---the diagnosis fixtures the
+ranker correction was made on, so in-sample---this search reaches higher
+recall at every $K$ tried. On the two holdouts it is higher at $K = 16$ and
+level at $K = 8$; at $K = 4$ it ties on one and trails on the other, and that
+is the row to read before the others. On the hardware-derived holdout below it
+is lower at $K = 16$.
 
 The baseline is scored generously and deliberately so. It ranks and judges
 templates rather than placements, so it cannot name which devices a candidate
@@ -166,8 +194,8 @@ Table~\ref{tab:e_g7_holdout} reports both holdouts, fixed before the scaling
 grid ran. On the synthetic one, \egsevenHoldoutEmbeddings{} embeddings compress
 to \egsevenHoldoutReps{} representatives, both correctness numbers are zero,
 and recall at the registered operating point is higher than the surrogate's.
-The second holdout is the hardware fixture with one uplink reservation
-altered, and it now exists.
+The second holdout is the hardware fixture with one PCIe-port reservation
+altered (\texttt{port-gpu0}), and it now exists.
 
 \textbf{On it the registered recall criterion is not met.} The invariant holds
 there---nothing feasible was removed and nothing mis-merged---but at the
@@ -242,24 +270,34 @@ One registered condition remains unanswered, and not for want of effort: two
 concurrent flows over \emph{disjoint} NICs is impossible on this
 hardware---each machine has exactly one InfiniBand device.
 
-% claim: C17
+% claim: C15
 The model's accuracy domain has an upper end. Above a message size the hardware
 begins overlapping the two directions of one link, the pair exceeds what
-processor sharing predicts, and the model becomes optimistic by about a third.
+processor sharing predicts, and the model becomes pessimistic: it predicts the
+transfer about a third slower than measured.
 That boundary is stated rather than absorbed into a fitted capacity: a capacity
 chosen because it reproduces the answer is not a measurement, and it would make
 the next node's prediction wrong silently.
 
 \subsection{Hardware}
+\label{sec:eval-hw}
 
 % claim: C18
 Table~\ref{tab:e_g5_real_hardware} reports the recommendation at three
-placements, three repetitions each, against the same latency target: one
-tensor-parallel pair on two different pairs of devices, and a four-way group.
-\textbf{On one wire the pair meets that target and on the other it misses it
-by \egfiveTtwoOverTone{}x}, with the same model, trace, scheduler knobs, seed
-and plan; the ranges do not overlap, and time per output token and goodput
-clear their targets at both, so the latency axis is the one that decides.
+placements, \egfiveReps{} repetitions each, at the load knee of the registered
+specification: one tensor-parallel pair on two different pairs of devices, and
+a four-way group. \textbf{The same pair's median $p99$ time to first token is
+\egfiveTtwoOverTone{}x higher on one wire than on the other}---\egfiveTtwoMedian{}
+against \egfiveToneMedian{} ms---with the same model, trace, scheduler knobs,
+seed and plan, and the ranges do not overlap: the slowest repetition on the
+faster wire measured \egfiveToneRangeHi{} ms and the fastest on the slower wire
+\egfiveTtwoRangeLo{} ms. Against the latency target the faster wire meets and
+the slower misses. That verdict is partly by construction, and the ratio is the
+evidence that does not depend on it: the target was registered before the
+matrix ran, derived from the faster placement's own pilot $p99$ with a margin
+above it, and so sits between the two placements by design. Time per output
+token and goodput clear their targets at both, so the latency axis is the one
+that decides.
 
 The planner being extended cannot express the difference between those two
 placements at all. It names a template, and the choice this experiment shows
@@ -268,32 +306,75 @@ strongest available form, and it is a hardware measurement rather than an
 argument.
 
 % claim: C33
-\textbf{Asked about the placement it is deployed on, the search tells the two
-pairs apart.} Each row's prediction is the search's verdict on that placement
-itself, and it matches the hardware's verdict in \egfiveAgreeRows{} of
-\egfiveAllRows{} rows: at both pairs, and not at the four-way group, where all
-\egfiveTthreeDisagree{} disagreements are a predicted \emph{met} that the
-hardware misses. A false \emph{met} is the direction that matters to a planner,
-and it is reported as a miss. An earlier version of this experiment printed
-the search's own pick beside every measurement, so the two pairs carried one
-identical prediction and looked indistinguishable to the evaluator; that
-reading was a defect of the harness, not a property of the simulator, and it is
-withdrawn.
+\textbf{Asked about the placement it is deployed on, with the registered
+adapter, the search tells the two pairs apart}---a reading the corrected
+adapter below qualifies. Each row's prediction is the search's verdict on that placement
+itself. Counting independent deployments of the recommendation only, the
+verdict matches the hardware's in every one of the \egfiveReps{} repetitions at
+both pairs, and in none at the four-way group, where each is a predicted
+\emph{met} that the hardware misses. A false \emph{met} is the direction that
+matters to a planner, and it is reported as a miss. The table carries two
+further rows per repetition that are not further tests of this question. The
+feasible-marginal alternative deployed the recommendation's own template at
+the same devices, so it is the same configuration measured twice; and the
+bound-stress row, a candidate predicted to miss by tens of seconds, agrees
+trivially and is taken up below. An earlier version
+of this experiment printed the search's own pick beside every measurement, so
+the two pairs carried one identical prediction and looked indistinguishable to
+the evaluator; that reading was a defect of the harness, not a property of the
+simulator, and it is withdrawn.
+
+% claim: C34
+\textbf{Post hoc, the four-way miss has a candidate cause.} After the
+registered runs, the adapter was found to give the simulator the bandwidth of a
+tensor-parallel group's first rank pair only: for the four-way group, its first
+NVLink pair's edge capacity, where the all-reduce measured at four ranks on
+that group is \egfourBusbwFour~GB/s. Every registered prediction in this
+section, at the pairs as well as the group, was made with a first-pair
+figure, and
+every verdict above stands as registered. With the adapter corrected and
+every deployed row simulated again---not registered, and nothing
+redeployed---the four-way group's recommendation and closest-miss rows agree
+with the hardware in \egfivePostTthreeReAgree{} of \egfivePostTthreeRows{},
+against \egfivePostTthreeOrigAgree{} originally, and its false \emph{met}
+verdicts fall from \egfivePostTthreeOrigFp{} to \egfivePostTthreeReFp. The
+correction is not free: on the NVLink pair, now given its measured two-rank
+all-reduce figure rather than its nominal capacity, agreement falls from
+\egfivePostToneOrigAgree{} to \egfivePostToneReAgree{} of
+\egfivePostToneRows{}, each new disagreement a predicted miss the hardware
+met. This is consistent with the adapter defect being a cause the registered
+experiment did not separate, and the corrected predictions are still short in
+magnitude at the highest load; it does not replace the registered result.
+
+% claim: C35
+\textbf{The ratio depends on load.} A widened matrix, registered before its
+first request, repeats the three placements at a lower and a higher load and
+under a burstier arrival pattern. Under the registered pattern the pair's
+ratio between the two wires is \egfiveWideLowRatio{}x below the knee,
+\egfiveTtwoOverTone{}x at it and \egfiveWideHighRatio{}x above it: the ratio
+is largest at the knee, the verdict differs between the wires at the knee and
+above it and not below, and the claim above is scoped to the knee. The
+four-way group's recommendation is predicted to meet its target at every level
+of both patterns; the hardware meets it only below the knee under the
+registered pattern, at a median of \egfiveWideTthreeLow{} ms, and misses
+everywhere else---the pattern the post-hoc re-prediction above largely
+removes.
 
 % claim: C19
 % claim: C20
-The two boundary alternatives are deployed against the bounds that ranked or
-rejected them, each offered the rate \emph{its own} spec declares so that a
-predicted and a measured column answer the same question. The prediction is
-optimistic on time to first token in most rows, not all of them. This
-experiment does not separate the candidate causes---prediction error, the
-contention model, the engine's scheduler---and does not choose the most
-flattering one.
+The bound-stress alternative is deployed against the bound that rejected it,
+offered the rate \emph{its own} spec declares so that a predicted and a
+measured column answer the same question. It is the only boundary alternative
+that is a separate test: the feasible-marginal one, as above, repeated the
+recommendation. The prediction is optimistic on time to first token in most
+rows, not all of them. This experiment does not separate the candidate
+causes---prediction error, the contention model, the engine's scheduler---and
+does not choose the most flattering one.
 
 \textbf{The lower bound was right, and the interesting number is how loose it
 is.} The candidate the throughput bound rejected by the smallest margin was
 deployed and offered the floor it had been rejected against. It did not reach
-it, so no feasible candidate was wrongly eliminated on hardware. That outcome
+it, so this one rejection was not wrong on hardware. That outcome
 was expected: a bound that is a relaxation rejects only what the most
 optimistic arithmetic already misses, so a correct rejection is not news, and
 the test is registered as weak for exactly that reason. What the deployment
@@ -302,13 +383,3 @@ hardware actually delivered, and it is more than an order of magnitude. That
 looseness is the price of soundness; this is its size on this machine.
 
 \input{e_g5_real_hardware}
-
-% claim: C21
-% pending
-One result from it is already measured and is reported here because it does not
-depend on the rest. Two placements of a single template---a tensor-parallel
-pair on an NVLink link, and the same pair across a PCIe bridge---differ in
-served $p99$ time to first token by a factor that grows sharply at the knee,
-because the slower interconnect moves the knee itself. Three repetitions per
-cell; the ranges do not overlap. The planner being extended cannot express the
-difference between these two placements at all, which is the point.

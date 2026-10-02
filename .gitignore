@@ -27,6 +27,8 @@ graft/
 # it came from; the directory itself is kept so `\input` paths resolve before
 # the first build. LaTeX's own droppings are regenerable by definition.
 paper/tables/*.tex
+# ...except the one hand-written table, which a fresh clone needs to build.
+!paper/tables/reuse.tex
 paper/main.pdf
 paper/*.aux
 paper/*.log
