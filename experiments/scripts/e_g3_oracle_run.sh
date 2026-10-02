@@ -41,6 +41,8 @@
 #                   sequential in candidate order whatever this is, so the
 #                   output is byte-identical to a serial run.
 #     CACHE_DIR     cache root; the arms use <root>/oracle and <root>/proposed.
+#     JSON_OUT      the run's rows (default outputs/eg3.json), which
+#                   `e_g3_cache_check.py --from-json` and a re-render read.
 #     CEILING       overall wall-clock ceiling in seconds (default 28800 = 8h).
 #                   Exit 124 means it expired, which is `timeout`'s own code.
 
@@ -56,6 +58,7 @@ MAX_WORKERS="${MAX_WORKERS:-4}"
 CEILING="${CEILING:-28800}"
 OUT="${OUT:-experiments/results/e_g3_real_sim_oracle.md}"
 LOG="${LOG:-outputs/eg3-oracle.log}"
+JSON_OUT="${JSON_OUT:-outputs/eg3.json}"
 
 export PYTHONPATH="$ROOT:$ROOT/vendor/heteropilot"
 
@@ -84,7 +87,7 @@ if [ -x "$WATCH" ]; then
     bash "$WATCH" -g 0 -s 0 -t "$CEILING" -- \
         "$VENV_PY" experiments/scripts/e_g3_real_sim_oracle.py \
         --predictor sim --cache-dir "$CACHE_DIR" \
-        --max-workers "$MAX_WORKERS" --out "$OUT" "$@" 2>&1 | tee "$LOG"
+        --max-workers "$MAX_WORKERS" --out "$OUT" --json-out "$JSON_OUT" "$@" 2>&1 | tee "$LOG"
     status=${PIPESTATUS[0]}
 else
     # Not a silent fallback: without it there is no ceiling and no
@@ -93,7 +96,7 @@ else
     echo "no process-group kill. Simulator children may outlive an abort." >&2
     "$VENV_PY" experiments/scripts/e_g3_real_sim_oracle.py \
         --predictor sim --cache-dir "$CACHE_DIR" \
-        --max-workers "$MAX_WORKERS" --out "$OUT" "$@" 2>&1 | tee "$LOG"
+        --max-workers "$MAX_WORKERS" --out "$OUT" --json-out "$JSON_OUT" "$@" 2>&1 | tee "$LOG"
     status=${PIPESTATUS[0]}
 fi
 elapsed=$(( $(date +%s) - start ))

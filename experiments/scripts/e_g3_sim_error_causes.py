@@ -161,7 +161,8 @@ def markdown(found: dict[str, list[dict]], args) -> str:
     out.append("      experiments/scripts/e_g3_real_sim_oracle.py --only $f \\")
     out.append("      --work-dir outputs/eg3-diag/$f --cache-dir outputs/eg3-diag/$f/cache")
     out.append("done")
-    out.append(f"python experiments/scripts/e_g3_sim_error_causes.py --out {args.out}")
+    out.append("python experiments/scripts/e_g3_sim_error_causes.py "
+               f"--work-dir {args.work_dir} --out {args.out}")
     out.append("```")
     out.append("")
     out.append(

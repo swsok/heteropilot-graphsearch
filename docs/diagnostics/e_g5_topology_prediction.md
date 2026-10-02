@@ -1,5 +1,9 @@
 # E-G5 — why T1 and T2 predicted the same thing
 
+> Moved here from `experiments/results/` in P7.2: it is a hand-run diagnostic
+> of the harness (the record behind GS-30), not a results file -- no script
+> generates it and the paper cites none of it.
+
 > **REAL SIM, used as a diagnostic.** Every figure here is `--predictor sim`
 > (LLMServingSim) on the committed fixture; none is a hardware measurement. They
 > are used to answer a question about this repository's harness, not about any

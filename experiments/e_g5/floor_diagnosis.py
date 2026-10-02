@@ -18,12 +18,10 @@ candidates. The evaluated set here is the registered floor's.
 **It must run under the pre-GS-38 adapter.** heteropilot's envelope key
 bands `link_bw` (`network_class`), and the corrected adapter moves T1, T2 and
 T3 into other bands, so under it every lookup misses. The predictions being
-diagnosed were made by the old adapter; run this from a tree whose
-`graphsearch/adapter.py` is the pre-GS-38 one (`git show 367ba74:...`), with
-the rest of the repository linked in:
+diagnosed were made by the old adapter, so run this through
+`run_floor_diagnosis.sh`, which builds that tree:
 
-    PYTHONPATH=$PRE:$PRE/vendor/heteropilot \
-        vendor/heteropilot/.venv/bin/python experiments/e_g5/floor_diagnosis.py
+    bash experiments/e_g5/run_floor_diagnosis.sh
 """
 
 from __future__ import annotations

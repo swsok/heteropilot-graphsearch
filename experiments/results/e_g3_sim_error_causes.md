@@ -41,7 +41,7 @@ for f in graph-toy-abcde graph-toy-shared-nic heterogeneous-lab; do
       experiments/scripts/e_g3_real_sim_oracle.py --only $f \
       --work-dir outputs/eg3-diag/$f --cache-dir outputs/eg3-diag/$f/cache
 done
-python experiments/scripts/e_g3_sim_error_causes.py --out experiments/results/e_g3_sim_error_causes.md
+python experiments/scripts/e_g3_sim_error_causes.py --work-dir outputs/eg3-diag --out experiments/results/e_g3_sim_error_causes.md
 ```
 
 The cache is deliberately not shared with E-G3's own: a cached success would hide the failure this file is about.
