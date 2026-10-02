@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.source.exists():
         print(f"contention.py: {args.source} is absent; skipping", file=sys.stderr)
-        return 0
+        return 1
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     except ModuleNotFoundError:
         print("contention.py: matplotlib is not installed; skipping",
               file=sys.stderr)
-        return 0
+        return 1
 
     rows = json.loads(args.source.read_text())["rows"]
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     axes.legend(fontsize=6.5, loc="upper left")
     figure.tight_layout()
     out = args.out_dir / "contention_error.pdf"
-    figure.savefig(out)
+    figure.savefig(out, metadata={"CreationDate": None})
     plt.close(figure)
     print(f"{args.source.name} -> {out}")
     return 0

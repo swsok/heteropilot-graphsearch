@@ -1,0 +1,34 @@
+%% HAND-WRITTEN, and the one table under tables/ that `make tables` does not
+%% overwrite. It carries no measured number: it is a statement about which
+%% repository each piece of code lives in, which contribution C requires the
+%% paper to make explicitly rather than leave to a reader's inference.
+\begin{table}[t]
+  \caption{What is reused, what is modified, and what is new~\sourcetag{NOT A MEASUREMENT}}
+  \label{tab:reuse}
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    Reused unmodified & Modified by hook & New in this work \\
+    \midrule
+    \texttt{planner.inventory}      & H1 \small(D121)  & \texttt{schema} \\
+    \texttt{candidate\_generator}   & H2 \small(D120)  & \texttt{paths} \\
+    \texttt{predictor} interface    & H3 \small(D122)  & \texttt{demand} \\
+    \texttt{optimizer.exhaustive}   & H4 \small(D127)  & \texttt{embeddings} \\
+    \texttt{optimizer.surrogate}    &                  & \texttt{equivalence} \\
+    \texttt{deploy.vllm\_cuda}      &                  & \texttt{bounds} \\
+    \texttt{util.percentile}        &                  & \texttt{ranker} \\
+    \texttt{bench.core.runner}      &                  & \texttt{adaptive} \\
+    \texttt{profiler} bundles       &                  & \texttt{adapter} \\
+    LLMServingSim                   &                  & \texttt{restore} \\
+                                    &                  & \texttt{oracle} \\
+                                    &                  & \texttt{cost} \\
+                                    &                  & \texttt{contention} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{2pt}
+  \footnotesize Each hook is a pull request against the planner's own
+  repository with a numbered deviation entry, not a patch applied from here;
+  the planner's behaviour is unchanged when a hook is not used, which its own
+  golden tests check. Thirteen new modules, four hooks, and no file of the
+  planner edited in place.
+\end{table}

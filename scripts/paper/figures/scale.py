@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
             f"(bash experiments/scripts/e_g6_run.sh). No figure written.",
             file=sys.stderr,
         )
-        return 0
+        return 1
 
     try:
         import matplotlib
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
             "run `make figures` through an interpreter that has it.",
             file=sys.stderr,
         )
-        return 0
+        return 1
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -100,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         figure.tight_layout()
 
         out = args.out_dir / f"{stem}.pdf"
-        figure.savefig(out)
+        figure.savefig(out, metadata={"CreationDate": None})
         plt.close(figure)
         print(f"{args.json} -> {out}")
 

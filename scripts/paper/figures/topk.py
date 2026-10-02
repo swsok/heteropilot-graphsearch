@@ -78,15 +78,17 @@ def main(argv: list[str] | None = None) -> int:
         import matplotlib.pyplot as plt
     except ModuleNotFoundError:
         print("topk.py: matplotlib is not installed; skipping", file=sys.stderr)
-        return 0
+        return 1
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     written = 0
     for filename, label in SOURCES:
         path = RESULTS / filename
         if not path.exists():
-            print(f"topk.py: {filename} is absent; skipping", file=sys.stderr)
-            continue
+            # A committed results file is missing: the figure would be stale,
+            # and `make figures` must not report success over it.
+            print(f"topk.py: {filename} is absent; no figure written", file=sys.stderr)
+            return 1
         rows = rows_of(path)
         fixtures = sorted({r.get("fixture", "") for r in rows} - {""})
         if not fixtures:
@@ -127,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         axes[0][-1].legend(fontsize=7, loc="lower right")
         figure.tight_layout()
         out = args.out_dir / f"topk_{label.replace(' ', '_')}.pdf"
-        figure.savefig(out)
+        figure.savefig(out, metadata={"CreationDate": None})
         plt.close(figure)
         print(f"{path.name} -> {out}")
         written += 1
