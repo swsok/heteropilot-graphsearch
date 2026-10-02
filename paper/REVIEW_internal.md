@@ -145,6 +145,6 @@ Open, for the submission rather than the text:
 
 | id | note | status |
 | --- | --- | --- |
-| D-1 | four sentences point to "the artifact" (timing table, toy-corpus table, corpus-wide ablation, toy-corpus recall); under double-blind a reviewer cannot see it | needs an anonymised artifact link at submission (user decision) |
+| D-1 | four sentences point to "the artifact" (timing table, toy-corpus table, corpus-wide ablation, toy-corpus recall); under double-blind a reviewer cannot see it | the toy-corpus recall now carries its numbers in the text (two macros from `e_g1b_topk.md`); the rest needs an anonymised artifact link at submission (user decision) |
 | D-2 | "registered" / "preregistration" and "accompanying repository" appear with no anonymised pointer | same as D-1 |
 | D-3 | the reuse table plus "hooks" and "golden tests" may identify the extended planner | check against the 2027 anonymity rules when the call appears |

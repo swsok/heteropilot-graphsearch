@@ -163,7 +163,8 @@ derivation is stated with the count.
 Figure~\ref{fig:topk} and the artifact's tables report feasible recall against the existing planner's surrogate top-$K$ under a
 specification whose SLOs bind. On the toy corpus---the diagnosis fixtures the
 ranker correction was made on, so in-sample---this search reaches higher
-recall at every $K$ tried. On the two holdouts it is higher at $K = 16$ and
+recall at every $K$ tried (on \texttt{graph-toy-abcde} at $K = 16$,
+\egonebRecallGraphAbcde{} against the surrogate's \egonebRecallSurrogateAbcde{}). On the two holdouts it is higher at $K = 16$ and
 level at $K = 8$; at $K = 4$ it ties on one and trails on the other, and that
 is the row to read before the others. On the hardware-derived holdout below it
 is lower at $K = 16$.
