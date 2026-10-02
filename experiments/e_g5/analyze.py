@@ -1244,17 +1244,20 @@ def markdown(data: list[dict], args) -> str:
     out += pd_section(RAW)
 
     out += ["", "## Reproducing", ""]
+    out.append("The measured columns are hardware and are not reproducible from this "
+               "repository; their raw files are committed under `experiments/e_g5/raw/` "
+               "and this file is rebuilt from them in under a second by the last "
+               "command. `REPRODUCE.md` says what each step needs.")
+    out.append("")
     out.append("```bash")
     out.append("export PYTHONPATH=$PWD:$PWD/vendor/heteropilot")
-    out.append("vendor/heteropilot/.venv/bin/python experiments/e_g5/deploy_and_bench.py \\")
-    out.append("    --condition llama31-8b__normal__T3__knee --rep 42 \\")
-    out.append("    --knee-rps 4 --predictor sim")
-    out.append("# GS-38: post-hoc re-prediction (corrected adapter, fresh cache)")
+    out.append("# hardware: the registered matrix (row 8) and, with WITH_PD=1, the P/D arm (row 7)")
+    out.append("bash experiments/e_g5/run_grid.sh")
+    out.append("# GS-38: post-hoc re-prediction (corrected adapter, fresh cache; CPU only)")
     out.append("vendor/heteropilot/.venv/bin/python experiments/e_g5/repredict.py")
-    out.append("# GS-38: cache-only floor diagnosis, from a tree with the pre-GS-38 adapter")
-    out.append("PYTHONPATH=$PRE:$PRE/vendor/heteropilot \\")
-    out.append("    vendor/heteropilot/.venv/bin/python experiments/e_g5/floor_diagnosis.py")
-    out.append(f"python experiments/e_g5/analyze.py --out {args.out}")
+    out.append("# GS-38: cache-only floor diagnosis, under the pre-GS-38 adapter")
+    out.append("bash experiments/e_g5/run_floor_diagnosis.sh")
+    out.append(f".venv/bin/python experiments/e_g5/analyze.py --out {args.out}")
     out.append("```")
     return "\n".join(out)
 

@@ -10,11 +10,14 @@ egthreeEmbeddingsAbcde:   {file: e_g3_real_sim_oracle.md, table: 0, row: graph-t
 egthreeRepsAbcde:         {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: representatives}
 egthreeRatioAbcde:        {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: compression_ratio}
 egthreeUnjudgedAbcde:     {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: unjudged}
-egthreeSavingAbcde:       {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, column: saving_s, format: "{:.0f}"}
-egthreeSimOracleAbcde:    {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, column: t_sim_oracle_s, format: "{:.0f}"}
-egthreeSimProposedAbcde:  {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, column: t_sim_proposed_s, format: "{:.0f}"}
+# Timings are wall seconds of a COLD run. `where: cold` makes a warm re-run --
+# against the archived cache, which reproduces every correctness column but not
+# these -- fail the lookup instead of quietly entering the paper (P7.1 B-4).
+egthreeSavingAbcde:       {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, where: {cold: "True"}, column: saving_s, format: "{:.0f}"}
+egthreeSimOracleAbcde:    {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, where: {cold: "True"}, column: t_sim_oracle_s, format: "{:.0f}"}
+egthreeSimProposedAbcde:  {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, where: {cold: "True"}, column: t_sim_proposed_s, format: "{:.0f}"}
 egthreeRatioLab:          {file: e_g3_real_sim_oracle.md, table: 0, row: heterogeneous-lab, column: compression_ratio}
-egthreeSavingLab:         {file: e_g3_real_sim_oracle.md, table: 1, row: heterogeneous-lab, column: saving_s, format: "{:.0f}"}
+egthreeSavingLab:         {file: e_g3_real_sim_oracle.md, table: 1, row: heterogeneous-lab, where: {cold: "True"}, column: saving_s, format: "{:.0f}"}
 
 # --- E-G6: scale -----------------------------------------------------------
 # 128 devices appears three times, once per symmetry. `where` says which.

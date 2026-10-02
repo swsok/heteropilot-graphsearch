@@ -67,22 +67,22 @@ figures are identical once `CreationDate` is stripped.
 | id | where | finding | severity | disposition |
 | --- | --- | --- | --- | --- |
 | B-1 | `.gitignore:29` | `paper/tables/*.tex` also ignores the hand-written `reuse.tex`, never committed; a fresh clone cannot build the paper (`limits.tex` inputs it). | must | fixed: `.gitignore` un-ignores `paper/tables/reuse.tex`, now committed (3d319d1) |
-| B-2 | `e_g3_sim_error_causes.md` | the documented command omits the required `--work-dir`; the work dir no longer exists; C14 has no raw source short of a 1.6 h cold rerun. | must | P7.2 |
+| B-2 | `e_g3_sim_error_causes.md` | the documented command omits the required `--work-dir`; the work dir no longer exists; C14 has no raw source short of a 1.6 h cold rerun. | must | P7.2 fixed: the script emits `--work-dir`, and the md's block is corrected to match; the work dir no longer exists, so `REPRODUCE.md` says C14 is re-derived by a cold run, not re-read |
 | B-3 | C21 | no generated artefact behind the claim (same as A-12). | must | fixed with A-12: C21 is not established; its body paragraph is removed and the pilot observation is a limit |
-| B-4 | E-G3 timings | rerunning against the cache overwrites cold timings with warm ones, and `make numbers` would carry them into the paper unchecked. | should | P7.2 |
-| B-5 | `e_g3_oracle_run.sh` | never writes `outputs/eg3.json`, which the cache check reads; the md's reproduce block omits the cache-check step. | should | P7.2 |
-| B-6 | `e_g5_real_hardware.md` | the reproduce block names one condition of 45, `$PRE` is undefined, other entry points unlisted. | should | P7.2 |
-| B-7 | `e_g5_topology_prediction.md` | hand-written, no generator or reproduce command. | should | P7.2 |
+| B-4 | E-G3 timings | rerunning against the cache overwrites cold timings with warm ones, and `make numbers` would carry them into the paper unchecked. | should | P7.2 fixed: E-G3 timing macros carry `where: {cold: "True"}`, so a warm row fails the lookup (checked on a copy with one row flipped) |
+| B-5 | `e_g3_oracle_run.sh` | never writes `outputs/eg3.json`, which the cache check reads; the md's reproduce block omits the cache-check step. | should | P7.2 fixed: `e_g3_oracle_run.sh` writes `JSON_OUT` (default `outputs/eg3.json`); `REPRODUCE.md` lists the cache-check step |
+| B-6 | `e_g5_real_hardware.md` | the reproduce block names one condition of 45, `$PRE` is undefined, other entry points unlisted. | should | P7.2 fixed: the grid launcher is committed (`experiments/e_g5/run_grid.sh`) and so is the pre-GS-38 diagnosis tree (`run_floor_diagnosis.sh`, rerun byte-identical); the md's block names both |
+| B-7 | `e_g5_topology_prediction.md` | hand-written, no generator or reproduce command. | should | P7.2 fixed: moved to `docs/diagnostics/` -- a hand-run diagnostic behind GS-30, not a results file |
 | B-8 | figures | missing inputs make `make figures` skip silently; PDFs embed `CreationDate`; `topk_synthetic_holdout.pdf` is stale (and unused, as are `scale_*.pdf`). | should | fixed (3d319d1): `savefig` writes no `CreationDate` (two runs byte-identical); a missing input or matplotlib is a non-zero exit; `make figures` derives `outputs/e_g4/microbench.json` from raw first; all six PDFs regenerated, `topk_synthetic_holdout.pdf` refreshed |
 | B-9 | `paper/Makefile` | `paper` does not depend on `numbers`. | should | fixed (3d319d1): `paper: tables numbers figures pdf` |
-| B-10 | every reproduce block | bare `python` is 3.8 here; the code needs 3.10; `pyproject.toml` has no `requires-python`. | should | P7.2 (`pyproject.toml` deliberately has no `[project]` table, like heteropilot's, so the version goes in `REPRODUCE.md`) |
-| B-11 | `outputs/` | caches and archived JSON (about 18 MB) are gitignored and need an archive. | should | P7.2 |
-| B-12 | submodule `.venv` | heteropilot's `.gitignore` does not cover `.venv`; building it on a fresh clone dirties the submodule and fails the gate. | should | P7.2 |
+| B-10 | every reproduce block | bare `python` is 3.8 here; the code needs 3.10; `pyproject.toml` has no `requires-python`. | should | P7.2 fixed in `REPRODUCE.md` (3.10, `.venv/bin/python`); `pyproject.toml` deliberately has no `[project]` table, like heteropilot's |
+| B-11 | `outputs/` | caches and archived JSON (about 18 MB) are gitignored and need an archive. | should | P7.2 fixed: `scripts/reproduce/archive_outputs.sh` packs the seven inputs (about 18 MB) with a checksum manifest; hosting is decided at submission |
+| B-12 | submodule `.venv` | heteropilot's `.gitignore` does not cover `.venv`; building it on a fresh clone dirties the submodule and fails the gate. | should | P7.2 fixed in `REPRODUCE.md`: the `info/exclude` lines for the submodule's venvs |
 | B-N1 | `md_to_tex.py` | tables are named by position; inserting one above an `\input` table relabels it. | note | noted; no `\input` table is positional-sensitive today (the paper inputs only first tables and the E-G4/E-G7 ones checked here) |
 | B-N2 | `numbers.yaml` | 9 of 40 macros are unused in the body. | note | noted; unused macros are harmless and kept for the tables they check |
-| B-N3 | results md | reproduce blocks sit at the end, not the head. | note | P7.2 |
-| B-N4 | branch | the fixed commit for `REPRODUCE.md` must be taken after PR #42 merges. | note | P7.2 |
-| B-N5 | simulator prerequisites | apt packages, submodule init, the post-`compile.sh` lines, the sim interpreter. | note | P7.2 |
+| B-N3 | results md | reproduce blocks sit at the end, not the head. | note | P7.2: each results file's block is generated by its script; `REPRODUCE.md` is the single index at the head of the package |
+| B-N4 | branch | the fixed commit for `REPRODUCE.md` must be taken after PR #42 merges. | note | P7.2: `REPRODUCE.md` pins the commit tagged at submission, after the stack merges |
+| B-N5 | simulator prerequisites | apt packages, submodule init, the post-`compile.sh` lines, the sim interpreter. | note | P7.2 fixed in `REPRODUCE.md` (setup and simulator sections) |
 
 ## Found while applying the fixes
 

@@ -530,15 +530,15 @@ Registered by row 5 and run before row 7 existed. Each repetition chose its own 
 
 ## Reproducing
 
+The measured columns are hardware and are not reproducible from this repository; their raw files are committed under `experiments/e_g5/raw/` and this file is rebuilt from them in under a second by the last command. `REPRODUCE.md` says what each step needs.
+
 ```bash
 export PYTHONPATH=$PWD:$PWD/vendor/heteropilot
-vendor/heteropilot/.venv/bin/python experiments/e_g5/deploy_and_bench.py \
-    --condition llama31-8b__normal__T3__knee --rep 42 \
-    --knee-rps 4 --predictor sim
-# GS-38: post-hoc re-prediction (corrected adapter, fresh cache)
+# hardware: the registered matrix (row 8) and, with WITH_PD=1, the P/D arm (row 7)
+bash experiments/e_g5/run_grid.sh
+# GS-38: post-hoc re-prediction (corrected adapter, fresh cache; CPU only)
 vendor/heteropilot/.venv/bin/python experiments/e_g5/repredict.py
-# GS-38: cache-only floor diagnosis, from a tree with the pre-GS-38 adapter
-PYTHONPATH=$PRE:$PRE/vendor/heteropilot \
-    vendor/heteropilot/.venv/bin/python experiments/e_g5/floor_diagnosis.py
-python experiments/e_g5/analyze.py --out experiments/results/e_g5_real_hardware.md
+# GS-38: cache-only floor diagnosis, under the pre-GS-38 adapter
+bash experiments/e_g5/run_floor_diagnosis.sh
+.venv/bin/python experiments/e_g5/analyze.py --out experiments/results/e_g5_real_hardware.md
 ```
