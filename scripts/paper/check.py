@@ -153,6 +153,44 @@ def paragraphs(text: str) -> list[tuple[int, list[str], bool, str]]:
     return out
 
 
+def _anonymity_patterns() -> dict:
+    """The one list, from `check_pdf.py`: the source and the PDF are held to
+    the same identifying strings (revision rule 0.4)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_pdf", Path(__file__).resolve().parent / "check_pdf.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault("check_pdf", module)
+    spec.loader.exec_module(module)
+    return module.ANONYMITY_PATTERNS
+
+
+#: Hand-written LaTeX outside `sections/` that reaches the PDF. Generated
+#: tables come from results files, which may name decision numbers; what they
+#: print is held by `check_pdf.py` on the PDF itself.
+HANDWRITTEN = (ROOT / "paper" / "main.tex", ROOT / "paper" / "tables" / "reuse.tex",
+               ROOT / "paper" / "figures" / "concept_sec9.tex")
+
+
+def anonymity_failures(paths) -> list[str]:
+    """Identifying strings in prose a reviewer reads, comments excluded.
+
+    Comments are the repository's own notes and never reach the PDF; a
+    decision number there is how the source cites its record.
+    """
+    patterns = _anonymity_patterns()
+    out = []
+    for path in paths:
+        text = re.sub(r"(?<!\\)%.*$", "", path.read_text(), flags=re.M)
+        rel = path.relative_to(ROOT) if ROOT in path.parents else path
+        for name, pattern in patterns.items():
+            for match in pattern.finditer(text):
+                out.append(f"{rel}: {name} {match.group(0)!r} -- the submission "
+                           f"is double-blind (revision rule 0.4)")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sections", type=Path, default=SECTIONS)
@@ -186,6 +224,8 @@ def main(argv: list[str] | None = None) -> int:
                     f"{match.group(0)!r}. Spelling a number does not give it "
                     f"provenance -- cite the macro."
                 )
+
+        failures += anonymity_failures([path])
 
         flat = re.sub(r"\s+", " ", prose)
         for pattern, why in FORBIDDEN:
@@ -221,6 +261,9 @@ def main(argv: list[str] | None = None) -> int:
         for match in re.finditer(r"\\pending\{([^}]*)\}", raw):
             line = raw[: match.start()].count("\n") + 1
             pendings.append(f"  {rel}:{line}  {match.group(1)}")
+
+    if args.sections == SECTIONS:
+        failures += anonymity_failures(HANDWRITTEN)
 
     print(f"pending placeholders: {len(pendings)}")
     for item in pendings:

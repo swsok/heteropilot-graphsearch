@@ -82,3 +82,27 @@ def test_identifying_text_fails() -> None:
 def test_no_pdf_means_run_make_pdf_first(tmp_path: Path) -> None:
     report, status = C.run(tmp_path)
     assert status == 2 and "make -C paper pdf" in report.failures[0]
+
+
+def _check_src():
+    spec = importlib.util.spec_from_file_location(
+        "paper_check", ROOT / "scripts" / "paper" / "check.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["paper_check"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_source_check_holds_the_same_identifying_strings(tmp_path: Path) -> None:
+    """R2.4: check.py refuses in prose what check_pdf.py refuses in the PDF,
+    and leaves comments alone -- they are the repository's own notes."""
+    src = _check_src()
+    section = tmp_path / "x.tex"
+    section.write_text(
+        "%% GS-38 and D127 are how this source cites its record.\n"
+        "Body text naming github.com/someone and decision GS-38.\n")
+    failures = src.anonymity_failures([section])
+    assert len(failures) == 2
+    assert any("repository URL" in f for f in failures)
+    assert any("decision number" in f for f in failures)
+    assert src.anonymity_failures([ROOT / "paper" / "tables" / "reuse.tex"]) == []
