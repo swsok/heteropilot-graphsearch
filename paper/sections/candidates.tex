@@ -15,73 +15,51 @@
 \label{sec:candidates}
 
 \paragraph{Templates and embeddings.}
-Generation proceeds in two steps. A \emph{template} is what the existing
-planner already produces: a role assignment with parallelism degrees and knobs,
-naming islands rather than devices. An \emph{embedding} is a template placed on
-named devices. Enumerating embeddings is where the space grows, and where the
-redundancy that makes it tractable also lives.
+A \emph{template} is what the existing planner already produces: a role
+assignment with parallelism degrees and knobs, naming islands rather than
+devices. An \emph{embedding} is a template placed on named devices. Replicas of
+one role are interchangeable, so only one ordering of each partition into
+replica groups is enumerated---the lowest remaining device fixes the next
+group---and the orderings folded away are counted in closed form,
+$\prod_a R_a! - 1$ per placement over the assignments $a$ with $R_a$ replicas
+each; enumerating them, as an earlier version did, did not terminate on an
+eight-device cluster and is kept only as the closed form's test.
 
-Replicas of one role are interchangeable, so a partition of devices into
-replica groups has as many orderings as there are permutations of the groups.
-Only one of them is enumerated: the lowest remaining device fixes the next
-group, which emits exactly one ordering per partition. The count of orderings
-this folds away is not measured by enumerating them---it is
-$\prod_a R_a! - 1$ per placement, over the assignments $a$ with $R_a$ replicas
-each. An earlier version of this work enumerated all of them so that the
-counter would be a measured quantity rather than a structural zero; that was
-unnecessary, and on an eight-device cluster it did not terminate. The closed
-form is the same number and the enumeration is kept only as its test.
-
-\paragraph{Candidate graphs and their labels.}
+\paragraph{Candidate graphs.}
 Each embedding becomes a small labelled graph: a vertex per rank group carrying
 its role, parallelism degree, device model, price and power, and edges carrying
-the flows between them. Crucially the graph also carries the \emph{boundary}:
-the shared resources the candidate's traffic crosses, each with the capacity it
-has left after external reservations.
+the flows between them. The graph also carries the \emph{boundary}: the shared
+resources the candidate's traffic crosses, each with the capacity it has left
+after external reservations.
 
 % claim: C1
 % claim: C3
 \paragraph{Folding, and why a hash is not enough.}
 Two embeddings are folded only if their candidate graphs are isomorphic. A
-Weisfeiler--Leman hash buckets them first, because comparing every pair is
-quadratic; within a bucket, a VF2 isomorphism check decides. The hash never
-decides on its own. A hash collision between two genuinely different candidates
-would merge them silently, and the failure would surface as a wrong price
-attributed to a candidate nobody evaluated---which is indistinguishable, in the
-output, from the search working correctly.
-
-The bucket key also contains the planner's own prediction key---model,
-serving architecture and scheduler knobs, the fields that change a simulation
-but are not in the graph---and that is deliberate rather than convenient: if
-two candidates may share a prediction they are, by that act, being claimed
-interchangeable, so the claim should be made once and checked once. (The
-oracle's per-placement result cache, Section~\ref{sec:adapter}, is a different
-cache.)
+Weisfeiler--Leman hash buckets them, because comparing every pair is
+quadratic; within a bucket a VF2 isomorphism check decides, and the hash never
+decides alone, because a collision would surface as a wrong price attributed
+to a candidate nobody evaluated---indistinguishable, in the output, from the
+search working. The bucket key also contains the planner's prediction
+key---model, serving architecture and knobs, which change a simulation but are
+not in the graph---because two candidates that may share a prediction are, by
+that act, claimed interchangeable.
 
 % claim: C24
 \paragraph{The boundary is what makes the relation correct.}
-The counterexample the relation exists for is small enough to state in full.
-Three nodes, identical in every local attribute---same accelerators, same
-interconnect between them, same price. A prefill group on node $X$ sending to a
-decode group on node $Z$, and a prefill group on node $Y$ sending to the same
-decode group on $Z$. The two placements agree in role, parallelism, device
-model, price, and in the shape of their traffic. They differ in one thing:
-$X$'s uplink already carries traffic this planner does not control, and $Y$'s
-does not.
-
-With the boundary in the signature they are two representatives. Without it
-they are one, and the evaluator---asked about whichever was chosen---returns a
-number that is then attributed to both. Section~\ref{sec:eval} reports the
-ablation: removing the boundary produces mis-merged pairs where the full
-relation produces none.
+Three nodes are identical in every local attribute. A prefill group on node $X$
+sends to a decode group on node $Z$, and a prefill group on $Y$ sends to the
+same decode group. The two placements agree in role, parallelism, device
+model, price and traffic shape, and differ in one thing: $X$'s uplink already
+carries traffic this planner does not control. With the boundary in the
+signature they are two representatives; without it they are one, and the
+evaluator's number for whichever was chosen is attributed to both.
 
 \input{concept_sec9}
 
 \paragraph{What compression is not.}
-A representative stands for a set of placements; the size of that set is its
-multiplicity. Multiplicity is not a concurrency limit, and the two are kept
-apart in the code and in the output, because a representative standing for
-sixteen placements does not mean sixteen of anything may run at once. Where
-two representatives would contend if deployed together, that is a separate
-relation---a conflict---and it is computed only when a caller asks for it,
-being quadratic in the number of embeddings.
+A representative's multiplicity is the number of placements it stands for, not
+a concurrency limit: one standing for sixteen placements does not mean sixteen
+may run at once. Contention between representatives deployed together is a
+separate relation, a conflict, computed only on request because it is
+quadratic in the number of embeddings.

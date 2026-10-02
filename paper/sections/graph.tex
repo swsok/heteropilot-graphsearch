@@ -14,57 +14,36 @@
 
 \paragraph{One graph, normalised.}
 The cluster becomes a directed graph whose vertices are accelerators, network
-interfaces, CPU sockets and switches, and whose edges are links. Every capacity
-is bytes per second, whatever unit the source file used; a schema that lets one
-file mean gigabytes and another gigabits is a schema in which a factor of eight
-survives review. Undirected links in the source become two directed edges, so a
-path is a sequence of edges and not a sequence of ambiguous adjacencies.
-
-\paragraph{Shared resources are vertices, not annotations.}
-A resource that several links contend for---a host bridge, an uplink, a switch
-port---enters the graph as its own vertex, with the links that cross it
-incident on it. It carries a capacity and the share already reserved by traffic
-outside this deployment. Making it a vertex rather than a label is what lets a
-cut computation see it: the capacity between two device sets is then a maximum
-flow in a graph where the contended element is a real node with a real
-capacity, and a reservation is subtracted before any bound is computed rather
-than after.
+interfaces, CPU sockets and switches, and whose edges are links, every capacity
+in bytes per second whatever unit the source used. A resource that several
+links contend for---a host bridge, an uplink, a switch port---is its own
+vertex, with a capacity and the share already reserved outside this
+deployment, so that a cut computation sees it: the capacity between two device
+sets is a maximum flow in which the contended element is a real node, with the
+reservation subtracted before any bound is computed.
 
 \paragraph{Demand.}
 A candidate's traffic is a set of flows, each with its participants, its bytes
 per event, its events per request, and whether a latency target charges for it.
-The last field is load-bearing: ingress and egress cross an uplink and consume
-its capacity, but no declared SLO charges for their time, so a model that
-priced only what the SLO charges for would conclude that those flows are free
-and that the uplink they saturate is idle.
-
-\paragraph{A link does not have \emph{a} bandwidth.}
-This is the trap the representation exists to avoid, and it is not a footnote.
-One wire answers different questions with different numbers depending on what
-crosses it. Measured on the eight-GPU node used in
-Section~\ref{sec:eval}, one PCIe path between two accelerators sustains
-\egfourPeerBridge~GB/s for a direct peer copy and \egfourBusbwTwo~GB/s of bus
-bandwidth for a two-rank all-reduce across it; a tensor-parallel group of four,
-on two NVLink pairs joined by that bridge, runs its all-reduce at
-\egfourBusbwFour~GB/s.
+The last field is load-bearing: ingress and egress consume an uplink's capacity
+though no SLO charges for their time, and a model that priced only charged
+flows would call a saturated uplink idle.
 
 % claim: C17
-The first two are two measurements of one path, and the two all-reduces, both
-bound by the bridge, differ by more than a factor of two. A measurement is therefore keyed by what was run---the collective,
-the number of ranks, the message-size band and how the measuring process was
-bound to the node---and a figure recorded under one key is never substituted for
-another. The number of ranks in particular is part of the key and not a note
-beside it, because filing a two-rank figure where a four-rank one belongs is
-precisely the substitution that keying exists to prevent.
+\paragraph{A link does not have \emph{a} bandwidth.}
+Measured on the node of Section~\ref{sec:eval}, one PCIe path between two
+accelerators sustains \egfourPeerBridge~GB/s for a direct peer copy and
+\egfourBusbwTwo~GB/s of bus bandwidth for a two-rank all-reduce across it; a
+tensor-parallel group of four, on two NVLink pairs joined by that bridge, runs
+its all-reduce at \egfourBusbwFour~GB/s. The two all-reduces, both bound by the
+bridge, differ by more than a factor of two. A measurement is therefore keyed
+by the collective, the number of ranks, the message-size band and the process
+binding, and a figure recorded under one key is never substituted for another.
 
 % claim: C15
 % claim: C16
 \paragraph{Which resource is shared is settled by measurement.}
-The representation can express that two links contend for something; it cannot
-decide whether they do. That is a claim about hardware and it has to be
-measured. Section~\ref{sec:eval} reports a case where the declaration was
-written first and the measurement contradicted it: two device pairs believed to
-share a host bridge were measured to share nothing, each concurrent copy
-sustaining the full single-copy rate. The consequence for this section is
-narrow and worth stating plainly---a shared-resource vertex is a hypothesis
-about the machine, and it is wrong until something has put a probe on the wire.
+The representation can express that two links contend; it cannot decide
+whether they do. Section~\ref{sec:eval} reports a declaration the measurement
+contradicted, so a shared-resource vertex is treated as a hypothesis about the
+machine until something has put a probe on the wire.

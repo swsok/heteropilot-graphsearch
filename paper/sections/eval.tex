@@ -83,10 +83,8 @@ feeding decode on the smaller, with the reverse direction succeeding. Both
 remain \texttt{unknown\_measurement}: a missing profile is not a property of
 the placement, and a crash is not a verdict.
 
-\input{e_g3_real_sim_oracle_2}
-
-Table~\ref{tab:e_g3_real_sim_oracle_2} reports what the compression cost
-against what it saved. On the largest fixture, \egthreeSimOracleAbcde~seconds
+Against what it saved, the compression is cheap (full timing table in the
+artifact). On the largest fixture, \egthreeSimOracleAbcde~seconds
 of oracle simulation become \egthreeSimProposedAbcde, a saving of
 \egthreeSavingAbcde~seconds with the hashing, the isomorphism checks and the
 bound evaluation all charged against the compression rather than ignored.
@@ -100,12 +98,10 @@ evaluates it is replaced.
 
 % claim: C1
 % claim: C4
-\input{e_g1_toy_pilot}
 \input{e_g6_scale}
 
-Table~\ref{tab:e_g1_toy_pilot} reports the compression on the toy corpus.
-Table~\ref{tab:e_g6_scale} reports it against device count and cluster
-symmetry, for a mock evaluator, at 32, 64 and 128 devices.
+Table~\ref{tab:e_g6_scale} reports the compression against device count and
+cluster symmetry, for a mock evaluator, at 32, 64 and 128 devices.
 
 % claim: C23
 The symmetry axis carries the result. At 128 devices the same
@@ -113,7 +109,7 @@ The symmetry axis carries the result. At 128 devices the same
 on a fully asymmetric cluster and to \egsixRepsSym{} on a fully symmetric one.
 The asymmetric ratio, \egsixRatioAsym, is still a substantial fold; the case
 where nothing folds is the toy corpus's asymmetric fixture, at
-\egoneRatioAsym{} in Table~\ref{tab:e_g1_toy_pilot}, where no two placements
+\egoneRatioAsym{} (toy-corpus table in the artifact), where no two placements
 are isomorphic. Both are reported rather than the configurations omitted. A
 method whose benefit depends on a property of the input should be shown on
 inputs that lack it.
@@ -123,16 +119,14 @@ single failure condition: the compression must not cost more than it saves on a
 fully symmetric cluster. This table cannot evaluate that condition: the grid is
 driven by the mock, where a simulation costs microseconds and any compression
 loses against it. The question is answered at toy scale, under the real
-simulator, by Table~\ref{tab:e_g3_real_sim_oracle_2}; what this grid adds is
+simulator, by the saving above; what this grid adds is
 how the compression's own cost and its ratio grow with the cluster. A
 simulation at this scale is not offered as validation of accuracy at scale.
 
 \subsection{Contribution A: the boundary in the signature}
 
 % claim: C24
-\input{e_g7_ablation}
-
-Table~\ref{tab:e_g7_ablation} reports the ablation. Across the corpus, under
+Across the toy corpus (full ablation table in the artifact), under
 the fixed tight specification, every arm reports no mis-merged pairs,
 \texttt{no\_boundary} included, even where it folds more: every placement there
 is infeasible, so the oracle cannot tell a wrong fold from a right one. The
@@ -157,8 +151,6 @@ derivation is stated with the count.
 % claim: C5
 % claim: C6
 % claim: C32
-\input{e_g1b_topk}
-\input{e_g2_topk_holdout}
 \begin{figure}[t]\centering
   \includegraphics[width=\linewidth]{topk_holdout.pdf}
   \caption{Feasible recall against the simulation budget, both arms, on the holdout fixtures~\sourcetag{MOCK}. The oracle's level is the dotted line. At $K=4$ the graph search ties on one holdout and is behind on the other, which the curve shows without the reader comparing two rows.}
@@ -168,11 +160,11 @@ derivation is stated with the count.
 % claim: C5
 % claim: C6
 % claim: C32
-Table~\ref{tab:e_g1b_topk} and Table~\ref{tab:e_g2_topk_holdout} report
-feasible recall against the existing planner's surrogate top-$K$ under a
+Figure~\ref{fig:topk} and the artifact's tables report feasible recall against the existing planner's surrogate top-$K$ under a
 specification whose SLOs bind. On the toy corpus---the diagnosis fixtures the
 ranker correction was made on, so in-sample---this search reaches higher
-recall at every $K$ tried. On the two holdouts it is higher at $K = 16$ and
+recall at every $K$ tried (on \texttt{graph-toy-abcde} at $K = 16$,
+\egonebRecallGraphAbcde{} against the surrogate's \egonebRecallSurrogateAbcde{}). On the two holdouts it is higher at $K = 16$ and
 level at $K = 8$; at $K = 4$ it ties on one and trails on the other, and that
 is the row to read before the others. On the hardware-derived holdout below it
 is lower at $K = 16$.
@@ -186,7 +178,6 @@ on a technicality would not be winning.
 % claim: C25
 % claim: C26
 \input{e_g7_holdout}
-\input{e_g7_baseline_fairness}
 
 % claim: C26
 % claim: C32
@@ -199,7 +190,7 @@ altered (\texttt{port-gpu0}), and it now exists.
 
 \textbf{On it the registered recall criterion is not met.} The invariant holds
 there---nothing feasible was removed and nothing mis-merged---but at the
-registered budget heteropilot's template-level surrogate retrieves more
+registered budget the existing planner's template-level surrogate retrieves more
 feasible placements than this search does. The response was registered before
 the run: the ranker was fitted to the diagnosis corpus, and the claim about it
 narrows to those fixtures and the synthetic holdout. It is reported here rather
@@ -214,15 +205,13 @@ and rejected rather than unevaluated.
 
 % claim: C15
 % claim: C16
-\input{e_g4_microbench_2}
 \begin{figure}[t]\centering
   \includegraphics[width=\linewidth]{contention_error.pdf}
   \caption{Fluid and null error against message size, on the declaration the measurements support~\sourcetag{REAL HARDWARE}. The bidirectional error is near zero from 4 to 64 MiB and rises at 128: an accuracy domain, not a single figure.}
   \label{fig:contention}
 \end{figure}
 
-Table~\ref{tab:e_g4_microbench_2} reports the registered verdict, and it is a
-\textbf{failure}: on the topology the plan declared before measuring,
+The registered verdict is a \textbf{failure}: on the topology the plan declared before measuring,
 processor-sharing is \egfourFluidPlannedSame\,\% out at the median on the
 condition it exists for, against \egfourNullPlannedSame\,\% for pricing each
 flow alone.

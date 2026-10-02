@@ -8,36 +8,23 @@
 \label{sec:conclusion}
 
 % claim: C24
-Placement is a decision a serving planner has to make and, when it enumerates
-over islands rather than over devices, has no language for. This work gives it
-one: an equivalence relation over placements that folds only what a graph
-isomorphism confirms interchangeable, and that carries the shared communication
-boundary so that two placements alike in every local attribute but crossing
-different contended links are kept apart. Removing the boundary from the
-signature mis-merges the counterexample pair, which the full relation does
-not.
-
 % claim: C2
-Elimination is a relaxation of the feasibility test or it is not called
-elimination, and each check publishes the optimistic assumptions it made. In
-every experiment that runs an exhaustive oracle, no feasible placement the
-evaluator judged was wrongly removed and no two differently-priced placements
-were folded together; both numbers are reported for every arm rather than
-summarised once, because they are conditions rather than scores. On hardware
-the bound is tested on one rejected candidate, and was right.
-
 % claim: C11
-The budget is adaptive and, more importantly, honest about itself: the output
-names how many representatives went unjudged and how many placements they stand
-for. Under the real simulator the compression saved more time than it cost,
-with its own hashing and isomorphism checks charged against it.
-
 % claim: C18
 % claim: C30
-On hardware the point is not subtle. One plan, deployed at two placements of
-itself, has a median $p99$ time to first token \egfiveTtwoOverTone{}x apart at
-the load knee, with ranges that do not overlap, and the planner this work
-extends cannot tell the two apart. The inter-node case now runs too, through this work's own harness because the
-deployment layer it extends has no router, and there the model's contention
-prediction is far larger than what the hardware shows: a result the
-registered criterion reports as a miss, not a confirmation.
+Placement is a decision a serving planner has to make and, when it enumerates
+over islands rather than devices, has no language for. This work gives it one:
+an equivalence relation that folds only what a graph isomorphism confirms
+interchangeable and carries the shared communication boundary, so that
+removing the boundary mis-merges the counterexample pair the full relation
+keeps apart. Elimination is a relaxation of the feasibility test; in every
+experiment that runs an exhaustive oracle, no feasible placement the evaluator
+judged was wrongly removed and nothing differently priced was folded, and on
+hardware the bound was tested on one rejected candidate and was right. The
+budget names what it never judged, and under the real simulator the
+compression saved more time than it cost. On hardware one plan at two
+placements of itself has a median $p99$ time to first token
+\egfiveTtwoOverTone{}x apart at the load knee, with ranges that do not overlap;
+on an inter-node disaggregated deployment the model's contention prediction is
+far larger than what the hardware shows, which the registered criterion
+reports as a miss.

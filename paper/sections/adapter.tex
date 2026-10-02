@@ -13,62 +13,41 @@
 \section{The simulator adapter and the contention model}
 \label{sec:adapter}
 
+% claim: C34
 \paragraph{Compiling a placement, and naming what was lost.}
-The adapter turns a placed candidate into a simulator configuration. The
-simulator accepts a bandwidth and a latency per collective and has no
-representation of a link graph. What can be expressed is passed per placement:
-a tensor-parallel group is given its own bottleneck---over every rank pair,
-from the measured all-reduce figure at the group's number of ranks where one
-exists, capped by what reservations leave---so two placements of one template
-on different wires compile to different inputs. What cannot be expressed is
-which resources two flows share: two placements whose bottlenecks are equal but
-which cross different shared resources compile to the same input.
-
-The adapter therefore emits, with every compiled plan, a report of the shared
-resources it could not pass on. The report covers that loss and no other: an
-earlier version of the adapter read only a group's first rank pair, and the
-report did not say so, because it was not written to look for it
-(Section~\ref{sec:limits}). This is the alternative to the two tempting options, both
-worse: folding the shared-resource effect into the bandwidth number, which
-would make the simulator's output unattributable, or saying nothing, which
-would let the search distinguish two candidates that the evaluator then judges
-identically without anyone noticing.
+The adapter turns a placed candidate into a simulator configuration, passing
+what can be expressed per placement: a tensor-parallel group is given its own
+bottleneck---the minimum over every rank pair of that pair's best path, each
+link given its measured all-reduce bus bandwidth at the group's own number of
+ranks where the cluster description carries one and its edge capacity
+otherwise, capped by what its shared resource's reservations leave---so two
+placements of one template on different wires compile to different inputs.
+That is the corrected adapter; the registered hardware rows were predicted by
+an earlier one that read the group's first rank pair at its edge capacity
+(Section~\ref{sec:eval-hw}). What cannot be expressed is which resources two
+flows share: two placements with equal bottlenecks that cross different shared
+resources compile to the same input. Every compiled plan carries a report of
+the shared resources dropped. The report covers that loss and no other: the
+rank pairs the earlier adapter ignored were never in it. Folding contention
+into the bandwidth instead would make the simulator's output unattributable.
 
 % claim: C10
-\paragraph{Prediction accuracy and search accuracy are different questions.}
-This work measures the second with the first held fixed. Whether the simulator
-predicts hardware well is a property of the simulator; whether the search finds
-what an exhaustive oracle finds is a property of the search, and it is asked by
-running both against the same evaluator. Replacing the deterministic mock with
-the real simulator leaves both correctness numbers at zero, which is the result
-that matters here: the compression and the bounds are not relying on an
-artefact of the mock.
-
 % claim: C13
-\paragraph{Binding the predictor to the placement.}
-A predictor that is asked about a template rather than a placement returns the
-same metrics for every placement of it, and then two members of a
-representative can never disagree---so \texttt{mismerged\_pairs} is
-structurally zero and the correctness check is vacuous. The oracle and the
-search therefore bind the predictor to each embedding before evaluating, and
-the binding is a named function rather than an optional attribute, so its
-absence is visible. The oracle's result cache would have the same effect if
-its key did not lead with the embedding's identity, and it does. This is a
-different cache from the bucket key of Section~\ref{sec:candidates}: there,
-sharing a prediction within an equivalence class is the saving being claimed;
-here, in the baseline that audits it, every placement gets its own entry.
+\paragraph{Prediction accuracy and search accuracy.}
+Whether the simulator predicts hardware well is a property of the simulator;
+whether the search finds what an exhaustive oracle finds is a property of the
+search, asked by running both against the same evaluator. That needs the
+predictor bound to each embedding: one asked about a template returns the
+same metrics for every placement of it, which makes \texttt{mismerged\_pairs}
+structurally zero. The binding is a named function, and the oracle's result
+cache leads with the embedding's identity for the same reason; it is a
+different cache from the bucket key of Section~\ref{sec:candidates}, where
+sharing a prediction within a class is the saving being claimed.
 
 % claim: C15
 \paragraph{Contention.}
-Flows that share a resource are priced by processor sharing: at any instant the
-active flows on a resource divide what capacity it has left, a flow's rate is
-the minimum over its path, and the schedule is recomputed whenever a flow
-starts or finishes. It is not packet-level, and it does not model candidates
-contending with each other---candidates are alternatives, and only one is
-deployed.
-
-Section~\ref{sec:eval} measures it against a microbenchmark. The model is
-accurate where flows genuinely share an endpoint and inaccurate above a message
-size where the hardware begins overlapping the two directions of one link; both
-are reported, and the accuracy domain is stated as a range rather than as a
-single error figure.
+Flows that share a resource are priced by processor sharing: the active flows
+on a resource divide what capacity it has left, a flow's rate is the minimum
+over its path, and the schedule is recomputed whenever a flow starts or
+finishes. It is not packet-level, and candidates do not contend with each
+other: they are alternatives, and only one is deployed.

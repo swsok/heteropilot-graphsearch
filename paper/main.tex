@@ -9,7 +9,24 @@
 %% BUILD: `make paper` from this directory. Do not run pdflatex by hand -- the
 %% tables under tables/ are generated from experiments/results/*.md by
 %% `make tables`, and a hand build silently compiles whatever was there last.
-\documentclass[sigconf,nonacm]{acmart}
+\documentclass[conference,10pt]{IEEEtran}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{adjustbox}
+%% IEEEtran asks for Times. Under pdfLaTeX that is its default; tectonic is
+%% XeTeX, so the OpenType Times clone is named here, with its math and a
+%% matching typewriter face. Named by file because tectonic resolves fonts
+%% from its bundle, not from the system.
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{fontspec}
+  \setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular,
+    BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+  \setmonofont{texgyrecursor}[Extension=.otf, UprightFont=*-regular,
+    BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+  \usepackage{unicode-math}
+  \setmathfont{texgyretermes-math.otf}
+\fi
 
 \usepackage{booktabs}
 \usepackage{tikz}
@@ -52,56 +69,37 @@
 \title{Graph-Based Placement Search for Heterogeneous LLM Serving Clusters}
 
 %% Placeholder. Replaced when the venue and the author list are settled (P7.3).
-\author{Anonymous}
-\affiliation{%
-  \institution{Anonymous Institution}
-  \country{}
-}
-\email{anonymous@example.org}
+\author{\IEEEauthorblockN{Anonymous submission}}
+
+\maketitle
+%% ISPASS requires numbered pages; IEEEtran's conference mode omits them.
+\thispagestyle{plain}
+\pagestyle{plain}
 
 \begin{abstract}
 %% Every sentence here traces to a row of paper/CLAIMS.md. The hardware
 %% sentence is deliberately the weakest one in the abstract, because the
 %% strongest hardware result available is a failure.
-Serving a large language model on a heterogeneous cluster means choosing which
-accelerators run which role at which degree of parallelism. Planners that
-enumerate configurations over groups of interchangeable devices cannot express
-that choice, because two placements of one configuration are, to them, one
-candidate---and on real hardware the difference between two such placements is
-large enough to decide whether a service meets its latency target.
-
-We enumerate placements instead, and make the resulting space tractable with an
-equivalence relation that folds two placements only when a graph isomorphism
-confirms their candidate graphs agree. Those graphs carry the shared
-communication boundary, so placements alike in every local attribute but
-crossing different contended links are kept apart; removing the boundary from
-the signature folds the counterexample pair the relation exists for, which the
-oracle prices apart. Elimination
-is a relaxation of the feasibility test---a candidate is removed only when
-arithmetic optimistic on every uncertain term still misses a declared
-constraint---and each check publishes the optimism it assumed. The evaluation
-budget is bounded and reports what it never reached, because a search that
-omits what it did not evaluate has made a claim about a space from evidence
-about part of it.
-
-In every experiment that runs an exhaustive oracle, mock or real simulator, no
-feasible placement the evaluator judged was wrongly eliminated and no two
-differently-priced placements were folded together; both counts are reported
-for every arm rather than summarised once. Under a
-discrete-event simulator the compression saved more time than it cost, with its
-own hashing and isomorphism checks charged against it. On hardware, one plan
-deployed at two placements of itself has a median $p99$ time to first token
-\egfiveTtwoOverTone{}x apart at the knee, with ranges that do not overlap---a
-difference the planner it extends cannot express. We also measure that a
-contention model's accuracy depends on which resource a cluster description
-claims is shared, a claim we found wrong on one bus and borne out on an
+Serving a large language model on a heterogeneous cluster means placing roles
+on accelerators. Planners that enumerate
+configurations over groups of interchangeable devices treat two placements of
+one configuration as one candidate, yet on hardware the placement can decide
+whether a service meets its latency target. We enumerate placements and fold
+two only when a graph isomorphism confirms their candidate graphs agree; the
+graphs carry the shared communication boundary, and removing it mis-merges the
+counterexample pair the relation exists for. Elimination is a relaxation of the
+feasibility test that publishes the optimism it assumed, and the bounded
+evaluation budget reports what it never reached. In every experiment with an
+exhaustive oracle, no feasible placement the evaluator
+judged was wrongly eliminated and nothing differently priced was folded; under
+the simulator the compression saved more time than it cost. On hardware, one
+plan at two placements of itself has a median $p99$ time to first token
+\egfiveTtwoOverTone{}x apart at the load knee, with non-overlapping ranges. Which resource is shared
+must be measured: a declaration we found wrong on one bus held on an
 inter-node NIC, where a disaggregated deployment nevertheless slowed far less
-than the model predicted; and that an optimistic throughput bound, tested on
-one rejected candidate, sits an order of magnitude above the capacity the
-machine delivers.
+than predicted; an optimistic throughput bound, tested on one rejected
+candidate, sits an order of magnitude above delivered capacity.
 \end{abstract}
-
-\maketitle
 
 \input{sections/intro}
 \input{sections/background}
@@ -115,7 +113,7 @@ machine delivers.
 \input{sections/limits}
 \input{sections/conclusion}
 
-\bibliographystyle{ACM-Reference-Format}
+\bibliographystyle{IEEEtran}
 %% No .bib yet -- P6.4 builds it from research design section 13 plus a fresh
 %% search. \bibliography is deliberately absent rather than pointing at a file
 %% that does not exist, which would fail the build for a reason unrelated to

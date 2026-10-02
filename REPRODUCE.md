@@ -18,7 +18,7 @@ byte-identically, and E-G4/E-G5 re-analysed byte-identically from raw.
 
 | what | pin |
 | --- | --- |
-| this repository | tag **`ispass27-submission`** = `68f6913` |
+| this repository | tag **`ispass27-submission`** (`git rev-parse ispass27-submission^{commit}` names the commit; the tag, not a copied sha, is the pin) |
 | `vendor/heteropilot` | `b339adfcf21d1642143c1587454d7e34fd0ada25` (submodule) |
 | `vendor/heteropilot/astra-sim` | `f82fb3d` (v1.1.0, nested submodule) |
 | Python | **3.10**, for both venvs (CI, heteropilot `uv venv --python 3.10`) |

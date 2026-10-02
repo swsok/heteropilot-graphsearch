@@ -101,3 +101,8 @@ egfivePostTthreeReFp:     {file: e_g5_real_hardware.md, find: ["placement", "ori
 
 # --- E-G1: the cluster on which nothing folds (A-8) ------------------------
 egoneRatioAsym:  {file: e_g1_toy_pilot.md, table: 0, row: graph-toy-asym, column: compression_ratio}
+
+# --- E-G1b: top-K on the in-sample diagnosis fixtures ------------------------
+# The table is in the artifact; the paper carries one fixture at the largest K.
+egonebRecallSurrogateAbcde: {file: e_g1b_topk.md, table: 0, row: graph-toy-abcde, where: {arm: heteropilot, k: "16"}, column: feasible_recall}
+egonebRecallGraphAbcde:     {file: e_g1b_topk.md, table: 0, row: graph-toy-abcde, where: {arm: graphsearch, k: "16"}, column: feasible_recall}
