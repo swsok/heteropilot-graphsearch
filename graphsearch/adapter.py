@@ -34,7 +34,7 @@ from graphsearch.demand import FlowKind
 from graphsearch.embeddings import EmbeddedCandidate
 from graphsearch.equivalence import Representative
 from graphsearch.paths import effective_bottleneck_bytes_per_s
-from graphsearch.schema import ResourceGraph
+from graphsearch.schema import ResourceGraph, bytes_per_s
 
 paths_root.ensure_importable()
 
@@ -121,6 +121,75 @@ def _flow_bottleneck(
     return best
 
 
+def _tp_bottleneck(
+    embedding: EmbeddedCandidate, graph: ResourceGraph, cluster: ClusterSpecV2
+) -> tuple[float, float, list[str]] | None:
+    """(bytes/s, latency ns, basis) of a tensor-parallel group's all-reduce.
+
+    **Every pair of the group, not the first.** A TP flow carries one path set
+    per rank pair, and this used to read `allowed_paths[0]` only -- for a
+    four-rank group on two NVLink pairs bridged by PCIe that is gpu0-gpu1, so
+    the simulator was told 112.5 GB/s for a ring that crosses the bridge twice.
+    TP=2 has one pair, so the first-pair error itself hit only groups of three
+    or more; but TP=2 changes too, by the rule below -- the NVLink pair from
+    112.5 nominal to 39.24, the PCIe pair from 25.12 to 19.34 (GS-38).
+
+    **Measured before nominal, per link, with heteropilot's own selector.**
+    Where a link carries a measurement for `(all_reduce, world_size = tp)` it
+    is used in place of the link's capacity -- `Link.measurement_for`, the
+    S3/D112 rule that a collective's figure is keyed by its kind and group
+    size. Elsewhere the edge's capacity, net of its shared resource's
+    reservation, as before.
+    """
+    links = {link.id: link for link in cluster.links}
+    # A TP flow's participants are a replica's tp x pp ranks, so with pp > 1
+    # the group size is not the all-reduce's world and the pairs include stage
+    # boundaries. No E-G5 template has pp > 1; rather than answer that case
+    # with the wrong world size, it keeps the previous first-pair figure and
+    # says so in the basis.
+    if any(a.pp_size > 1 for a in embedding.template.assignments):
+        old = _flow_bottleneck(embedding, graph, (FlowKind.TP_ALLREDUCE,))
+        if old is None:
+            return None
+        return old[0], old[1], ["pp > 1: first-pair figure, not the measured all-reduce"]
+    best: tuple[float, float] | None = None
+    basis: set[str] = set()
+    for flow in embedding.flows:
+        if flow.kind is not FlowKind.TP_ALLREDUCE:
+            continue
+        tp = len(flow.participants)
+        for path_set_ in flow.allowed_paths:
+            path = path_set_.best
+            if path is None:
+                continue
+            for edge_id in path.edges:
+                edge = graph.edges[edge_id]
+                capacity = edge.capacity_bytes_per_s
+                available = None
+                if edge.shared_resource_id is not None:
+                    available = graph.shared_resources[
+                        edge.shared_resource_id].available_bytes_per_s
+                    capacity = min(capacity, available)
+                link_id = edge_id.rsplit(":", 1)[0]
+                link = links.get(link_id)
+                hit = (link.measurement_for("all_reduce", "bulk", "unknown", world_size=tp)
+                       if link is not None else None)
+                if hit is not None and link is not None:
+                    # The measurement replaces the link's rate, not a
+                    # reservation: it was taken on an idle link, so whatever a
+                    # shared resource has reserved still caps it.
+                    measured = bytes_per_s(hit.bus_bw_gbps, link.bandwidth_unit)
+                    capacity = measured if available is None else min(measured, available)
+                    basis.add(f"{link.id}: measured all_reduce w{tp} {hit.bus_bw_gbps:g} GB/s")
+                else:
+                    basis.add(f"{link_id}: nominal {capacity / _GB:g} GB/s")
+                if best is None or capacity < best[0]:
+                    best = (capacity, path.latency_ns)
+    if best is None:
+        return None
+    return best[0], best[1], sorted(basis)
+
+
 def compile_embedded(
     embedding: EmbeddedCandidate,
     cluster: ClusterSpecV2,
@@ -155,7 +224,8 @@ def compile_embedded(
         topology_level=2,
     )
 
-    intra = _flow_bottleneck(embedding, graph, (FlowKind.TP_ALLREDUCE,))
+    tp = _tp_bottleneck(embedding, graph, cluster)
+    intra = None if tp is None else (tp[0], tp[1])
     cross = _flow_bottleneck(
         embedding, graph, (FlowKind.PD_KV_TRANSFER, FlowKind.PP_ACTIVATION)
     )
@@ -190,7 +260,10 @@ def compile_embedded(
         per_dim_latency_ns=list(new_latency),
         basis=(
             "link_bw/link_latency replaced with this placement's first-choice "
-            "path bottleneck, reservations subtracted"
+            "path bottleneck, reservations subtracted; for the TP all-reduce, "
+            "the slowest link over every rank pair, measured all_reduce busbw "
+            "at world_size = tp where a link carries one (GS-38)"
+            + ("" if tp is None else "; " + "; ".join(tp[2]))
         ),
     )
     reduction = TopologyReduction(

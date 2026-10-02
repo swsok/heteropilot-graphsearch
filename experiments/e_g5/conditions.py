@@ -37,11 +37,22 @@ MODELS = {
     },
 }
 
-#: Poisson (`burstiness = 1.0`) and bursty. heteropilot's own generator emits
-#: Poisson arrivals only, so the burst trace is produced by re-spacing an
-#: existing trace's arrivals -- see `make_workload.py`, which records that it
-#: did so in the trace's own provenance.
+#: Poisson and bursty, as the **Gamma shape** of the inter-arrival times:
+#: 1.0 is Poisson and smaller is burstier (coefficient of variation
+#: 1/sqrt(shape)). This is vLLM's `burstiness` and `make_workload.py`'s.
+#:
+#: **heteropilot's `ServiceSpec.burstiness` is the reciprocal**:
+#: `planner/util/workload.py` draws Gamma(shape = 1 / burstiness), so there a
+#: LARGER value is burstier. Writing 0.2 into the spec, as this harness did,
+#: asks the simulator for shape 5 -- arrivals smoother than Poisson -- while
+#: the hardware trace is shape 0.2. `spec_burstiness` is the translation, and
+#: tests/test_e_g5_harness.py pins that both generators then agree (GS-35).
 PATTERNS = {"normal": 1.0, "burst": 0.2}
+
+
+def spec_burstiness(pattern: str) -> float:
+    """The pattern in heteropilot's convention: 1 / Gamma shape."""
+    return 1.0 / PATTERNS[pattern]
 
 #: Below the knee, near it, above it. The absolute rps per model comes from
 #: the pilot and is filled in by `--calibrate-levels`; these are the multiples
@@ -76,7 +87,7 @@ TOPOLOGIES = {
     # The registered condition, unchanged: one node, aggregated.
     "T1": Topology(
         key="T1", devices=(0, 1), tp=2,
-        link="NVLink NV4, measured 52.64 GB/s p2p / 19.34 GB/s busbw world 2",
+        link="NVLink NV4, measured 52.64 GB/s p2p / 39.24 GB/s all_reduce busbw world 2",
     ),
     # Substitutes for "inter-node P/D over independent uplinks". Identical
     # engine, identical model, identical load; the only difference is a wire
@@ -165,6 +176,25 @@ SPECS = {
         "recommendation_column": "not applicable (bound verification only)",
     },
 }
+
+#: Spec S's goodput floor per load level. `knee` is preregistration row 4's
+#: 2.3; the others are registered in row 8, by row 4's rule applied at their
+#: own rate. A level with no registered floor refuses rather than borrowing
+#: the knee's, which would be unreachable below it.
+#: Row 8, by row 4's rule (95 % of the lowest measured goodput across T1, T2,
+#: T3, rounded down to 0.1) at each level's own rate, from pilots excluded from
+#: validation: `low` 0.95 x 1.714 (T2) -> 1.6; `high` 0.95 x 2.542 (T2, the
+#: knee's recommendation template deployed at 6 rps, since `high` offers no
+#: recommendation of its own to measure) -> 2.4.
+GOODPUT_FLOOR: dict[str, float | None] = {"knee": 2.3, "low": 1.6, "high": 2.4}
+
+
+def goodput_floor(level: str) -> float | None:
+    if level not in GOODPUT_FLOOR:
+        raise SystemExit(f"no goodput floor registered for level {level!r}; "
+                         "pass --goodput-floor for a pilot")
+    return GOODPUT_FLOOR[level]
+
 
 #: The measured knee, from `experiments/e_g5/raw/pilot/`. `deploy_and_bench.py`
 #: refuses a guessed one.

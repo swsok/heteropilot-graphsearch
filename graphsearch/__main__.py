@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from graphsearch import paths_root
@@ -488,6 +488,9 @@ class PlacementVerdict:
     feasible: bool | None
     plan: object | None
     detail: str
+    #: The violated axes as the feasibility check judged them: metric, target,
+    #: predicted, overshoot ratio. Empty when the placement was feasible.
+    violations: list = field(default_factory=list)
 
 
 def evaluate_placement(args, objects: PlanObjects, template_id: str,
@@ -560,8 +563,14 @@ def evaluate_placement(args, objects: PlanObjects, template_id: str,
                                 True, result.feasible_plans[0], "")
     if result.infeasible_plans:
         plan, report = result.infeasible_plans[0]
+        violations = [
+            {"metric": v.metric, "target": v.target, "predicted": v.predicted,
+             "overshoot_ratio": v.overshoot_ratio}
+            for v in getattr(report, "violations", [])
+        ]
         return PlacementVerdict(embedding.id, ranks, search_state, "evaluated",
-                                False, plan, str(getattr(report, "reasons", report)))
+                                False, plan, str(getattr(report, "reasons", report)),
+                                violations)
     why = "; ".join(str(r) for r in result.rejections) or "; ".join(result.notes)
     return PlacementVerdict(
         embedding.id, ranks, search_state, "unknown_measurement", None, None,

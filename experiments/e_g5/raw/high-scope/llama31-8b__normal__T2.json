@@ -1,0 +1,25 @@
+{
+  "branch": "recommendation",
+  "condition": "llama31-8b__normal__T2__high",
+  "feasible_marginal": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+  "feasible_marginal_why": "feasible-marginal on SIMULATED p99 (risk 0.8222, closest to 1 of 3 evaluated feasible at this size)",
+  "goodput_floor": 2.4,
+  "rate_rps": 6.0,
+  "recommendation": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+  "recommendation_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@857398a0d1b9",
+  "scope": {
+    "budget_k16": {
+      "evaluated": 16,
+      "feasible_of_size_found": 4,
+      "feasible_of_size_in_scope": 4
+    },
+    "evaluated": 210,
+    "exhaustive": true,
+    "feasible": 4,
+    "feasible_of_size": 4,
+    "representatives": 210,
+    "unevaluated": 0
+  },
+  "seed": 42,
+  "written_at": "2026-10-01T05:40:28.660123+00:00"
+}

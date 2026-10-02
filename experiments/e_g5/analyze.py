@@ -97,10 +97,33 @@ def rows(raw_root: Path) -> list[dict]:
                 "candidate": dep.get("candidate_id"),
                 "predicted": dep.get("predicted"),
                 "placement_verdict": dep.get("placement_verdict"),
+                "closest_miss": dep.get("closest_miss"),
                 "measured": latencies(measured_path),
                 "slo": prov.get("slo"),
             })
+    _mark_duplicates(out)
     return out
+
+
+def _embedding(row: dict):
+    pv = row.get("placement_verdict") or {}
+    return pv.get("embedding_id") or None
+
+
+def _mark_duplicates(out: list[dict]) -> None:
+    """GS-38: a marginal row that deployed the recommendation's own embedding.
+
+    The old rule excluded only the recommendation's embedding id, so another
+    embedding of the same template could be chosen -- and the condition places
+    it on the same devices, which makes it the same deployment. Those rows are
+    kept, measured as they were, and labelled; nothing is redeployed.
+    """
+    rec = {(r["condition"], r["rep"]): _embedding(r) for r in out
+           if r["deployment"] == "recommendation"}
+    for r in out:
+        if (r["deployment"] == "boundary:feasible_marginal" and _embedding(r)
+                and rec.get((r["condition"], r["rep"])) == _embedding(r)):
+            r["duplicate_of"] = "recommendation"
 
 
 #: The SLO every row is judged against, from `conditions.SPECS`. Read here
@@ -121,19 +144,28 @@ def verdict(row: dict) -> tuple[str, list[str]]:
     """
     if not row.get("measured"):
         return "not measured", []
-    spec = slo_of("bound_stress" if row["deployment"].endswith("impossible_proven")
-                  else "service")
+    bound = row["deployment"].endswith("impossible_proven")
+    spec = slo_of("bound_stress" if bound else "service")
+    # The service floor is per LEVEL (preregistration row 8): reading the
+    # knee's 2.3 for every row judged `low` against a floor its own spec did
+    # not have, and gave `high` -- which has none -- a goodput axis.
+    floor = spec["min_goodput_rps"] if bound else level_floor(row["condition"])
     m = row["measured"]
     missed = []
     if m["p99_ttft_ms"] > spec["ttft_max_ms"]:
         missed.append(f"TTFT {m['p99_ttft_ms']:.0f} > {spec['ttft_max_ms']:.0f} ms")
     if m["p99_tpot_ms"] > spec["tpot_max_ms"]:
         missed.append(f"TPOT {m['p99_tpot_ms']:.1f} > {spec['tpot_max_ms']:.0f} ms")
-    if m["goodput_rps"] < spec["min_goodput_rps"]:
-        missed.append(
-            f"goodput {m['goodput_rps']:.2f} < {spec['min_goodput_rps']:.2f} rps"
-        )
+    if floor is not None and m["goodput_rps"] < floor:
+        missed.append(f"goodput {m['goodput_rps']:.2f} < {floor:.2f} rps")
     return ("met" if not missed else "MISSED"), missed
+
+
+def level_floor(condition: str):
+    import sys
+    sys.path.insert(0, str(ROOT / "experiments" / "e_g5"))
+    import conditions as C
+    return C.goodput_floor(condition.split("__")[3])
 
 
 def predicted_verdict(row: dict) -> str:
@@ -165,8 +197,10 @@ def table(data: list[dict]) -> list[str]:
         def f(v, d):
             return "-" if v is None else f"{v:.{d}f}"
 
+        label = row["deployment"] + (
+            " (duplicate of recommendation)" if row.get("duplicate_of") else "")
         out.append(
-            f"| {row['condition']} | {row['deployment']} | {row['devices']} | "
+            f"| {row['condition']} | {label} | {row['devices']} | "
             f"{row['offered_rps']:.1f} | {f(p and p['p99_ttft_ms'], 1)} | "
             f"{m['p99_ttft_ms']:.1f} | {f(p and p['p99_tpot_ms'], 2)} | "
             f"{m['p99_tpot_ms']:.2f} | {m['goodput_rps']:.3f} | "
@@ -689,7 +723,372 @@ def pd_section(raw_root: Path) -> list[str]:
     return out
 
 
+def _axis(name: str) -> str:
+    """`p99_ttft_ms` / `TTFT 3341 > 550 ms` -> `ttft`; the same for tpot, goodput."""
+    low = name.lower()
+    for axis in ("ttft", "tpot", "goodput"):
+        if axis in low:
+            return axis
+    return low
+
+
+def closest_miss_table(data: list[dict]) -> list[str]:
+    """Row 8: at `high` the closest miss is deployed in the recommendation's
+    place, and what is tested is the verdict "no feasible plan of this size".
+
+    (i) did the hardware miss its SLO too -- the direction of the verdict;
+    (ii) did it miss on the axes the prediction said it would.
+    """
+    rows = [r for r in data if r["deployment"] == "closest_miss" and r.get("measured")]
+    if not rows:
+        return []
+    head = ["condition", "devices", "offered rps", "p99 TTFT pred", "p99 TTFT meas",
+            "p99 TPOT pred", "p99 TPOT meas", "goodput meas",
+            "predicted violated axes", "measured violated axes",
+            "(i) hardware missed", "(ii) same axes"]
+    out = ["| " + " | ".join(head) + " |", "| " + " | ".join("---" for _ in head) + " |"]
+    agree_i = agree_ii = 0
+    for row in rows:
+        p, m = row["predicted"] or {}, row["measured"]
+        cm = row["closest_miss"] or {}
+        pred_axes = sorted({_axis(v["metric"]) for v in cm.get("predicted_violated_axes", [])})
+        pred_txt = ", ".join(
+            f"{_axis(v['metric'])} +{v['overshoot_ratio'] * 100:.0f} %"
+            for v in sorted(cm.get("predicted_violated_axes", []), key=lambda v: v["metric"]))
+        state, missed = verdict(row)
+        meas_axes = sorted({_axis(x.split()[0]) for x in missed})
+        i_ok = state == "MISSED"
+        ii_ok = i_ok and pred_axes == meas_axes
+        agree_i += i_ok
+        agree_ii += ii_ok
+
+        def f(v, d):
+            return "-" if v is None else f"{v:.{d}f}"
+
+        out.append(
+            f"| {row['condition']} | {row['devices']} | {row['offered_rps']:.1f} | "
+            f"{f(p.get('p99_ttft_ms'), 1)} | {m['p99_ttft_ms']:.1f} | "
+            f"{f(p.get('p99_tpot_ms'), 2)} | {m['p99_tpot_ms']:.2f} | "
+            f"{m['goodput_rps']:.3f} | {pred_txt or '-'} | "
+            f"{', '.join(meas_axes) or 'none'} | {'yes' if i_ok else '**no**'} | "
+            f"{'yes' if ii_ok else '**no**'} |")
+    out += ["", f"(i) the hardware also missed: **{agree_i} of {len(rows)}**. "
+            f"(ii) and on the predicted axes: **{agree_ii} of {len(rows)}**."]
+    return out
+
+
+def high_scope_table(raw_root: Path, data: list[dict]) -> list[str]:
+    """Row 8 (a)-(c): what the seed-42 exhaustive evaluation found per
+    condition, what was deployed because of it, and the hardware's verdict."""
+    files = sorted((raw_root / "high-scope").glob("*.json"))
+    if not files:
+        return []
+    head = ["condition", "representatives", "evaluated", "feasible of size", "branch",
+            "deployed", "K=16 recall", "hardware (seeds 42 / 43 / 44)"]
+    out = ["| " + " | ".join(head) + " |", "| " + " | ".join("---" for _ in head) + " |"]
+    recalls = []
+    for f in files:
+        sc = json.loads(f.read_text())
+        cond = sc["condition"]
+        s = sc["scope"]
+        k = s.get("budget_k16", {})
+        found, total = k.get("feasible_of_size_found"), k.get("feasible_of_size_in_scope")
+        recall = f"{found}/{total}" if total else "- (none feasible)"
+        if total:
+            recalls.append((cond, found, total))
+        label = "recommendation" if sc["branch"] == "recommendation" else "closest_miss"
+        tid = sc.get("recommendation") or (sc.get("closest_miss") or {}).get("template_id")
+        verdicts = []
+        for rep in (42, 43, 44):
+            row = next((r for r in data if r["condition"] == cond and r["rep"] == rep
+                        and r["deployment"] == label and r.get("measured")), None)
+            verdicts.append(verdict(row)[0] if row else "-")
+        out.append(f"| {cond} | {s['representatives']} | {s['evaluated']} | "
+                   f"{s['feasible_of_size']} | {sc['branch']} | `…{(tid or '')[-16:]}` | "
+                   f"{recall} | {' / '.join(verdicts)} |")
+    if recalls:
+        out += ["", "**The registered adaptive search on a real-hardware spec (row 8 c).** "
+                "K = 16 against the exhaustive feasible set of the condition's size, seed 42: "
+                + "; ".join(f"`{c.split('__')[1]} {c.split('__')[2]}` {a}/{b}"
+                            for c, a, b in recalls)
+                + ". This sits beside GS-31: there the ranker's recall failed a registered "
+                "criterion on the real-lab holdout; here it is measured on the specs the "
+                "hardware campaign actually deployed. The ranker is not changed."]
+    return out
+
+
+def _core(data: list[dict]) -> list[dict]:
+    """The registered core the paper's E-G5 claims are about: normal x knee.
+
+    The widened matrix (row 8) is reported in its own section. Pooling it into
+    these tables silently moved the paper's macros -- the T2/T1 ratio read
+    1.6 instead of 8.3, because low and high rows joined each placement's
+    median -- so every figure the paper takes from here is the core's.
+    """
+    return [r for r in data if r["condition"].split("__")[1:4:2] == ["normal", "knee"]]
+
+
+def widened_section(data: list[dict]) -> list[str]:
+    """Row 8: every pattern x level, its own rows, never pooled."""
+    import statistics
+
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for r in data:
+        _, pattern, _, level = r["condition"].split("__")
+        groups.setdefault((pattern, level), []).append(r)
+    if len(groups) <= 1:
+        return []
+    out = ["", "## The widened matrix, by pattern and level (row 8)", "",
+           "The recommendation (or, at `high` without a feasible plan, the closest "
+           "miss) per placement; medians over the three repetitions. `n/a` means "
+           "the search offered no candidate of the condition's size to deploy.", "",
+           "| pattern | level | placement | deployed | predicted (42/43/44) | measured (42/43/44) "
+           "| median p99 TTFT | ratio to T1 at this level |",
+           "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+    order = [("normal", "low"), ("normal", "knee"), ("normal", "high"),
+             ("burst", "low"), ("burst", "knee"), ("burst", "high")]
+    for key in order:
+        rows = groups.get(key, [])
+        meds = {}
+        lines = []
+        for topo in ("T1", "T2", "T3"):
+            mains = [r for r in rows if r["condition"].split("__")[2] == topo
+                     and r["deployment"] in ("recommendation", "closest_miss")]
+            kind = ", ".join(sorted({r["deployment"] for r in mains})) or "none"
+            pv, mv, ttft = [], [], []
+            for rep in (42, 43, 44):
+                m = next((r for r in mains if r["rep"] == rep), None)
+                if m and m.get("measured"):
+                    pv.append(predicted_verdict(m))
+                    mv.append(verdict(m)[0])
+                    ttft.append(m["measured"]["p99_ttft_ms"])
+                else:
+                    pv.append("n/a")
+                    mv.append("n/a")
+            meds[topo] = statistics.median(ttft) if ttft else None
+            lines.append((topo, kind, pv, mv))
+        for topo, kind, pv, mv in lines:
+            med = meds[topo]
+            ratio = (f"{med / meds['T1']:.1f}x" if med and meds.get("T1") else "-")
+            med_txt = f"{med:.0f} ms" if med else "-"
+            head = f"| {key[0]} | {key[1]} | {topo} | {kind} | {' / '.join(pv)} | "
+            out.append(head +
+                       f"{' / '.join(mv)} | {med_txt} | {ratio} |")
+    out += ["", "| pattern | level | rows judged | verdicts agreeing |",
+            "| --- | --- | --- | --- |"]
+    for key in order:
+        rows = [r for r in groups.get(key, []) if r.get("measured")
+                and predicted_verdict(r) in ("met", "MISSED")]
+        agree = sum(1 for r in rows if predicted_verdict(r) == verdict(r)[0])
+        out.append(f"| {key[0]} | {key[1]} | {len(rows)} | {agree} |")
+    return out
+
+
+#: GS-38: the link figure each topology's TP group was simulated with, before
+#: and after the adapter read every rank pair and the measured all-reduce.
+GS38_LINK_BW = {"T1": (112.5, 39.24), "T2": (25.12, 19.34), "T3": (112.5, 8.71)}
+
+
+def _re_verdict(r: dict) -> str:
+    if r.get("state") != "evaluated":
+        return r.get("state") or "-"
+    return "met" if r.get("feasible") else "MISSED"
+
+
+def repredict_section(raw_root: Path, data: list[dict]) -> list[str]:
+    """GS-38: every deployed row's prediction again, with the corrected adapter.
+
+    Post hoc and without a deployment: the hardware column is the one already
+    measured. The original prediction stays where it was; this is a column
+    beside it, never a replacement.
+    """
+    path = raw_root / "repredict-gs38.json"
+    if not path.exists():
+        return []
+    re_rows = json.loads(path.read_text())["rows"]
+    by_key = {(r["condition"], int(r["rep"]), r["label"]): r for r in re_rows}
+    out = ["", "## Post-hoc re-prediction after the adapter fix (GS-38, no deployment)", "",
+           "`compile_embedded` gave the simulator the bandwidth of the TP group's "
+           "**first rank pair** only, and that pair's nominal capacity: a four-rank "
+           "group on two NVLink pairs bridged by PCIe (T3) was simulated at "
+           "112.5 GB/s instead of the 8.71 GB/s busbw measured at world 4. Every "
+           "deployed row is simulated again below, at its own placement, seed and "
+           "spec, with the corrected adapter and a fresh cache. **Nothing was "
+           "redeployed; the hardware column is unchanged.** Link figure given to "
+           "the simulator, before -> after: " + ", ".join(
+               f"{t} {a} -> {b} GB/s" for t, (a, b) in sorted(GS38_LINK_BW.items()))
+           + ".", "",
+           "| condition | rep | deployment | p99 TTFT pred | p99 TTFT re-pred | "
+           "p99 TPOT pred | p99 TPOT re-pred | goodput pred | goodput re-pred | "
+           "predicted | post-hoc re-prediction (adapter corrected, no deployment) "
+           "| measured |",
+           "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+
+    def f(v, d):
+        return "-" if v is None else f"{v:.{d}f}"
+
+    tally: dict[tuple[str, str, str], list[int]] = {}
+    for row in data:
+        if not row.get("measured"):
+            continue
+        r = by_key.get((row["condition"], int(row["rep"]), row["deployment"]))
+        if r is None:
+            continue
+        p, q = row.get("predicted") or {}, r.get("predicted") or {}
+        hw = verdict(row)[0]
+        old, new = predicted_verdict(row), _re_verdict(r)
+        label = row["deployment"] + (" (dup.)" if row.get("duplicate_of") else "")
+        out.append(
+            f"| {row['condition']} | {row['rep']} | {label} | "
+            f"{f(p.get('p99_ttft_ms'), 0)} | {f(q.get('p99_ttft_ms'), 0)} | "
+            f"{f(p.get('p99_tpot_ms'), 1)} | {f(q.get('p99_tpot_ms'), 1)} | "
+            f"{f(p.get('slo_goodput_rps'), 2)} | {f(q.get('slo_goodput_rps'), 2)} | "
+            f"{old} | **{new}** | {hw} |")
+        if row.get("duplicate_of") or old not in ("met", "MISSED") \
+                or new not in ("met", "MISSED"):
+            continue
+        _, pattern, topo, level = row["condition"].split("__")
+        t = tally.setdefault((pattern, level, topo), [0, 0, 0])
+        t[0] += 1
+        t[1] += old == hw
+        t[2] += new == hw
+    main = {}
+    for row in data:
+        if not row.get("measured") or row["deployment"] not in (
+                "recommendation", "closest_miss"):
+            continue
+        r = by_key.get((row["condition"], int(row["rep"]), row["deployment"]))
+        if r is None or predicted_verdict(row) not in ("met", "MISSED") \
+                or _re_verdict(r) not in ("met", "MISSED"):
+            continue
+        hw = verdict(row)[0]
+        t = main.setdefault(row["condition"].split("__")[2], [0, 0, 0, 0, 0])
+        t[0] += 1
+        t[1] += predicted_verdict(row) == hw
+        t[2] += _re_verdict(r) == hw
+        t[3] += predicted_verdict(row) == "met" and hw == "MISSED"
+        t[4] += _re_verdict(r) == "met" and hw == "MISSED"
+    out += ["", "The deployed recommendation (or closest miss) only, every pattern "
+            "and level, by placement:", "",
+            "| placement | rows | original agrees | re-prediction agrees "
+            "| original false positives | re-prediction false positives |",
+            "| --- | --- | --- | --- | --- | --- |"]
+    for topo, (n, a, b, fa, fb) in sorted(main.items()):
+        out.append(f"| {topo} | {n} | {a} | {b} | {fa} | {fb} |")
+    out += ["", "Verdict agreement with the hardware, original against post-hoc "
+            "(duplicate marginal rows not counted twice):", "",
+            "| pattern | level | placement | rows | original agrees | re-prediction agrees |",
+            "| --- | --- | --- | --- | --- | --- |"]
+    for (pattern, level, topo), (n, a, b) in sorted(tally.items()):
+        out.append(f"| {pattern} | {level} | {topo} | {n} | {a} | {b} |")
+    return out
+
+
+def floor_sections(raw_root: Path) -> list[str]:
+    """GS-38: the zero-recommendation diagnosis and the floor sensitivity."""
+    path = raw_root / "floor-diagnosis-gs38.json"
+    if not path.exists():
+        return []
+    doc = json.loads(path.read_text())
+    if doc.get("cache_misses"):
+        raise SystemExit(f"{path}: written with cache misses {doc['cache_misses']}; "
+                         "its predictions are not the registered runs'")
+    rows_ = doc["rows"]
+    out = ["", "## Why burst T1/T2 at low and knee recommended nothing (GS-38)", "",
+           "From the registered runs' cached predictions only (no new simulation; "
+           f"cache misses: {len(doc['cache_misses'])}). Counts are over the "
+           "evaluated candidates of the condition's size; a candidate can violate "
+           "more than one axis.", "",
+           "| condition | rep | floor | evaluated of size | TTFT | TPOT | goodput "
+           "| goodput only | best goodput | best goodput, latency met |",
+           "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+
+    def f(v, d=3):
+        return "-" if v is None else f"{v:.{d}f}"
+
+    for r in rows_:
+        if r["pattern"] != "burst" or r["topology"] == "T3" or r["level"] == "high":
+            continue
+        ax = r["axis_counts_of_size"]
+        out.append(
+            f"| {r['condition']} | {r['rep']} | {r['registered_floor']} | "
+            f"{r['evaluated_of_size']} | {ax.get('p99_ttft_ms', 0)} | "
+            f"{ax.get('p99_tpot_ms', 0)} | {ax.get('slo_goodput_rps', 0)} | "
+            f"{r['goodput_only_of_size']} | {f(r['max_goodput_of_size'])} | "
+            f"{f(r['max_goodput_latency_ok_of_size'])} |")
+    burst = [r for r in rows_ if r["pattern"] == "burst" and r["topology"] != "T3"
+             and r["level"] != "high"]
+    if burst:
+        all_ttft = all(r["axis_counts_of_size"].get("p99_ttft_ms", 0)
+                       == r["evaluated_of_size"] for r in burst)
+        g_only = sum(r["goodput_only_of_size"] for r in burst)
+        ttfts = [c["p99_ttft_ms"] for r in burst for c in r["candidates_of_size"]]
+        best = f"{min(ttfts):.0f} ms" if ttfts else "-"
+        out += ["", ("**TTFT eliminated every evaluated candidate in every row**"
+                     if all_ttft else "TTFT did not eliminate every candidate")
+                + f"; {g_only} candidate(s) failed on goodput alone, and the lowest "
+                f"predicted p99 TTFT of any evaluated candidate in these rows is "
+                f"{best} against 550. "
+                "So this is not the normal-low goodput-floor artifact: relaxing "
+                "the floor recovers nothing (next section). T1 and T2 rows are "
+                "identical because the search is the same for both -- the "
+                "condition's placement applies only at deployment. These are the "
+                "pre-GS-38 adapter's predictions, the ones the run acted on."]
+    floors = doc["floors"]
+    changed = sorted({f"{r['condition'].split('__', 1)[1]} seed {r['rep']}" for r in rows_
+                      if len({s["feasible_of_size"] > 0 for s in
+                              [r["at_registered_floor"], *r["sensitivity"]]}) > 1})
+    out += ["", "## A hardware-derived floor applied to pessimistic simulator "
+            "predictions (GS-38, analysis only, no deployment)", "",
+            "Row 4's rule derives each level's goodput floor from the *hardware's* "
+            "measured goodput. The simulator predicts lower goodput than the "
+            "hardware delivers, so a floor that the hardware clears by construction "
+            "can sit above every prediction. Below, each condition's cached "
+            "predictions are re-judged at other floors: latency verdicts exactly as "
+            "the run's own feasibility reports gave them (with their accuracy "
+            "margins), goodput re-tested against the floor. **The evaluated set is "
+            "the registered floor's**: a run made at another floor would reorder "
+            "the ranker's budget (GS-36) and could reach other candidates, which "
+            "this cannot show. Each cell: feasible candidates of the condition's "
+            "size / whether the recommendation's template is the deployed one "
+            "(`same`, `other`, or `-` for none).", "",
+            "| condition | rep | registered floor | at registered | "
+            + " | ".join(f"at {x}" for x in floors) + " |",
+            "| --- | --- | --- | --- | " + " | ".join("---" for _ in floors) + " |"]
+
+    # A repetition that deployed nothing is compared with the template another
+    # repetition of the same condition deployed, and says which one.
+    elsewhere = {}
+    for r in rows_:
+        if r["deployed_template"]:
+            elsewhere.setdefault(r["condition"], (r["rep"], r["deployed_template"]))
+
+    def cell(r, s):
+        if s["recommendation"] is None:
+            return f"{s['feasible_of_size']} / -"
+        if s["same_template_as_deployed"] is not None:
+            tag = "same" if s["same_template_as_deployed"] else "other"
+        elif r["condition"] in elsewhere:
+            rep, tpl = elsewhere[r["condition"]]
+            tag = (f"same as rep {rep}'s" if s["recommendation_template"] == tpl
+                   else f"other than rep {rep}'s")
+        else:
+            tag = "nothing deployed"
+        return f"{s['feasible_of_size']} / {tag}"
+
+    for r in rows_:
+        out.append(f"| {r['condition']} | {r['rep']} | {r['registered_floor']} | "
+                   f"{cell(r, r['at_registered_floor'])} | "
+                   + " | ".join(cell(r, s) for s in r["sensitivity"]) + " |")
+    out += ["", f"Conditions whose recommendation appears or vanishes across these "
+            f"floors: {', '.join(changed) if changed else 'none'}. Everywhere else the "
+            "answer, and the template, is the same at every floor tried."]
+    return out
+
+
 def markdown(data: list[dict], args) -> str:
+    everything = data
+    data = _core(data)
     out = ["# E-G5 — the recommendation and the bounds, on hardware", "", BANNER, ""]
     out.append(
         "Each deployment is offered the rate **its own spec** declares: the "
@@ -734,7 +1133,38 @@ def markdown(data: list[dict], args) -> str:
     out.append("")
     out += agreement_table(data)
 
-    out += ["", "## Predicted against measured", ""]
+    hs = high_scope_table(RAW, everything)
+    if hs:
+        out += ["", "## Above the knee: the exhaustive scope, and what it decided", ""]
+        out.append(
+            "At `high` the verdict is decided once, by evaluating every representative "
+            "of GS-27's scope at seed 42 without a budget; the three repetitions repeat "
+            "the deployment and the measurement of what that decided (row 8). A "
+            "recommendation that saturates here is a false positive of the 6 rps "
+            "prediction; a closest miss that also misses is agreement with the "
+            "infeasibility verdict. They are different claims."
+        )
+        out.append("")
+        out += hs
+    cm = closest_miss_table(everything)
+    if cm:
+        out += ["", "## Above the knee: is there really no feasible plan of this size?", ""]
+        out.append(
+            "At `high` the search returns no feasible plan of the condition's size, "
+            "so the recommendation's slot is filled by the **closest miss** -- "
+            "heteropilot's `closest_plan` rule, the infeasible plan with the "
+            "smallest worst normalised overshoot, restricted to the size (row 8). "
+            "What is tested is the verdict \"no feasible plan of this size\", "
+            "within GS-27's scope cut, not a recommendation's SLO."
+        )
+        out.append("")
+        out += cm
+
+    out += widened_section(everything)
+    out += repredict_section(RAW, everything)
+    out += floor_sections(RAW)
+
+    out += ["", "## Predicted against measured (normal x knee)", ""]
     out += table(data)
 
     missing = [(r, verdict(r)[1]) for r in data if r.get("measured")]
@@ -819,6 +1249,11 @@ def markdown(data: list[dict], args) -> str:
     out.append("vendor/heteropilot/.venv/bin/python experiments/e_g5/deploy_and_bench.py \\")
     out.append("    --condition llama31-8b__normal__T3__knee --rep 42 \\")
     out.append("    --knee-rps 4 --predictor sim")
+    out.append("# GS-38: post-hoc re-prediction (corrected adapter, fresh cache)")
+    out.append("vendor/heteropilot/.venv/bin/python experiments/e_g5/repredict.py")
+    out.append("# GS-38: cache-only floor diagnosis, from a tree with the pre-GS-38 adapter")
+    out.append("PYTHONPATH=$PRE:$PRE/vendor/heteropilot \\")
+    out.append("    vendor/heteropilot/.venv/bin/python experiments/e_g5/floor_diagnosis.py")
     out.append(f"python experiments/e_g5/analyze.py --out {args.out}")
     out.append("```")
     return "\n".join(out)

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "model": "NousResearch/Meta-Llama-3.1-8B",
+  "vllm_version": "0.19.0",
+  "engine_kwargs": {
+    "model": "/home/swsok/.cache/huggingface/hub/models--NousResearch--Meta-Llama-3.1-8B/snapshots/1f47e50cdbe801ad8a5174156ec3a0655108fb9f",
+    "tensor_parallel_size": 2,
+    "data_parallel_size": 1,
+    "enable_expert_parallel": false,
+    "max_num_seqs": 128,
+    "max_num_batched_tokens": 2048,
+    "max_model_len": null,
+    "dtype": "bfloat16",
+    "kv_cache_dtype": "auto",
+    "seed": 42,
+    "enable_prefix_caching": false
+  },
+  "dataset_path": "/home/swsok/heteropilot-graphsearch/outputs/e_g5/workloads/llama31-8b-rps55-b0.2.jsonl",
+  "dataset_hash": "909bea109288cbc034ffdeac26318e0851fb05b4742cf3526474e486ab6663fb",
+  "num_requests": 150,
+  "started_at": "2026-10-01T19:13:05.079901Z",
+  "finished_at": "2026-10-01T19:13:58.756229Z",
+  "tick_seconds": 1.0
+}

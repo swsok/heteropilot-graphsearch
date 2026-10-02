@@ -1,0 +1,4654 @@
+{
+  "basis": "GS-38: post-hoc re-prediction with the corrected adapter, no deployment",
+  "rows": [
+    {
+      "condition": "llama31-8b__burst__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30777.029270199997), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 29198.414920119998,
+        "slo_goodput_rps": 0.22848105862742055
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 30777.029270199997,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 54.95823503672727,
+          "predicted": 30777.029270199997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=709.5985451600001), Violation(metric='slo_goodput_rps', target=2.4, predicted=2.1167623370978204)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@7efcb731f4ff",
+      "feasible": false,
+      "label": "closest_miss",
+      "original_predicted": {
+        "p99_tpot_ms": 59.39997376,
+        "p99_ttft_ms": 709.5985451600001,
+        "slo_goodput_rps": 2.1167623370978204
+      },
+      "predicted": {
+        "p99_tpot_ms": 59.39997376,
+        "p99_ttft_ms": 709.5985451600001,
+        "slo_goodput_rps": 2.1167623370978204
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.29017917301818197,
+          "predicted": 709.5985451600001,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.11801569287590816,
+          "predicted": 2.1167623370978204,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30905.520687059998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.23468210324936362)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.445078179999996,
+        "p99_ttft_ms": 29382.69132091,
+        "slo_goodput_rps": 0.2429837485552434
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.928531819999996,
+        "p99_ttft_ms": 30905.520687059998,
+        "slo_goodput_rps": 0.23468210324936362
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.19185579465454,
+          "predicted": 30905.520687059998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9957330526681935,
+          "predicted": 0.23468210324936362,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=907.386232189999), Violation(metric='p99_tpot_ms', target=60.0, predicted=61.56378264), Violation(metric='slo_goodput_rps', target=2.4, predicted=1.7164209995688307)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@7efcb731f4ff",
+      "feasible": false,
+      "label": "closest_miss",
+      "original_predicted": {
+        "p99_tpot_ms": 61.56378264,
+        "p99_ttft_ms": 907.386232189999,
+        "slo_goodput_rps": 1.7164209995688307
+      },
+      "predicted": {
+        "p99_tpot_ms": 61.56378264,
+        "p99_ttft_ms": 907.386232189999,
+        "slo_goodput_rps": 1.7164209995688307
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.6497931494363618,
+          "predicted": 907.386232189999,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.02606304399999999,
+          "predicted": 61.56378264,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.28482458351298723,
+          "predicted": 1.7164209995688307,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34449.51642263), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.07082275943028198)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32643.35987863,
+        "slo_goodput_rps": 0.16526709785968235
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34449.51642263,
+        "slo_goodput_rps": 0.07082275943028198
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.63548440478181,
+          "predicted": 34449.51642263,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9987123134649039,
+          "predicted": 0.07082275943028198,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=685.4311886999999), Violation(metric='p99_tpot_ms', target=60.0, predicted=66.48974313999999), Violation(metric='slo_goodput_rps', target=2.4, predicted=0.8373645309802009)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@7efcb731f4ff",
+      "feasible": false,
+      "label": "closest_miss",
+      "original_predicted": {
+        "p99_tpot_ms": 66.48974313999999,
+        "p99_ttft_ms": 685.4311886999999,
+        "slo_goodput_rps": 0.8373645309802009
+      },
+      "predicted": {
+        "p99_tpot_ms": 66.48974313999999,
+        "p99_ttft_ms": 685.4311886999999,
+        "slo_goodput_rps": 0.8373645309802009
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.2462385249090907,
+          "predicted": 685.4311886999999,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.10816238566666646,
+          "predicted": 66.48974313999999,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.651098112091583,
+          "predicted": 0.8373645309802009,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30777.029270199997), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 29198.414920119998,
+        "slo_goodput_rps": 0.22848105862742055
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 30777.029270199997,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 54.95823503672727,
+          "predicted": 30777.029270199997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30905.520687059998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.23468210324936362)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.445078179999996,
+        "p99_ttft_ms": 29382.69132091,
+        "slo_goodput_rps": 0.2429837485552434
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.928531819999996,
+        "p99_ttft_ms": 30905.520687059998,
+        "slo_goodput_rps": 0.23468210324936362
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.19185579465454,
+          "predicted": 30905.520687059998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9957330526681935,
+          "predicted": 0.23468210324936362,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34449.51642263), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.07082275943028198)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32643.35987863,
+        "slo_goodput_rps": 0.16526709785968235
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34449.51642263,
+        "slo_goodput_rps": 0.07082275943028198
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.63548440478181,
+          "predicted": 34449.51642263,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9987123134649039,
+          "predicted": 0.07082275943028198,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30777.029270199997), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 29198.414920119998,
+        "slo_goodput_rps": 0.22848105862742055
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 30777.029270199997,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 54.95823503672727,
+          "predicted": 30777.029270199997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30905.520687059998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.23468210324936362)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.445078179999996,
+        "p99_ttft_ms": 29382.69132091,
+        "slo_goodput_rps": 0.2429837485552434
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.928531819999996,
+        "p99_ttft_ms": 30905.520687059998,
+        "slo_goodput_rps": 0.23468210324936362
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.19185579465454,
+          "predicted": 30905.520687059998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9957330526681935,
+          "predicted": 0.23468210324936362,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T1__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34449.51642263), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.07082275943028198)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32643.35987863,
+        "slo_goodput_rps": 0.16526709785968235
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34449.51642263,
+        "slo_goodput_rps": 0.07082275943028198
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.63548440478181,
+          "predicted": 34449.51642263,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9987123134649039,
+          "predicted": 0.07082275943028198,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33271.41393196), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.37744423), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.09476330065661337)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.4972934,
+        "p99_ttft_ms": 32139.633544119995,
+        "slo_goodput_rps": 0.19425193127677343
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.37744423,
+        "p99_ttft_ms": 33271.41393196,
+        "slo_goodput_rps": 0.09476330065661337
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.493479876290905,
+          "predicted": 33271.41393196,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.006290737166666697,
+          "predicted": 60.37744423,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9982770308971525,
+          "predicted": 0.09476330065661337,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=709.5985451600001), Violation(metric='slo_goodput_rps', target=2.4, predicted=2.1167623370978204)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@71b605e469a5",
+      "feasible": false,
+      "label": "closest_miss",
+      "original_predicted": {
+        "p99_tpot_ms": 59.39997376,
+        "p99_ttft_ms": 709.5985451600001,
+        "slo_goodput_rps": 2.1167623370978204
+      },
+      "predicted": {
+        "p99_tpot_ms": 59.39997376,
+        "p99_ttft_ms": 709.5985451600001,
+        "slo_goodput_rps": 2.1167623370978204
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.29017917301818197,
+          "predicted": 709.5985451600001,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.11801569287590816,
+          "predicted": 2.1167623370978204,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33492.12692843), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.145918699999996), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.14803735024033882)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.29215407999999,
+        "p99_ttft_ms": 32340.209491629998,
+        "slo_goodput_rps": 0.2085816770619067
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.145918699999996,
+        "p99_ttft_ms": 33492.12692843,
+        "slo_goodput_rps": 0.14803735024033882
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.89477623350909,
+          "predicted": 33492.12692843,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0024319783333332625,
+          "predicted": 60.145918699999996,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.997308411813812,
+          "predicted": 0.14803735024033882,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=907.386232189999), Violation(metric='p99_tpot_ms', target=60.0, predicted=61.56378264), Violation(metric='slo_goodput_rps', target=2.4, predicted=1.7164209995688307)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@71b605e469a5",
+      "feasible": false,
+      "label": "closest_miss",
+      "original_predicted": {
+        "p99_tpot_ms": 61.56378264,
+        "p99_ttft_ms": 907.386232189999,
+        "slo_goodput_rps": 1.7164209995688307
+      },
+      "predicted": {
+        "p99_tpot_ms": 61.56378264,
+        "p99_ttft_ms": 907.386232189999,
+        "slo_goodput_rps": 1.7164209995688307
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.6497931494363618,
+          "predicted": 907.386232189999,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.02606304399999999,
+          "predicted": 61.56378264,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.28482458351298723,
+          "predicted": 1.7164209995688307,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=37303.43776663), Violation(metric='p99_tpot_ms', target=60.0, predicted=67.3807454), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 65.26885331,
+        "p99_ttft_ms": 36008.53181207,
+        "slo_goodput_rps": 0.0
+      },
+      "predicted": {
+        "p99_tpot_ms": 67.3807454,
+        "p99_ttft_ms": 37303.43776663,
+        "slo_goodput_rps": 0.0
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 66.82443230296363,
+          "predicted": 37303.43776663,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.12301242333333325,
+          "predicted": 67.3807454,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 1.0,
+          "predicted": 0.0,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=685.4311886999999), Violation(metric='p99_tpot_ms', target=60.0, predicted=66.48974313999999), Violation(metric='slo_goodput_rps', target=2.4, predicted=0.8373645309802009)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192@71b605e469a5",
+      "feasible": false,
+      "label": "closest_miss",
+      "original_predicted": {
+        "p99_tpot_ms": 66.48974313999999,
+        "p99_ttft_ms": 685.4311886999999,
+        "slo_goodput_rps": 0.8373645309802009
+      },
+      "predicted": {
+        "p99_tpot_ms": 66.48974313999999,
+        "p99_ttft_ms": 685.4311886999999,
+        "slo_goodput_rps": 0.8373645309802009
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp2-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.2462385249090907,
+          "predicted": 685.4311886999999,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.10816238566666646,
+          "predicted": 66.48974313999999,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.651098112091583,
+          "predicted": 0.8373645309802009,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33271.41393196), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.37744423), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.09476330065661337)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.4972934,
+        "p99_ttft_ms": 32139.633544119995,
+        "slo_goodput_rps": 0.19425193127677343
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.37744423,
+        "p99_ttft_ms": 33271.41393196,
+        "slo_goodput_rps": 0.09476330065661337
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.493479876290905,
+          "predicted": 33271.41393196,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.006290737166666697,
+          "predicted": 60.37744423,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9982770308971525,
+          "predicted": 0.09476330065661337,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33492.12692843), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.145918699999996), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.14803735024033882)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.29215407999999,
+        "p99_ttft_ms": 32340.209491629998,
+        "slo_goodput_rps": 0.2085816770619067
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.145918699999996,
+        "p99_ttft_ms": 33492.12692843,
+        "slo_goodput_rps": 0.14803735024033882
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.89477623350909,
+          "predicted": 33492.12692843,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0024319783333332625,
+          "predicted": 60.145918699999996,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.997308411813812,
+          "predicted": 0.14803735024033882,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=37303.43776663), Violation(metric='p99_tpot_ms', target=60.0, predicted=67.3807454), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 65.26885331,
+        "p99_ttft_ms": 36008.53181207,
+        "slo_goodput_rps": 0.0
+      },
+      "predicted": {
+        "p99_tpot_ms": 67.3807454,
+        "p99_ttft_ms": 37303.43776663,
+        "slo_goodput_rps": 0.0
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 66.82443230296363,
+          "predicted": 37303.43776663,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.12301242333333325,
+          "predicted": 67.3807454,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 1.0,
+          "predicted": 0.0,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33271.41393196), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.37744423), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.09476330065661337)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.4972934,
+        "p99_ttft_ms": 32139.633544119995,
+        "slo_goodput_rps": 0.19425193127677343
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.37744423,
+        "p99_ttft_ms": 33271.41393196,
+        "slo_goodput_rps": 0.09476330065661337
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.493479876290905,
+          "predicted": 33271.41393196,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.006290737166666697,
+          "predicted": 60.37744423,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9982770308971525,
+          "predicted": 0.09476330065661337,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33492.12692843), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.145918699999996), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.14803735024033882)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.29215407999999,
+        "p99_ttft_ms": 32340.209491629998,
+        "slo_goodput_rps": 0.2085816770619067
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.145918699999996,
+        "p99_ttft_ms": 33492.12692843,
+        "slo_goodput_rps": 0.14803735024033882
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.89477623350909,
+          "predicted": 33492.12692843,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0024319783333332625,
+          "predicted": 60.145918699999996,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.997308411813812,
+          "predicted": 0.14803735024033882,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T2__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=37303.43776663), Violation(metric='p99_tpot_ms', target=60.0, predicted=67.3807454), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 65.26885331,
+        "p99_ttft_ms": 36008.53181207,
+        "slo_goodput_rps": 0.0
+      },
+      "predicted": {
+        "p99_tpot_ms": 67.3807454,
+        "p99_ttft_ms": 37303.43776663,
+        "slo_goodput_rps": 0.0
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 66.82443230296363,
+          "predicted": 37303.43776663,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.12301242333333325,
+          "predicted": 67.3807454,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 1.0,
+          "predicted": 0.0,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=600.88230187)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu3",
+        "a40x8/gpu1",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp2-s128-t2048@50b241b2119a",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 31.883361869999998,
+        "p99_ttft_ms": 600.88230187,
+        "slo_goodput_rps": 3.596661830671815
+      },
+      "predicted": {
+        "p99_tpot_ms": 31.883361869999998,
+        "p99_ttft_ms": 600.88230187,
+        "slo_goodput_rps": 3.596661830671815
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp2-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.09251327612727271,
+          "predicted": 600.88230187,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30777.029270199997), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 29198.414920119998,
+        "slo_goodput_rps": 0.22848105862742055
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 30777.029270199997,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 54.95823503672727,
+          "predicted": 30777.029270199997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=10580.55978226), Violation(metric='slo_goodput_rps', target=2.4, predicted=1.3823808329633098)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 20.70001306,
+        "p99_ttft_ms": 305.06890159,
+        "slo_goodput_rps": 4.720836416495861
+      },
+      "predicted": {
+        "p99_tpot_ms": 45.643791019999995,
+        "p99_ttft_ms": 10580.55978226,
+        "slo_goodput_rps": 1.3823808329633098
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 18.23738142229091,
+          "predicted": 10580.55978226,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.4240079862652876,
+          "predicted": 1.3823808329633098,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=632.1129129699999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu3",
+        "a40x8/gpu1",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp2-s128-t2048@50b241b2119a",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 35.15441085,
+        "p99_ttft_ms": 632.1129129699999,
+        "slo_goodput_rps": 3.3979215271135415
+      },
+      "predicted": {
+        "p99_tpot_ms": 35.15441085,
+        "p99_ttft_ms": 632.1129129699999,
+        "slo_goodput_rps": 3.3979215271135415
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp2-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.14929620539999983,
+          "predicted": 632.1129129699999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30905.520687059998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.23468210324936362)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.445078179999996,
+        "p99_ttft_ms": 29382.69132091,
+        "slo_goodput_rps": 0.2429837485552434
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.928531819999996,
+        "p99_ttft_ms": 30905.520687059998,
+        "slo_goodput_rps": 0.23468210324936362
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.19185579465454,
+          "predicted": 30905.520687059998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9957330526681935,
+          "predicted": 0.23468210324936362,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=9688.335077869999), Violation(metric='slo_goodput_rps', target=2.4, predicted=1.5389591188343077)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 23.42736459,
+        "p99_ttft_ms": 279.8129701699999,
+        "slo_goodput_rps": 4.369567751805194
+      },
+      "predicted": {
+        "p99_tpot_ms": 47.547327609999996,
+        "p99_ttft_ms": 9688.335077869999,
+        "slo_goodput_rps": 1.5389591188343077
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 16.615154687036362,
+          "predicted": 9688.335077869999,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.35876703381903846,
+          "predicted": 1.5389591188343077,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=782.3411322999999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu3",
+        "a40x8/gpu1",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp2-s128-t2048@50b241b2119a",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 37.04673574999999,
+        "p99_ttft_ms": 782.3411322999999,
+        "slo_goodput_rps": 3.1395144808468305
+      },
+      "predicted": {
+        "p99_tpot_ms": 37.04673574999999,
+        "p99_ttft_ms": 782.3411322999999,
+        "slo_goodput_rps": 3.1395144808468305
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp2-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.4224384223636362,
+          "predicted": 782.3411322999999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34449.51642263), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.07082275943028198)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32643.35987863,
+        "slo_goodput_rps": 0.16526709785968235
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34449.51642263,
+        "slo_goodput_rps": 0.07082275943028198
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.63548440478181,
+          "predicted": 34449.51642263,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9987123134649039,
+          "predicted": 0.07082275943028198,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=12209.808846689997), Violation(metric='slo_goodput_rps', target=2.4, predicted=0.9758817752115766)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 23.266857469999994,
+        "p99_ttft_ms": 299.7910855099999,
+        "slo_goodput_rps": 4.004388292735789
+      },
+      "predicted": {
+        "p99_tpot_ms": 53.20005429999999,
+        "p99_ttft_ms": 12209.808846689997,
+        "slo_goodput_rps": 0.9758817752115766
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 21.199652448527267,
+          "predicted": 12209.808846689997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.5933825936618431,
+          "predicted": 0.9758817752115766,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1580.4244576099998), Violation(metric='slo_goodput_rps', target=2.3, predicted=1.8363690978622265)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 16.85751694,
+        "p99_ttft_ms": 499.7023238499998,
+        "slo_goodput_rps": 3.694228666313892
+      },
+      "predicted": {
+        "p99_tpot_ms": 42.06014601,
+        "p99_ttft_ms": 1580.4244576099998,
+        "slo_goodput_rps": 1.8363690978622265
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.8734990138363632,
+          "predicted": 1580.4244576099998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.20157865310337975,
+          "predicted": 1.8363690978622265,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30777.029270199997), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 29198.414920119998,
+        "slo_goodput_rps": 0.22848105862742055
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 30777.029270199997,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 54.95823503672727,
+          "predicted": 30777.029270199997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1580.4244576099998), Violation(metric='slo_goodput_rps', target=2.3, predicted=1.8363690978622265)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 16.85751694,
+        "p99_ttft_ms": 499.7023238499998,
+        "slo_goodput_rps": 3.694228666313892
+      },
+      "predicted": {
+        "p99_tpot_ms": 42.06014601,
+        "p99_ttft_ms": 1580.4244576099998,
+        "slo_goodput_rps": 1.8363690978622265
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.8734990138363632,
+          "predicted": 1580.4244576099998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.20157865310337975,
+          "predicted": 1.8363690978622265,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=2804.66836141), Violation(metric='slo_goodput_rps', target=2.3, predicted=1.6491742859830094)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 20.00599652,
+        "p99_ttft_ms": 465.76670254,
+        "slo_goodput_rps": 3.323088014902594
+      },
+      "predicted": {
+        "p99_tpot_ms": 46.27127567,
+        "p99_ttft_ms": 2804.66836141,
+        "slo_goodput_rps": 1.6491742859830094
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 4.099397020745455,
+          "predicted": 2804.66836141,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.2829677017465176,
+          "predicted": 1.6491742859830094,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30905.520687059998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.23468210324936362)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.445078179999996,
+        "p99_ttft_ms": 29382.69132091,
+        "slo_goodput_rps": 0.2429837485552434
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.928531819999996,
+        "p99_ttft_ms": 30905.520687059998,
+        "slo_goodput_rps": 0.23468210324936362
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.19185579465454,
+          "predicted": 30905.520687059998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9957330526681935,
+          "predicted": 0.23468210324936362,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=2804.66836141), Violation(metric='slo_goodput_rps', target=2.3, predicted=1.6491742859830094)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 20.00599652,
+        "p99_ttft_ms": 465.76670254,
+        "slo_goodput_rps": 3.323088014902594
+      },
+      "predicted": {
+        "p99_tpot_ms": 46.27127567,
+        "p99_ttft_ms": 2804.66836141,
+        "slo_goodput_rps": 1.6491742859830094
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 4.099397020745455,
+          "predicted": 2804.66836141,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.2829677017465176,
+          "predicted": 1.6491742859830094,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1900.5442714499989), Violation(metric='slo_goodput_rps', target=2.3, predicted=1.3428249890861754)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 19.673524009999998,
+        "p99_ttft_ms": 454.60345965999994,
+        "slo_goodput_rps": 3.1015908198576474
+      },
+      "predicted": {
+        "p99_tpot_ms": 50.57502176,
+        "p99_ttft_ms": 1900.5442714499989,
+        "slo_goodput_rps": 1.3428249890861754
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 2.455535038999998,
+          "predicted": 1900.5442714499989,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.41616304822340194,
+          "predicted": 1.3428249890861754,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34449.51642263), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.07082275943028198)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32643.35987863,
+        "slo_goodput_rps": 0.16526709785968235
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34449.51642263,
+        "slo_goodput_rps": 0.07082275943028198
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.63548440478181,
+          "predicted": 34449.51642263,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9987123134649039,
+          "predicted": 0.07082275943028198,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1900.5442714499989), Violation(metric='slo_goodput_rps', target=2.3, predicted=1.3428249890861754)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 19.673524009999998,
+        "p99_ttft_ms": 454.60345965999994,
+        "slo_goodput_rps": 3.1015908198576474
+      },
+      "predicted": {
+        "p99_tpot_ms": 50.57502176,
+        "p99_ttft_ms": 1900.5442714499989,
+        "slo_goodput_rps": 1.3428249890861754
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 2.455535038999998,
+          "predicted": 1900.5442714499989,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.41616304822340194,
+          "predicted": 1.3428249890861754,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1250.171261359999), Violation(metric='slo_goodput_rps', target=1.6, predicted=1.593303479817282)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 13.7564128,
+        "p99_ttft_ms": 418.46777824,
+        "slo_goodput_rps": 2.141225325834218
+      },
+      "predicted": {
+        "p99_tpot_ms": 22.923970999999995,
+        "p99_ttft_ms": 1250.171261359999,
+        "slo_goodput_rps": 1.593303479817282
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.2730386570181802,
+          "predicted": 1250.171261359999,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.004185325114198779,
+          "predicted": 1.593303479817282,
+          "target": 1.6
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30777.029270199997), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 29198.414920119998,
+        "slo_goodput_rps": 0.22848105862742055
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 30777.029270199997,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 54.95823503672727,
+          "predicted": 30777.029270199997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1250.171261359999), Violation(metric='slo_goodput_rps', target=1.6, predicted=1.593303479817282)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 13.7564128,
+        "p99_ttft_ms": 418.46777824,
+        "slo_goodput_rps": 2.141225325834218
+      },
+      "predicted": {
+        "p99_tpot_ms": 22.923970999999995,
+        "p99_ttft_ms": 1250.171261359999,
+        "slo_goodput_rps": 1.593303479817282
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.2730386570181802,
+          "predicted": 1250.171261359999,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.004185325114198779,
+          "predicted": 1.593303479817282,
+          "target": 1.6
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1207.5771109899997), Violation(metric='slo_goodput_rps', target=1.6, predicted=1.3960368686188809)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 15.02098573,
+        "p99_ttft_ms": 311.7486676399999,
+        "slo_goodput_rps": 1.8375435958463051
+      },
+      "predicted": {
+        "p99_tpot_ms": 28.43359593,
+        "p99_ttft_ms": 1207.5771109899997,
+        "slo_goodput_rps": 1.3960368686188809
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.195594747254545,
+          "predicted": 1207.5771109899997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.1274769571131995,
+          "predicted": 1.3960368686188809,
+          "target": 1.6
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30905.520687059998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.23468210324936362)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.445078179999996,
+        "p99_ttft_ms": 29382.69132091,
+        "slo_goodput_rps": 0.2429837485552434
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.928531819999996,
+        "p99_ttft_ms": 30905.520687059998,
+        "slo_goodput_rps": 0.23468210324936362
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.19185579465454,
+          "predicted": 30905.520687059998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9957330526681935,
+          "predicted": 0.23468210324936362,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1207.5771109899997), Violation(metric='slo_goodput_rps', target=1.6, predicted=1.3960368686188809)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 15.02098573,
+        "p99_ttft_ms": 311.7486676399999,
+        "slo_goodput_rps": 1.8375435958463051
+      },
+      "predicted": {
+        "p99_tpot_ms": 28.43359593,
+        "p99_ttft_ms": 1207.5771109899997,
+        "slo_goodput_rps": 1.3960368686188809
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.195594747254545,
+          "predicted": 1207.5771109899997,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.1274769571131995,
+          "predicted": 1.3960368686188809,
+          "target": 1.6
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1130.4416224099987), Violation(metric='slo_goodput_rps', target=1.6, predicted=1.3121259988435636)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 13.12717428,
+        "p99_ttft_ms": 344.4669648599998,
+        "slo_goodput_rps": 1.774311320418716
+      },
+      "predicted": {
+        "p99_tpot_ms": 23.57476768,
+        "p99_ttft_ms": 1130.4416224099987,
+        "slo_goodput_rps": 1.3121259988435636
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.0553484043818158,
+          "predicted": 1130.4416224099987,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.1799212507227728,
+          "predicted": 1.3121259988435636,
+          "target": 1.6
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34449.51642263), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.07082275943028198)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32643.35987863,
+        "slo_goodput_rps": 0.16526709785968235
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34449.51642263,
+        "slo_goodput_rps": 0.07082275943028198
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.63548440478181,
+          "predicted": 34449.51642263,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9987123134649039,
+          "predicted": 0.07082275943028198,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__burst__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1130.4416224099987), Violation(metric='slo_goodput_rps', target=1.6, predicted=1.3121259988435636)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 13.12717428,
+        "p99_ttft_ms": 344.4669648599998,
+        "slo_goodput_rps": 1.774311320418716
+      },
+      "predicted": {
+        "p99_tpot_ms": 23.57476768,
+        "p99_ttft_ms": 1130.4416224099987,
+        "slo_goodput_rps": 1.3121259988435636
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.0553484043818158,
+          "predicted": 1130.4416224099987,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.1799212507227728,
+          "predicted": 1.3121259988435636,
+          "target": 1.6
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@86d623362a51",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 48.864819049999994,
+        "p99_ttft_ms": 445.6580044199997,
+        "slo_goodput_rps": 2.919120925380431
+      },
+      "predicted": {
+        "p99_tpot_ms": 51.148854629999995,
+        "p99_ttft_ms": 495.52314239999987,
+        "slo_goodput_rps": 2.865307810808747
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=29912.926232629998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 28334.31188255,
+        "slo_goodput_rps": 0.20771005329765505
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 29912.926232629998,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 53.38713860478181,
+          "predicted": 29912.926232629998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@86d623362a51",
+      "feasible": true,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 48.864819049999994,
+        "p99_ttft_ms": 445.6580044199997,
+        "slo_goodput_rps": 2.919120925380431
+      },
+      "predicted": {
+        "p99_tpot_ms": 51.148854629999995,
+        "p99_ttft_ms": 495.52314239999987,
+        "slo_goodput_rps": 2.865307810808747
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=654.71510404)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@86d623362a51",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 49.553437419999995,
+        "p99_ttft_ms": 554.4955390499999,
+        "slo_goodput_rps": 2.905367730474028
+      },
+      "predicted": {
+        "p99_tpot_ms": 52.04157326,
+        "p99_ttft_ms": 654.71510404,
+        "slo_goodput_rps": 2.7096366852117346
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.1903910982545455,
+          "predicted": 654.71510404,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30943.806254799998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.1954247737310372)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.48007953999999,
+        "p99_ttft_ms": 29338.71439432,
+        "slo_goodput_rps": 0.2026164084400615
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.06362651999999,
+        "p99_ttft_ms": 30943.806254799998,
+        "slo_goodput_rps": 0.1954247737310372
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.26146591781818,
+          "predicted": 30943.806254799998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9964468222957994,
+          "predicted": 0.1954247737310372,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=654.71510404)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@86d623362a51",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 49.553437419999995,
+        "p99_ttft_ms": 554.4955390499999,
+        "slo_goodput_rps": 2.905367730474028
+      },
+      "predicted": {
+        "p99_tpot_ms": 52.04157326,
+        "p99_ttft_ms": 654.71510404,
+        "slo_goodput_rps": 2.7096366852117346
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.1903910982545455,
+          "predicted": 654.71510404,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1049.186994619999), Violation(metric='slo_goodput_rps', target=2.4, predicted=2.3331154030281436)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@86d623362a51",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 56.352766689999996,
+        "p99_ttft_ms": 840.9151946799996,
+        "slo_goodput_rps": 2.564217910533002
+      },
+      "predicted": {
+        "p99_tpot_ms": 59.08175908,
+        "p99_ttft_ms": 1049.186994619999,
+        "slo_goodput_rps": 2.3331154030281436
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.9076127174909073,
+          "predicted": 1049.186994619999,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.027868582071606807,
+          "predicted": 2.3331154030281436,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34388.318291389995), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.053117069572711485)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32582.161747389997,
+        "slo_goodput_rps": 0.07345204349319216
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34388.318291389995,
+        "slo_goodput_rps": 0.053117069572711485
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.52421507525454,
+          "predicted": 34388.318291389995,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.999034235098678,
+          "predicted": 0.053117069572711485,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1049.186994619999), Violation(metric='slo_goodput_rps', target=2.4, predicted=2.3331154030281436)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@86d623362a51",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 56.352766689999996,
+        "p99_ttft_ms": 840.9151946799996,
+        "slo_goodput_rps": 2.564217910533002
+      },
+      "predicted": {
+        "p99_tpot_ms": 59.08175908,
+        "p99_ttft_ms": 1049.186994619999,
+        "slo_goodput_rps": 2.3331154030281436
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.9076127174909073,
+          "predicted": 1049.186994619999,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.027868582071606807,
+          "predicted": 2.3331154030281436,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=597.2611180199981)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 41.197484509999995,
+        "p99_ttft_ms": 503.0858152199978,
+        "slo_goodput_rps": 2.464652779122546
+      },
+      "predicted": {
+        "p99_tpot_ms": 43.590908279999994,
+        "p99_ttft_ms": 597.2611180199981,
+        "slo_goodput_rps": 2.433210534574829
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.08592930549090562,
+          "predicted": 597.2611180199981,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=29912.926232629998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 28334.31188255,
+        "slo_goodput_rps": 0.20771005329765505
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 29912.926232629998,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 53.38713860478181,
+          "predicted": 29912.926232629998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=597.2611180199981)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 41.197484509999995,
+        "p99_ttft_ms": 503.0858152199978,
+        "slo_goodput_rps": 2.464652779122546
+      },
+      "predicted": {
+        "p99_tpot_ms": 43.590908279999994,
+        "p99_ttft_ms": 597.2611180199981,
+        "slo_goodput_rps": 2.433210534574829
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.08592930549090562,
+          "predicted": 597.2611180199981,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=572.2212464399997)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 46.11335424999999,
+        "p99_ttft_ms": 546.71313656,
+        "slo_goodput_rps": 2.5227061763802343
+      },
+      "predicted": {
+        "p99_tpot_ms": 48.505295589999996,
+        "p99_ttft_ms": 572.2212464399997,
+        "slo_goodput_rps": 2.4211325429717063
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.04040226625454497,
+          "predicted": 572.2212464399997,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30943.806254799998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.1954247737310372)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.48007953999999,
+        "p99_ttft_ms": 29338.71439432,
+        "slo_goodput_rps": 0.2026164084400615
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.06362651999999,
+        "p99_ttft_ms": 30943.806254799998,
+        "slo_goodput_rps": 0.1954247737310372
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.26146591781818,
+          "predicted": 30943.806254799998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9964468222957994,
+          "predicted": 0.1954247737310372,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=572.2212464399997)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 46.11335424999999,
+        "p99_ttft_ms": 546.71313656,
+        "slo_goodput_rps": 2.5227061763802343
+      },
+      "predicted": {
+        "p99_tpot_ms": 48.505295589999996,
+        "p99_ttft_ms": 572.2212464399997,
+        "slo_goodput_rps": 2.4211325429717063
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.04040226625454497,
+          "predicted": 572.2212464399997,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@86d623362a51",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 50.281320099999995,
+        "p99_ttft_ms": 456.5386824499997,
+        "slo_goodput_rps": 2.374754492278399
+      },
+      "predicted": {
+        "p99_tpot_ms": 53.1654189,
+        "p99_ttft_ms": 537.0306233499999,
+        "slo_goodput_rps": 2.3423862458892857
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34388.318291389995), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.053117069572711485)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32582.161747389997,
+        "slo_goodput_rps": 0.07345204349319216
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34388.318291389995,
+        "slo_goodput_rps": 0.053117069572711485
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.52421507525454,
+          "predicted": 34388.318291389995,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.999034235098678,
+          "predicted": 0.053117069572711485,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__knee",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@86d623362a51",
+      "feasible": true,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 50.281320099999995,
+        "p99_ttft_ms": 456.5386824499997,
+        "slo_goodput_rps": 2.374754492278399
+      },
+      "predicted": {
+        "p99_tpot_ms": 53.1654189,
+        "p99_ttft_ms": 537.0306233499999,
+        "slo_goodput_rps": 2.3423862458892857
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T1__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=29912.926232629998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 28334.31188255,
+        "slo_goodput_rps": 0.20771005329765505
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 29912.926232629998,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 53.38713860478181,
+          "predicted": 29912.926232629998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 25.09017511,
+        "p99_ttft_ms": 371.9828374599996,
+        "slo_goodput_rps": 1.6744496834590916
+      },
+      "predicted": {
+        "p99_tpot_ms": 26.21146681,
+        "p99_ttft_ms": 410.21392285999957,
+        "slo_goodput_rps": 1.668754892768486
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T1__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30943.806254799998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.1954247737310372)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.48007953999999,
+        "p99_ttft_ms": 29338.71439432,
+        "slo_goodput_rps": 0.2026164084400615
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.06362651999999,
+        "p99_ttft_ms": 30943.806254799998,
+        "slo_goodput_rps": 0.1954247737310372
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.26146591781818,
+          "predicted": 30943.806254799998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9964468222957994,
+          "predicted": 0.1954247737310372,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T1__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": true,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 25.09017511,
+        "p99_ttft_ms": 371.9828374599996,
+        "slo_goodput_rps": 1.6744496834590916
+      },
+      "predicted": {
+        "p99_tpot_ms": 26.21146681,
+        "p99_ttft_ms": 410.21392285999957,
+        "slo_goodput_rps": 1.668754892768486
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T1__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34388.318291389995), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.053117069572711485)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32582.161747389997,
+        "slo_goodput_rps": 0.07345204349319216
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34388.318291389995,
+        "slo_goodput_rps": 0.053117069572711485
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.52421507525454,
+          "predicted": 34388.318291389995,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.999034235098678,
+          "predicted": 0.053117069572711485,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=621.2913882499996)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 53.323674669999996,
+        "p99_ttft_ms": 586.1849578199998,
+        "slo_goodput_rps": 2.777413204086941
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.51216198999999,
+        "p99_ttft_ms": 621.2913882499996,
+        "slo_goodput_rps": 2.7135078483080872
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.1296207059090902,
+          "predicted": 621.2913882499996,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=32407.310894389997), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.37744423), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0758106405252907)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.4972934,
+        "p99_ttft_ms": 31275.530506549996,
+        "slo_goodput_rps": 0.1359763518937414
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.37744423,
+        "p99_ttft_ms": 32407.310894389997,
+        "slo_goodput_rps": 0.0758106405252907
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 57.92238344434545,
+          "predicted": 32407.310894389997,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.006290737166666697,
+          "predicted": 60.37744423,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.998621624717722,
+          "predicted": 0.0758106405252907,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=621.2913882499996)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 53.323674669999996,
+        "p99_ttft_ms": 586.1849578199998,
+        "slo_goodput_rps": 2.777413204086941
+      },
+      "predicted": {
+        "p99_tpot_ms": 55.51216198999999,
+        "p99_ttft_ms": 621.2913882499996,
+        "slo_goodput_rps": 2.7135078483080872
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.1296207059090902,
+          "predicted": 621.2913882499996,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=762.0235279499999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 54.386790219999995,
+        "p99_ttft_ms": 730.8395682099996,
+        "slo_goodput_rps": 2.624926338361277
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.38805934999999,
+        "p99_ttft_ms": 762.0235279499999,
+        "slo_goodput_rps": 2.475676893046499
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.38549732354545435,
+          "predicted": 762.0235279499999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33480.03002184), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.145918699999996), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.12953268146029648)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.29365453999999,
+        "p99_ttft_ms": 32329.26594504,
+        "slo_goodput_rps": 0.17065400357854132
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.145918699999996,
+        "p99_ttft_ms": 33480.03002184,
+        "slo_goodput_rps": 0.12953268146029648
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.872781857890914,
+          "predicted": 33480.03002184,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0024319783333332625,
+          "predicted": 60.145918699999996,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9976448603370855,
+          "predicted": 0.12953268146029648,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=762.0235279499999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 54.386790219999995,
+        "p99_ttft_ms": 730.8395682099996,
+        "slo_goodput_rps": 2.624926338361277
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.38805934999999,
+        "p99_ttft_ms": 762.0235279499999,
+        "slo_goodput_rps": 2.475676893046499
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.38549732354545435,
+          "predicted": 762.0235279499999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1360.18030046), Violation(metric='p99_tpot_ms', target=60.0, predicted=64.31032705999999), Violation(metric='slo_goodput_rps', target=2.4, predicted=1.5708316531538342)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 61.98187786,
+        "p99_ttft_ms": 1225.4731137799995,
+        "slo_goodput_rps": 1.9861791535269482
+      },
+      "predicted": {
+        "p99_tpot_ms": 64.31032705999999,
+        "p99_ttft_ms": 1360.18030046,
+        "slo_goodput_rps": 1.5708316531538342
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.4730550917454543,
+          "predicted": 1360.18030046,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0718387843333332,
+          "predicted": 64.31032705999999,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.3454868111859024,
+          "predicted": 1.5708316531538342,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=37242.23963539), Violation(metric='p99_tpot_ms', target=60.0, predicted=67.3807454), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 65.26885331,
+        "p99_ttft_ms": 35947.33368083,
+        "slo_goodput_rps": 0.0
+      },
+      "predicted": {
+        "p99_tpot_ms": 67.3807454,
+        "p99_ttft_ms": 37242.23963539,
+        "slo_goodput_rps": 0.0
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 66.71316297343635,
+          "predicted": 37242.23963539,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.12301242333333325,
+          "predicted": 67.3807454,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 1.0,
+          "predicted": 0.0,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1360.18030046), Violation(metric='p99_tpot_ms', target=60.0, predicted=64.31032705999999), Violation(metric='slo_goodput_rps', target=2.4, predicted=1.5708316531538342)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 61.98187786,
+        "p99_ttft_ms": 1225.4731137799995,
+        "slo_goodput_rps": 1.9861791535269482
+      },
+      "predicted": {
+        "p99_tpot_ms": 64.31032705999999,
+        "p99_ttft_ms": 1360.18030046,
+        "slo_goodput_rps": 1.5708316531538342
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s256-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.4730550917454543,
+          "predicted": 1360.18030046,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0718387843333332,
+          "predicted": 64.31032705999999,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.3454868111859024,
+          "predicted": 1.5708316531538342,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=733.5304815399987)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 46.01287136,
+        "p99_ttft_ms": 630.7885546599983,
+        "slo_goodput_rps": 2.4042432613951137
+      },
+      "predicted": {
+        "p99_tpot_ms": 48.10597156,
+        "p99_ttft_ms": 733.5304815399987,
+        "slo_goodput_rps": 2.3456613619976516
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.3336917846181795,
+          "predicted": 733.5304815399987,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=32407.310894389997), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.37744423), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0758106405252907)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.4972934,
+        "p99_ttft_ms": 31275.530506549996,
+        "slo_goodput_rps": 0.1359763518937414
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.37744423,
+        "p99_ttft_ms": 32407.310894389997,
+        "slo_goodput_rps": 0.0758106405252907
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 57.92238344434545,
+          "predicted": 32407.310894389997,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.006290737166666697,
+          "predicted": 60.37744423,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.998621624717722,
+          "predicted": 0.0758106405252907,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=733.5304815399987)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 46.01287136,
+        "p99_ttft_ms": 630.7885546599983,
+        "slo_goodput_rps": 2.4042432613951137
+      },
+      "predicted": {
+        "p99_tpot_ms": 48.10597156,
+        "p99_ttft_ms": 733.5304815399987,
+        "slo_goodput_rps": 2.3456613619976516
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.3336917846181795,
+          "predicted": 733.5304815399987,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=668.0483773999999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 50.606824169999996,
+        "p99_ttft_ms": 658.2244032099999,
+        "slo_goodput_rps": 2.339188145625044
+      },
+      "predicted": {
+        "p99_tpot_ms": 52.26924822,
+        "p99_ttft_ms": 668.0483773999999,
+        "slo_goodput_rps": 2.3149831616100105
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.21463341345454534,
+          "predicted": 668.0483773999999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33480.03002184), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.145918699999996), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.12953268146029648)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.29365453999999,
+        "p99_ttft_ms": 32329.26594504,
+        "slo_goodput_rps": 0.17065400357854132
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.145918699999996,
+        "p99_ttft_ms": 33480.03002184,
+        "slo_goodput_rps": 0.12953268146029648
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.872781857890914,
+          "predicted": 33480.03002184,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0024319783333332625,
+          "predicted": 60.145918699999996,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9976448603370855,
+          "predicted": 0.12953268146029648,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=668.0483773999999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 50.606824169999996,
+        "p99_ttft_ms": 658.2244032099999,
+        "slo_goodput_rps": 2.339188145625044
+      },
+      "predicted": {
+        "p99_tpot_ms": 52.26924822,
+        "p99_ttft_ms": 668.0483773999999,
+        "slo_goodput_rps": 2.3149831616100105
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.21463341345454534,
+          "predicted": 668.0483773999999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=780.2925625799985), Violation(metric='slo_goodput_rps', target=2.3, predicted=2.1021907716296537)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 55.70723952,
+        "p99_ttft_ms": 628.01949693,
+        "slo_goodput_rps": 2.1716933622010908
+      },
+      "predicted": {
+        "p99_tpot_ms": 57.710990579999994,
+        "p99_ttft_ms": 780.2925625799985,
+        "slo_goodput_rps": 2.1021907716296537
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.4187137501454518,
+          "predicted": 780.2925625799985,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.08600401233493309,
+          "predicted": 2.1021907716296537,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=37242.23963539), Violation(metric='p99_tpot_ms', target=60.0, predicted=67.3807454), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 65.26885331,
+        "p99_ttft_ms": 35947.33368083,
+        "slo_goodput_rps": 0.0
+      },
+      "predicted": {
+        "p99_tpot_ms": 67.3807454,
+        "p99_ttft_ms": 37242.23963539,
+        "slo_goodput_rps": 0.0
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 66.71316297343635,
+          "predicted": 37242.23963539,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.12301242333333325,
+          "predicted": 67.3807454,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 1.0,
+          "predicted": 0.0,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=780.2925625799985), Violation(metric='slo_goodput_rps', target=2.3, predicted=2.1021907716296537)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192@673ab68d0a1d",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 55.70723952,
+        "p99_ttft_ms": 628.01949693,
+        "slo_goodput_rps": 2.1716933622010908
+      },
+      "predicted": {
+        "p99_tpot_ms": 57.710990579999994,
+        "p99_ttft_ms": 780.2925625799985,
+        "slo_goodput_rps": 2.1021907716296537
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.4187137501454518,
+          "predicted": 780.2925625799985,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.08600401233493309,
+          "predicted": 2.1021907716296537,
+          "target": 2.3
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=32407.310894389997), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.37744423), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0758106405252907)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.4972934,
+        "p99_ttft_ms": 31275.530506549996,
+        "slo_goodput_rps": 0.1359763518937414
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.37744423,
+        "p99_ttft_ms": 32407.310894389997,
+        "slo_goodput_rps": 0.0758106405252907
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 57.92238344434545,
+          "predicted": 32407.310894389997,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.006290737166666697,
+          "predicted": 60.37744423,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.998621624717722,
+          "predicted": 0.0758106405252907,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 27.35870597,
+        "p99_ttft_ms": 457.2419919999994,
+        "slo_goodput_rps": 1.6632376139754952
+      },
+      "predicted": {
+        "p99_tpot_ms": 28.71224138,
+        "p99_ttft_ms": 489.72695263999935,
+        "slo_goodput_rps": 1.6474695869381095
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T2__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=33480.03002184), Violation(metric='p99_tpot_ms', target=60.0, predicted=60.145918699999996), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.12953268146029648)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 58.29365453999999,
+        "p99_ttft_ms": 32329.26594504,
+        "slo_goodput_rps": 0.17065400357854132
+      },
+      "predicted": {
+        "p99_tpot_ms": 60.145918699999996,
+        "p99_ttft_ms": 33480.03002184,
+        "slo_goodput_rps": 0.12953268146029648
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 59.872781857890914,
+          "predicted": 33480.03002184,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.0024319783333332625,
+          "predicted": 60.145918699999996,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9976448603370855,
+          "predicted": 0.12953268146029648,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T2__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": true,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 27.35870597,
+        "p99_ttft_ms": 457.2419919999994,
+        "slo_goodput_rps": 1.6632376139754952
+      },
+      "predicted": {
+        "p99_tpot_ms": 28.71224138,
+        "p99_ttft_ms": 489.72695263999935,
+        "slo_goodput_rps": 1.6474695869381095
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T2__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=37242.23963539), Violation(metric='p99_tpot_ms', target=60.0, predicted=67.3807454), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.0)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu2"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@673ab68d0a1d",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 65.26885331,
+        "p99_ttft_ms": 35947.33368083,
+        "slo_goodput_rps": 0.0
+      },
+      "predicted": {
+        "p99_tpot_ms": 67.3807454,
+        "p99_ttft_ms": 37242.23963539,
+        "slo_goodput_rps": 0.0
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 66.71316297343635,
+          "predicted": 37242.23963539,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.12301242333333325,
+          "predicted": 67.3807454,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 1.0,
+          "predicted": 0.0,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048@6c53cf433379",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 43.27740717,
+        "p99_ttft_ms": 443.71341346999986,
+        "slo_goodput_rps": 2.7328111552996894
+      },
+      "predicted": {
+        "p99_tpot_ms": 43.27740717,
+        "p99_ttft_ms": 443.71341346999986,
+        "slo_goodput_rps": 2.7328111552996894
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=29912.926232629998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 28334.31188255,
+        "slo_goodput_rps": 0.20771005329765505
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 29912.926232629998,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 53.38713860478181,
+          "predicted": 29912.926232629998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=2179.6313296199996)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 17.691758200000002,
+        "p99_ttft_ms": 171.83774822999982,
+        "slo_goodput_rps": 4.095733120963855
+      },
+      "predicted": {
+        "p99_tpot_ms": 46.063473089999995,
+        "p99_ttft_ms": 2179.6313296199996,
+        "slo_goodput_rps": 3.0004960731492947
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 2.9629660538545446,
+          "predicted": 2179.6313296199996,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048@6c53cf433379",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 44.95545549,
+        "p99_ttft_ms": 463.4810301699998,
+        "slo_goodput_rps": 2.777392663237345
+      },
+      "predicted": {
+        "p99_tpot_ms": 44.95545549,
+        "p99_ttft_ms": 463.4810301699998,
+        "slo_goodput_rps": 2.777392663237345
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30943.806254799998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.1954247737310372)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.48007953999999,
+        "p99_ttft_ms": 29338.71439432,
+        "slo_goodput_rps": 0.2026164084400615
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.06362651999999,
+        "p99_ttft_ms": 30943.806254799998,
+        "slo_goodput_rps": 0.1954247737310372
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.26146591781818,
+          "predicted": 30943.806254799998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9964468222957994,
+          "predicted": 0.1954247737310372,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=7692.27150501), Violation(metric='slo_goodput_rps', target=2.4, predicted=2.301234605064036)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 20.97724832,
+        "p99_ttft_ms": 205.2425401799999,
+        "slo_goodput_rps": 4.267801455665664
+      },
+      "predicted": {
+        "p99_tpot_ms": 47.03510640999999,
+        "p99_ttft_ms": 7692.27150501,
+        "slo_goodput_rps": 2.301234605064036
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 12.985948190927273,
+          "predicted": 7692.27150501,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.04115224788998488,
+          "predicted": 2.301234605064036,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048@6c53cf433379",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 47.79221472,
+        "p99_ttft_ms": 477.5086289199999,
+        "slo_goodput_rps": 2.662067212246729
+      },
+      "predicted": {
+        "p99_tpot_ms": 47.79221472,
+        "p99_ttft_ms": 477.5086289199999,
+        "slo_goodput_rps": 2.662067212246729
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp1-dp4-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34388.318291389995), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.053117069572711485)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32582.161747389997,
+        "slo_goodput_rps": 0.07345204349319216
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34388.318291389995,
+        "slo_goodput_rps": 0.053117069572711485
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.52421507525454,
+          "predicted": 34388.318291389995,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.999034235098678,
+          "predicted": 0.053117069572711485,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__high",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=9032.339139179998), Violation(metric='slo_goodput_rps', target=2.4, predicted=2.0608604005616207)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 22.180615749999998,
+        "p99_ttft_ms": 209.37931635999993,
+        "slo_goodput_rps": 4.031911200171041
+      },
+      "predicted": {
+        "p99_tpot_ms": 53.792865039999995,
+        "p99_ttft_ms": 9032.339139179998,
+        "slo_goodput_rps": 2.0608604005616207
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t8192",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 15.422434798509087,
+          "predicted": 9032.339139179998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.14130816643265803,
+          "predicted": 2.0608604005616207,
+          "target": 2.4
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=742.1165869399986)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 13.15877632,
+        "p99_ttft_ms": 161.67772517999995,
+        "slo_goodput_rps": 2.9912925119589495
+      },
+      "predicted": {
+        "p99_tpot_ms": 29.94221144,
+        "p99_ttft_ms": 742.1165869399986,
+        "slo_goodput_rps": 2.7335910429908763
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.34930288534545195,
+          "predicted": 742.1165869399986,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=29912.926232629998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 28334.31188255,
+        "slo_goodput_rps": 0.20771005329765505
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 29912.926232629998,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 53.38713860478181,
+          "predicted": 29912.926232629998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=742.1165869399986)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 13.15877632,
+        "p99_ttft_ms": 161.67772517999995,
+        "slo_goodput_rps": 2.9912925119589495
+      },
+      "predicted": {
+        "p99_tpot_ms": 29.94221144,
+        "p99_ttft_ms": 742.1165869399986,
+        "slo_goodput_rps": 2.7335910429908763
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.34930288534545195,
+          "predicted": 742.1165869399986,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=757.8833585599999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 15.47088775,
+        "p99_ttft_ms": 244.4622131099998,
+        "slo_goodput_rps": 3.2631233254739618
+      },
+      "predicted": {
+        "p99_tpot_ms": 39.868027409999996,
+        "p99_ttft_ms": 757.8833585599999,
+        "slo_goodput_rps": 2.6167025165503306
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.3779697428363635,
+          "predicted": 757.8833585599999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30943.806254799998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.1954247737310372)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.48007953999999,
+        "p99_ttft_ms": 29338.71439432,
+        "slo_goodput_rps": 0.2026164084400615
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.06362651999999,
+        "p99_ttft_ms": 30943.806254799998,
+        "slo_goodput_rps": 0.1954247737310372
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.26146591781818,
+          "predicted": 30943.806254799998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9964468222957994,
+          "predicted": 0.1954247737310372,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=757.8833585599999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 15.47088775,
+        "p99_ttft_ms": 244.4622131099998,
+        "slo_goodput_rps": 3.2631233254739618
+      },
+      "predicted": {
+        "p99_tpot_ms": 39.868027409999996,
+        "p99_ttft_ms": 757.8833585599999,
+        "slo_goodput_rps": 2.6167025165503306
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.3779697428363635,
+          "predicted": 757.8833585599999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1339.2393726799999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 16.06200117,
+        "p99_ttft_ms": 212.38659192999984,
+        "slo_goodput_rps": 3.104007657516368
+      },
+      "predicted": {
+        "p99_tpot_ms": 42.41476262,
+        "p99_ttft_ms": 1339.2393726799999,
+        "slo_goodput_rps": 2.3103352138830484
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.4349806775999998,
+          "predicted": 1339.2393726799999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34388.318291389995), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.053117069572711485)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32582.161747389997,
+        "slo_goodput_rps": 0.07345204349319216
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34388.318291389995,
+        "slo_goodput_rps": 0.053117069572711485
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.52421507525454,
+          "predicted": 34388.318291389995,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.999034235098678,
+          "predicted": 0.053117069572711485,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__knee",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=1339.2393726799999)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 16.06200117,
+        "p99_ttft_ms": 212.38659192999984,
+        "slo_goodput_rps": 3.104007657516368
+      },
+      "predicted": {
+        "p99_tpot_ms": 42.41476262,
+        "p99_ttft_ms": 1339.2393726799999,
+        "slo_goodput_rps": 2.3103352138830484
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 1.4349806775999998,
+          "predicted": 1339.2393726799999,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 11.06415044,
+        "p99_ttft_ms": 154.72723686,
+        "slo_goodput_rps": 1.6116735513801668
+      },
+      "predicted": {
+        "p99_tpot_ms": 14.940653059999997,
+        "p99_ttft_ms": 421.92300210999923,
+        "slo_goodput_rps": 1.6042839705498484
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=29912.926232629998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.20026325109420254)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.61124362,
+        "p99_ttft_ms": 28334.31188255,
+        "slo_goodput_rps": 0.20771005329765505
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.2336902,
+        "p99_ttft_ms": 29912.926232629998,
+        "slo_goodput_rps": 0.20026325109420254
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 53.38713860478181,
+          "predicted": 29912.926232629998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9963588499801055,
+          "predicted": 0.20026325109420254,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": true,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 11.06415044,
+        "p99_ttft_ms": 154.72723686,
+        "slo_goodput_rps": 1.6116735513801668
+      },
+      "predicted": {
+        "p99_tpot_ms": 14.940653059999997,
+        "p99_ttft_ms": 421.92300210999923,
+        "slo_goodput_rps": 1.6042839705498484
+      },
+      "rep": 42,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=596.5104736699994)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 11.34099549,
+        "p99_ttft_ms": 211.06554816999994,
+        "slo_goodput_rps": 1.8175689302813582
+      },
+      "predicted": {
+        "p99_tpot_ms": 16.47789373,
+        "p99_ttft_ms": 596.5104736699994,
+        "slo_goodput_rps": 1.7432888108319535
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.08456449758181717,
+          "predicted": 596.5104736699994,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=30943.806254799998), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.1954247737310372)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 53.48007953999999,
+        "p99_ttft_ms": 29338.71439432,
+        "slo_goodput_rps": 0.2026164084400615
+      },
+      "predicted": {
+        "p99_tpot_ms": 56.06362651999999,
+        "p99_ttft_ms": 30943.806254799998,
+        "slo_goodput_rps": 0.1954247737310372
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 55.26146591781818,
+          "predicted": 30943.806254799998,
+          "target": 550.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.9964468222957994,
+          "predicted": 0.1954247737310372,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=596.5104736699994)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": false,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 11.34099549,
+        "p99_ttft_ms": 211.06554816999994,
+        "slo_goodput_rps": 1.8175689302813582
+      },
+      "predicted": {
+        "p99_tpot_ms": 16.47789373,
+        "p99_ttft_ms": 596.5104736699994,
+        "slo_goodput_rps": 1.7432888108319535
+      },
+      "rep": 43,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 0.08456449758181717,
+          "predicted": 596.5104736699994,
+          "target": 550.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": true,
+      "label": "boundary:feasible_marginal",
+      "original_predicted": {
+        "p99_tpot_ms": 12.688876489999998,
+        "p99_ttft_ms": 168.58727248999995,
+        "slo_goodput_rps": 1.7600340729642674
+      },
+      "predicted": {
+        "p99_tpot_ms": 19.65631538,
+        "p99_ttft_ms": 508.99339159999954,
+        "slo_goodput_rps": 1.7098726077527984
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": []
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='p99_ttft_ms', target=550.0, predicted=34388.318291389995), Violation(metric='p99_tpot_ms', target=60.0, predicted=62.72622515), Violation(metric='slo_goodput_rps', target=55.0, predicted=0.053117069572711485)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@86d623362a51",
+      "feasible": false,
+      "label": "boundary:impossible_proven",
+      "original_predicted": {
+        "p99_tpot_ms": 59.780528139999994,
+        "p99_ttft_ms": 32582.161747389997,
+        "slo_goodput_rps": 0.07345204349319216
+      },
+      "predicted": {
+        "p99_tpot_ms": 62.72622515,
+        "p99_ttft_ms": 34388.318291389995,
+        "slo_goodput_rps": 0.053117069572711485
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048",
+      "violations": [
+        {
+          "metric": "p99_ttft_ms",
+          "overshoot_ratio": 61.52421507525454,
+          "predicted": 34388.318291389995,
+          "target": 550.0
+        },
+        {
+          "metric": "p99_tpot_ms",
+          "overshoot_ratio": 0.04543708583333329,
+          "predicted": 62.72622515,
+          "target": 60.0
+        },
+        {
+          "metric": "slo_goodput_rps",
+          "overshoot_ratio": 0.999034235098678,
+          "predicted": 0.053117069572711485,
+          "target": 55.0
+        }
+      ]
+    },
+    {
+      "condition": "llama31-8b__normal__T3__low",
+      "detail": "",
+      "devices": [
+        "a40x8/gpu0",
+        "a40x8/gpu1",
+        "a40x8/gpu2",
+        "a40x8/gpu3"
+      ],
+      "embedding_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@8afde48cfcae",
+      "feasible": true,
+      "label": "recommendation",
+      "original_predicted": {
+        "p99_tpot_ms": 12.688876489999998,
+        "p99_ttft_ms": 168.58727248999995,
+        "slo_goodput_rps": 1.7600340729642674
+      },
+      "predicted": {
+        "p99_tpot_ms": 19.65631538,
+        "p99_ttft_ms": 508.99339159999954,
+        "slo_goodput_rps": 1.7098726077527984
+      },
+      "rep": 44,
+      "state": "evaluated",
+      "template_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048",
+      "violations": []
+    }
+  ]
+}

@@ -95,3 +95,116 @@ def test_a_placement_the_template_cannot_occupy_is_out_of_scope() -> None:
     assert verdict.state == "excluded_by_scope"
     assert verdict.plan is None
 
+
+
+def test_the_burst_pattern_means_the_same_thing_to_both_generators() -> None:
+    """GS-35: heteropilot's `burstiness` is the reciprocal of vLLM's.
+
+    The simulator's trace comes from heteropilot's generator fed the spec's
+    value; the hardware's from `make_workload.py` fed the pattern's Gamma
+    shape. Both must give the burst pattern the same coefficient of variation.
+    """
+    import numpy as np
+    from planner.util.workload import _sample_arrivals
+
+    here = ROOT / "experiments" / "e_g5"
+    sys.path.insert(0, str(here))
+    import conditions as C
+
+    shape = C.PATTERNS["burst"]
+    sim = np.diff(_sample_arrivals(np.random.default_rng(0), 4.0,
+                                   C.spec_burstiness("burst"), 200_000))
+    import make_workload
+
+    rows = [{"arrival_time_ns": 0, "input_toks": 1} for _ in range(50_000)]
+    out = make_workload.rescale(rows, 4.0, shape, seed=0)
+    hw = np.diff([r["arrival_time_ns"] / 1e9 for r in out])
+    expected = 1.0 / np.sqrt(shape)
+    for gaps in (sim, hw):
+        cv = gaps.std() / gaps.mean()
+        assert abs(cv - expected) / expected < 0.05, cv
+
+
+def test_closest_miss_is_heteropilots_rule_not_the_lowest_ttft() -> None:
+    """Row 8: the closest miss minimises `worst_overshoot`, not predicted TTFT.
+
+    `near_ttft` misses TTFT by 1 % and TPOT by 200 %; `balanced` misses both
+    by 20 %. Picking by predicted TTFT would take `near_ttft`; heteropilot's
+    `closest_plan` rule takes `balanced`, because a plan that misses one axis
+    by a mile is not close to feasible.
+    """
+    from planner.optimizer.feasibility import FeasibilityReport
+    from planner.plan import Violation
+
+    harness = _harness()
+
+    def plan(cid, devices, ttft):
+        return SimpleNamespace(
+            candidate=SimpleNamespace(id=cid, total_devices=devices),
+            predicted=SimpleNamespace(p99_ttft_ms=ttft),
+        )
+
+    def report(*violations):
+        return FeasibilityReport(passed=False, violations=[
+            Violation(metric=m, target=t, predicted=p) for m, t, p in violations])
+
+    near_ttft = (plan("near_ttft", 2, 555.5),
+                 report(("p99_ttft_ms", 550, 555.5), ("p99_tpot_ms", 60, 180)))
+    balanced = (plan("balanced", 2, 660.0),
+                report(("p99_ttft_ms", 550, 660), ("p99_tpot_ms", 60, 72)))
+    other_size = (plan("tiny", 1, 551.0), report(("p99_ttft_ms", 550, 551)))
+    pairs = [near_ttft, balanced, other_size]
+
+    by_ttft = min((p for p in pairs if p[0].candidate.total_devices == 2),
+                  key=lambda pr: pr[0].predicted.p99_ttft_ms)
+    assert by_ttft[0].candidate.id == "near_ttft"          # the wrong rule's pick
+    chosen = harness.closest_miss(pairs, 2)
+    assert chosen[0].candidate.id == "balanced"            # heteropilot's rule
+    # the size restriction: a closer 1-device plan is not eligible for 2
+    assert harness.closest_miss(pairs, 1)[0].candidate.id == "tiny"
+    assert harness.closest_miss(pairs, 4) is None
+
+
+def test_closest_miss_breaks_ties_by_candidate_id() -> None:
+    from planner.optimizer.feasibility import FeasibilityReport
+    from planner.plan import Violation
+
+    harness = _harness()
+
+    def pair(cid):
+        return (SimpleNamespace(candidate=SimpleNamespace(id=cid, total_devices=2)),
+                FeasibilityReport(passed=False, violations=[
+                    Violation(metric="p99_ttft_ms", target=550, predicted=660)]))
+
+    assert harness.closest_miss([pair("b"), pair("a"), pair("c")], 2)[0].candidate.id == "a"
+
+
+def test_feasible_marginal_is_a_different_template() -> None:
+    """GS-38: another embedding of the recommended template is not an alternative.
+
+    The condition places every row on its own devices, so `tpl@b` would be
+    deployed exactly as `tpl@a` was. The closest-to-1 plan is `tpl@b`; the
+    rule must pass over it to `other@c`.
+    """
+    harness = _harness()
+
+    def plan(cid, ttft):
+        return SimpleNamespace(
+            candidate=SimpleNamespace(id=cid, total_devices=4),
+            predicted=SimpleNamespace(p99_ttft_ms=ttft, p99_tpot_ms=1.0,
+                                      slo_goodput_rps=5.0),
+        )
+
+    spec = SimpleNamespace(slo=SimpleNamespace(
+        ttft=SimpleNamespace(max_ms=100.0), tpot=SimpleNamespace(max_ms=100.0),
+        min_goodput_rps=None))
+    plans = [plan("tpl@a", 10.0), plan("tpl@b", 99.0), plan("other@c", 50.0)]
+    objects = SimpleNamespace(audit=SimpleNamespace(
+        feasible_plans=plans, evaluated=3, feasible_ids=["tpl@a", "tpl@b", "other@c"]))
+
+    chosen, _ = harness.feasible_marginal(objects, spec, 4, "tpl@a")
+    assert chosen.candidate.id == "other@c"
+    only_one_template = SimpleNamespace(audit=SimpleNamespace(
+        feasible_plans=plans[:2], evaluated=2, feasible_ids=["tpl@a", "tpl@b"]))
+    chosen, why = harness.feasible_marginal(only_one_template, spec, 4, "tpl@a")
+    assert chosen is None and "template other than" in why

@@ -1,0 +1,25 @@
+{
+  "floor": 2.4,
+  "placements": {
+    "T1": {
+      "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@857398a0d1b9",
+      "goodput_rps": 2.676580314795362,
+      "p99_ttft_ms": 12882.536281757055,
+      "state": "measured"
+    },
+    "T2": {
+      "candidate_id": "cuda-a40-a40x8-tp2-dp1-s128-t2048@857398a0d1b9",
+      "goodput_rps": 2.5416730101824245,
+      "p99_ttft_ms": 15483.44348426908,
+      "state": "measured"
+    },
+    "T3": {
+      "candidate_id": "cuda-a40-a40x8-tp4-dp1-s128-t2048@006bb9ee12aa",
+      "goodput_rps": 2.83658662269061,
+      "p99_ttft_ms": 13023.068639244884,
+      "state": "measured"
+    }
+  },
+  "rate_rps": 6.0,
+  "rule": "row 4: 0.95 x lowest, rounded down to 0.1"
+}
