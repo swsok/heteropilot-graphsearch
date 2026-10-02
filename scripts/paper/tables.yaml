@@ -1,0 +1,73 @@
+# Which columns of a results table the paper shows (revision R1.1).
+#
+# Keyed by the label stem `md_to_tex.py` writes a table under: the results
+# file's stem, plus `_N` for its N-th table. A table not named here is set
+# whole, as before, with a warning when it has more than seven columns.
+#
+#   columns  the columns shown, in order. A string is a column of the table
+#            (or of a `join`); `{name:, cells: [a, b], sep:}` sets two cells
+#            side by side. A column the table lacks is an error, so a results
+#            script that renames one cannot make it vanish from the paper.
+#   labels   header text, by column (or composite) name.
+#   join     columns taken from another table of the same file, matched on
+#            the first column; `find` names headers that identify that table.
+#   width    column (a `table`) or page (a `table*`).
+#   size     small | footnotesize | scriptsize.
+#
+# Nothing here changes a cell. What is left out is still in the results file,
+# which the artifact carries.
+
+# Table I -- E-G3, correctness under the real simulator.
+e_g3_real_sim_oracle:
+  width: page
+  size: small
+  join:
+    - {find: [fixture, saving_s, cold], columns: [saving_s]}
+  columns: [fixture, embeddings, representatives, compression_ratio,
+            false_infeasible, mismerged_pairs, complete, unjudged, saving_s]
+  labels:
+    compression_ratio: ratio
+    false_infeasible: false inf.
+    mismerged_pairs: mis-merged
+    saving_s: saving (s)
+
+# Table II -- E-G6, scale. The other timing columns stay in the results file.
+e_g6_scale:
+  width: column
+  size: footnotesize
+  columns: [devices, symmetry, embeddings, representatives, compression_ratio,
+            t_vf2_s, t_total_s]
+  labels:
+    compression_ratio: ratio
+    t_vf2_s: VF2 (s)
+    t_total_s: total (s)
+
+# Table IV -- E-G7, holdout. Page width: in one column its seven columns were
+# shrunk past reading size.
+e_g7_holdout:
+  width: page
+  size: small
+  join:
+    - {find: [fixture, "`full` at k = 16", "heteropilot at k = 16"],
+       columns: ["`full` at k = 16", "heteropilot at k = 16"]}
+  columns:
+    - fixture
+    - embeddings
+    - representatives
+    - compression_ratio
+    - false_infeasible
+    - mismerged_pairs
+    - {name: recall16, cells: ["`full` at k = 16", "heteropilot at k = 16"], sep: " / "}
+  labels:
+    compression_ratio: ratio
+    false_infeasible: false inf.
+    mismerged_pairs: mis-merged
+    recall16: recall@16 (ours / surrogate)
+
+# Table V -- E-G5, the placement result. TPOT and goodput are a sentence and
+# two macros in the text.
+e_g5_real_hardware:
+  width: page
+  size: small
+  columns: [placement, devices, "p99 TTFT pred", predicted, "p99 TTFT median",
+            range, "vs T1", measured]

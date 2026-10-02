@@ -285,8 +285,9 @@ the slower misses. That verdict is partly by construction, and the ratio is the
 evidence that does not depend on it: the target was registered before the
 matrix ran, derived from the faster placement's own pilot $p99$ with a margin
 above it, and so sits between the two placements by design. Time per output
-token and goodput clear their targets at both, so the latency axis is the one
-that decides.
+token (median $p99$ \egfiveToneTpot{} and \egfiveTtwoTpot{} ms) and goodput
+(\egfiveToneGoodput{} and \egfiveTtwoGoodput{} rps) clear their targets at
+both, so the latency axis is the one that decides.
 
 The planner being extended cannot express the difference between those two
 placements at all. It names a template, and the choice this experiment shows

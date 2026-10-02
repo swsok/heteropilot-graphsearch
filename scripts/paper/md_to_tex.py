@@ -11,10 +11,17 @@ That refusal is the point. A number that reaches a paper without its provenance
 is indistinguishable from a measurement, and the banner is the only thing
 standing between a mock figure and a performance claim.
 
-What it does NOT do: compute, round, reorder or reformat a value. A cell is
-copied through with TeX's special characters escaped and nothing else. If a
-table needs a different shape in the paper, the experiment script that writes
-the markdown is what changes, so the markdown and the paper cannot disagree.
+What it does NOT do: compute, round or reformat a value. A cell is copied
+through with TeX's special characters escaped and nothing else.
+
+What it MAY do, and only as `scripts/paper/tables.yaml` says (revision R1.1):
+choose which columns of a table the paper shows and in what order, rename their
+headers, take a column from another table of the same file matched on the first
+column, set two cells side by side as `a / b`, and set the float's width and
+type size. A results file carries every column an experiment produced; a
+two-column page cannot, and a table squeezed to fit was a table whose
+correctness columns nobody could read. Every cell that appears is still the
+markdown's own text.
 
 Usage:
     python scripts/paper/md_to_tex.py --out-dir paper/tables experiments/results/*.md
@@ -26,6 +33,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 #: Where `--all` looks. Relative to the repository root, which is this file's
@@ -187,6 +195,101 @@ def title_of(text: str) -> str:
     return ""
 
 
+TABLES_YAML = REPO_ROOT / "scripts" / "paper" / "tables.yaml"
+
+#: An unmapped table with more columns than this gets a warning: it is set
+#: whole, and a reader of a two-column page will not see much of it.
+MANY_COLUMNS = 7
+
+
+class TableSpecError(ValueError):
+    """`tables.yaml` names a column, a join or a size the table does not have."""
+
+
+@dataclass
+class TableSpec:
+    columns: list = field(default_factory=list)
+    labels: dict = field(default_factory=dict)
+    joins: list = field(default_factory=list)
+    width: str = "column"
+    size: str = "small"
+
+
+_SIZES = ("small", "footnotesize", "scriptsize")
+
+
+def load_specs(path: Path = TABLES_YAML) -> dict[str, TableSpec]:
+    """`tables.yaml`, keyed by the label stem a table is written under."""
+    if not path.exists():
+        return {}
+    import yaml
+
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    specs = {}
+    for key, entry in raw.items():
+        spec = TableSpec(
+            columns=list(entry.get("columns", [])),
+            labels={str(k): str(v) for k, v in (entry.get("labels") or {}).items()},
+            joins=list(entry.get("join", [])),
+            width=entry.get("width", "column"),
+            size=entry.get("size", "small"),
+        )
+        if spec.width not in ("column", "page"):
+            raise TableSpecError(f"{key}: width must be column or page, not {spec.width!r}")
+        if spec.size not in _SIZES:
+            raise TableSpecError(f"{key}: size must be one of {_SIZES}, not {spec.size!r}")
+        specs[str(key)] = spec
+    return specs
+
+
+def _find(tables, names: list[str], key: str):
+    for header, rows in tables:
+        if all(name in header for name in names):
+            return header, rows
+    raise TableSpecError(f"{key}: no table in the file has every header of {names}")
+
+
+def apply_spec(key: str, header: list[str], rows: list[list[str]], spec: TableSpec,
+               tables) -> tuple[list[str], list[list[str]]]:
+    """The columns `spec` names, in its order, under its labels.
+
+    A join adds columns from another table of the same file, matched on the
+    first column (a fixture, a placement); a missing match is `-`, never a
+    guess. A composite column is `{name:, cells: [a, b], sep:}` and sets the
+    two cells side by side. A column the table does not have is an error,
+    so a renamed column in a results script cannot silently drop out.
+    """
+    width = len(header)
+    records = [dict(zip(header, (row + [""] * width)[:width], strict=True)) for row in rows]
+    for join in spec.joins:
+        other_header, other_rows = _find(tables, join["find"], key)
+        n = len(other_header)
+        index = {row[0]: dict(zip(other_header, (row + [""] * n)[:n], strict=True))
+                 for row in other_rows}
+        for record in records:
+            match = index.get(record[header[0]], {})
+            for column in join["columns"]:
+                record[column] = match.get(column, "-")
+    available = set(header) | {c for join in spec.joins for c in join["columns"]}
+    out_header, getters = [], []
+    for column in spec.columns:
+        if isinstance(column, dict):
+            for cell in column["cells"]:
+                if cell not in available:
+                    raise TableSpecError(
+                        f"{key}: composite column names {cell!r}, not in the table")
+            sep = column.get("sep", " / ")
+            getters.append(lambda r, cells=column["cells"], sep=sep: sep.join(r[c] for c in cells))
+            out_header.append(spec.labels.get(column["name"], column["name"]))
+        else:
+            if column not in available:
+                raise TableSpecError(f"{key}: column {column!r} is not in the table "
+                                     f"(has {sorted(available)})")
+            getters.append(lambda r, c=column: r[c])
+            out_header.append(spec.labels.get(column, column))
+    return out_header, [[get(r) for get in getters] for r in records]
+
+
 #: A table with more columns than this spans both columns of the page. The
 #: venue is two-column (IEEE conference, ISPASS); a twelve-column table set in
 #: one column is either 2x too wide or unreadably small.
@@ -202,12 +305,15 @@ def render(
     note: str,
     source: str,
     kind: str,
+    width: str | None = None,
+    size: str = "small",
 ) -> str:
     """One `table` float. `booktabs` rules, and the provenance note underneath."""
     spec = column_spec(header, rows)
     # Wide tables span the page; either kind is shrunk only if it still does
     # not fit (`max width`), never enlarged, so a narrow table keeps its size.
-    wide = len(header) > WIDE_COLUMNS
+    # `tables.yaml` says which, when it maps the table.
+    wide = len(header) > WIDE_COLUMNS if width is None else width == "page"
     env = "table*" if wide else "table"
     width = "\\textwidth" if wide else "\\columnwidth"
     body = [
@@ -221,7 +327,7 @@ def render(
         # mistake this whole mechanism exists to prevent.
         f"  \\caption{{{escape_tex(caption)}~\\sourcetag{{{TAGS[kind]}}}}}",
         f"  \\label{{{label}}}",
-        "  \\small",
+        f"  \\{size}",
         f"  \\begin{{adjustbox}}{{max width={width}}}",
         f"  \\begin{{tabular}}{{{spec}}}",
         "    \\toprule",
@@ -235,6 +341,9 @@ def render(
         "    \\bottomrule",
         "  \\end{tabular}",
         "  \\end{adjustbox}",
+        # adjustbox leaves TeX in horizontal mode; without the paragraph
+        # break the provenance note is set beside a narrow table, not under it.
+        "  \\par",
         "  \\vspace{2pt}",
         f"  \\footnotesize {note}",
         f"\\end{{{env}}}",
@@ -255,13 +364,25 @@ def convert(path: Path, out_dir: Path) -> list[Path]:
     caption = title_of(path.read_text(encoding="utf-8")) or path.stem
     source = str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
     written: list[Path] = []
+    specs = load_specs()
     for position, (header, rows) in enumerate(tables, start=1):
         suffix = "" if position == 1 else f"_{position}"
-        target = out_dir / f"{path.stem}{suffix}.tex"
+        key = f"{path.stem}{suffix}"
+        target = out_dir / f"{key}.tex"
+        spec = specs.get(key)
+        width, size = None, "small"
+        if spec is not None:
+            header, rows = apply_spec(key, header, rows, spec, tables)
+            width, size = spec.width, spec.size
+        elif len(header) > MANY_COLUMNS:
+            print(f"md_to_tex: {key} has {len(header)} columns and no entry in "
+                  f"tables.yaml; set whole", file=sys.stderr)
         target.write_text(
             render(
                 header,
                 rows,
+                width=width,
+                size=size,
                 caption=caption if position == 1 else f"{caption} (continued)",
                 label=f"tab:{path.stem}{suffix}",
                 note=NOTES[kind],
