@@ -1,0 +1,415 @@
+% refs.bib -- HeteroPilot graph-search paper (ISPASS 2027, IEEEtran)
+% Every entry below except `heteropilot` (placeholder) was checked on
+% 2026-10-02 against Crossref, arXiv, or the publisher page; see
+% refs_verification.md for the source of each.
+
+% ---------------------------------------------------------------------
+% PLACEHOLDER -- NOT VERIFIED. Title provisional, authors and arXiv id
+% to be filled before submission.
+% ---------------------------------------------------------------------
+@misc{heteropilot,
+  author       = {Anonymous},
+  title        = {{HeteroPilot}: Planning {LLM} Serving on Heterogeneous Clusters},
+  note         = {arXiv preprint, number pending},
+  year         = {2026}
+}
+
+% Every entry's DOI or arXiv id was checked against Crossref, arXiv or the
+% publisher's page (2026-10-02); the two software entries carry no URL because
+% the double-blind PDF may not contain a repository host (revision rule 0.4).
+% ---------------------------------------------------------------------
+% Heterogeneous / disaggregated LLM serving
+% ---------------------------------------------------------------------
+@inproceedings{helix,
+  author    = {Yixuan Mei and Yonghao Zhuang and Xupeng Miao and Juncheng Yang and Zhihao Jia and Rashmi Vinayak},
+  title     = {Helix: Serving Large Language Models over Heterogeneous {GPUs} and Network via Max-Flow},
+  booktitle = {Proceedings of the 30th ACM International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS), Volume 1},
+  pages     = {586--602},
+  year      = {2025},
+  publisher = {ACM},
+  doi       = {10.1145/3669940.3707215}
+}
+
+@inproceedings{thunderserve,
+  author    = {Youhe Jiang and Fangcheng Fu and Xiaozhe Yao and Taiyi Wang and Bin Cui and Ana Klimovic and Eiko Yoneki},
+  title     = {{ThunderServe}: High-performance and Cost-efficient {LLM} Serving in Cloud Environments},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  volume    = {7},
+  year      = {2025},
+  note      = {arXiv:2502.09334}
+}
+
+@article{shuntserve,
+  author  = {Seungwoo Jeong and Moohyun Song and Juhyun Park and Kyungyong Lee},
+  title   = {{ShuntServe}: Cost-efficient {LLM} serving on heterogeneous spot {GPU} clusters},
+  journal = {Future Generation Computer Systems},
+  volume  = {186},
+  pages   = {108760},
+  year    = {2027},
+  doi     = {10.1016/j.future.2026.108760}
+}
+
+@inproceedings{distserve,
+  author    = {Yinmin Zhong and Shengyu Liu and Junda Chen and Jianbo Hu and Yibo Zhu and Xuanzhe Liu and Xin Jin and Hao Zhang},
+  title     = {{DistServe}: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving},
+  booktitle = {18th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {193--210},
+  year      = {2024},
+  publisher = {USENIX Association},
+  note      = {arXiv:2401.09670}
+}
+
+@inproceedings{splitwise,
+  author    = {Pratyush Patel and Esha Choukse and Chaojie Zhang and Aashaka Shah and {\'I}{\~n}igo Goiri and Saeed Maleki and Ricardo Bianchini},
+  title     = {Splitwise: Efficient Generative {LLM} Inference Using Phase Splitting},
+  booktitle = {2024 ACM/IEEE 51st Annual International Symposium on Computer Architecture (ISCA)},
+  pages     = {118--132},
+  year      = {2024},
+  publisher = {IEEE},
+  doi       = {10.1109/ISCA59077.2024.00019}
+}
+
+@inproceedings{mooncake,
+  author    = {Ruoyu Qin and Zheming Li and Weiran He and Jialei Cui and Feng Ren and Mingxing Zhang and Yongwei Wu and Weimin Zheng and Xinran Xu},
+  title     = {Mooncake: Trading More Storage for Less Computation --- A {KVCache}-centric Architecture for Serving {LLM} Chatbot},
+  booktitle = {23rd USENIX Conference on File and Storage Technologies (FAST)},
+  pages     = {155--170},
+  year      = {2025},
+  publisher = {USENIX Association},
+  note      = {arXiv:2407.00079}
+}
+
+@inproceedings{llumnix,
+  author    = {Biao Sun and Ziming Huang and Hanyu Zhao and Wencong Xiao and Xinyi Zhang and Yong Li and Wei Lin},
+  title     = {Llumnix: Dynamic Scheduling for Large Language Model Serving},
+  booktitle = {18th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {173--191},
+  year      = {2024},
+  publisher = {USENIX Association},
+  note      = {arXiv:2406.03243}
+}
+
+@misc{melange,
+  author        = {Tyler Griggs and Xiaoxuan Liu and Jiaxiang Yu and Doyoung Kim and Wei-Lin Chiang and Alvin Cheung and Ion Stoica},
+  title         = {{M{\'e}lange}: Cost Efficient Large Language Model Serving by Exploiting {GPU} Heterogeneity},
+  howpublished  = {arXiv preprint arXiv:2404.14527},
+  year          = {2024},
+  eprint        = {2404.14527},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{hexgen,
+  author    = {Youhe Jiang and Ran Yan and Xiaozhe Yao and Yang Zhou and Beidi Chen and Binhang Yuan},
+  title     = {{HexGen}: Generative Inference of Large Language Model over Heterogeneous Environment},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {235},
+  pages     = {21946--21961},
+  year      = {2024},
+  publisher = {PMLR},
+  note      = {arXiv:2311.11514}
+}
+
+@inproceedings{spotserve,
+  author    = {Xupeng Miao and Chunan Shi and Jiangfei Duan and Xiaoli Xi and Dahua Lin and Bin Cui and Zhihao Jia},
+  title     = {{SpotServe}: Serving Generative Large Language Models on Preemptible Instances},
+  booktitle = {Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS), Volume 2},
+  pages     = {1112--1127},
+  year      = {2024},
+  publisher = {ACM},
+  doi       = {10.1145/3620665.3640411}
+}
+
+@misc{tetriinfer,
+  author        = {Cunchen Hu and Heyang Huang and Liangliang Xu and Xusheng Chen and Jiang Xu and Shuang Chen and Hao Feng and Chenxi Wang and Sa Wang and Yungang Bao and Ninghui Sun and Yizhou Shan},
+  title         = {Inference without Interference: Disaggregate {LLM} Inference for Mixed Downstream Workloads},
+  howpublished  = {arXiv preprint arXiv:2401.11181},
+  year          = {2024},
+  eprint        = {2401.11181},
+  archivePrefix = {arXiv}
+}
+
+% ---------------------------------------------------------------------
+% Serving engines and batching
+% ---------------------------------------------------------------------
+@inproceedings{vllm,
+  author    = {Woosuk Kwon and Zhuohan Li and Siyuan Zhuang and Ying Sheng and Lianmin Zheng and Cody Hao Yu and Joseph Gonzalez and Hao Zhang and Ion Stoica},
+  title     = {Efficient Memory Management for Large Language Model Serving with {PagedAttention}},
+  booktitle = {Proceedings of the 29th Symposium on Operating Systems Principles (SOSP)},
+  pages     = {611--626},
+  year      = {2023},
+  publisher = {ACM},
+  doi       = {10.1145/3600006.3613165}
+}
+
+@inproceedings{sarathiserve,
+  author    = {Amey Agrawal and Nitin Kedia and Ashish Panwar and Jayashree Mohan and Nipun Kwatra and Bhargav Gulavani and Alexey Tumanov and Ramachandran Ramjee},
+  title     = {Taming Throughput-Latency Tradeoff in {LLM} Inference with {Sarathi-Serve}},
+  booktitle = {18th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {117--134},
+  year      = {2024},
+  publisher = {USENIX Association},
+  note      = {arXiv:2403.02310}
+}
+
+@inproceedings{orca,
+  author    = {Gyeong-In Yu and Joo Seong Jeong and Geon-Woo Kim and Soojeong Kim and Byung-Gon Chun},
+  title     = {Orca: A Distributed Serving System for {Transformer-Based} Generative Models},
+  booktitle = {16th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {521--538},
+  year      = {2022},
+  publisher = {USENIX Association},
+  url       = {https://www.usenix.org/conference/osdi22/presentation/yu}
+}
+
+@inproceedings{flexgen,
+  author    = {Ying Sheng and Lianmin Zheng and Binhang Yuan and Zhuohan Li and Max Ryabinin and Beidi Chen and Percy Liang and Christopher R{\'e} and Ion Stoica and Ce Zhang},
+  title     = {{FlexGen}: High-Throughput Generative Inference of Large Language Models with a Single {GPU}},
+  booktitle = {Proceedings of the 40th International Conference on Machine Learning (ICML)},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {202},
+  pages     = {31094--31116},
+  year      = {2023},
+  publisher = {PMLR},
+  note      = {arXiv:2303.06865}
+}
+
+@inproceedings{deepspeedinference,
+  author    = {Reza Yazdani Aminabadi and Samyam Rajbhandari and Ammar Ahmad Awan and Cheng Li and Du Li and Elton Zheng and Olatunji Ruwase and Shaden Smith and Minjia Zhang and Jeff Rasley and Yuxiong He},
+  title     = {{DeepSpeed-Inference}: Enabling Efficient Inference of Transformer Models at Unprecedented Scale},
+  booktitle = {SC22: International Conference for High Performance Computing, Networking, Storage and Analysis},
+  pages     = {1--15},
+  year      = {2022},
+  publisher = {IEEE},
+  doi       = {10.1109/SC41404.2022.00051}
+}
+
+@inproceedings{alpaserve,
+  author    = {Zhuohan Li and Lianmin Zheng and Yinmin Zhong and Vincent Liu and Ying Sheng and Xin Jin and Yanping Huang and Zhifeng Chen and Hao Zhang and Joseph E. Gonzalez and Ion Stoica},
+  title     = {{AlpaServe}: Statistical Multiplexing with Model Parallelism for Deep Learning Serving},
+  booktitle = {17th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {663--679},
+  year      = {2023},
+  publisher = {USENIX Association},
+  note      = {arXiv:2302.11665}
+}
+
+% Software without a paper; accessed 2026-10-02.
+@misc{dynamo,
+  author       = {{NVIDIA}},
+  title        = {{NVIDIA Dynamo}: A Datacenter Scale Distributed Inference Serving Framework},
+  howpublished = {Open-source software},
+  note         = {NVIDIA}
+}
+
+@misc{nixl,
+  author       = {{NVIDIA}},
+  title        = {{NIXL}: {NVIDIA} Inference Xfer Library},
+  howpublished = {Open-source software},
+  note         = {Version 0.9.0, as used here}
+}
+
+% ---------------------------------------------------------------------
+% Simulators and traces
+% ---------------------------------------------------------------------
+@inproceedings{vidur,
+  author    = {Amey Agrawal and Nitin Kedia and Jayashree Mohan and Ashish Panwar and Nipun Kwatra and Bhargav S. Gulavani and Ramachandran Ramjee and Alexey Tumanov},
+  title     = {{Vidur}: A Large-Scale Simulation Framework for {LLM} Inference},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  volume    = {6},
+  year      = {2024},
+  note      = {arXiv:2405.05465}
+}
+
+@inproceedings{llmservingsim,
+  author    = {Jaehong Cho and Minsu Kim and Hyunmin Choi and Guseul Heo and Jongse Park},
+  title     = {{LLMServingSim}: A {HW/SW} Co-Simulation Infrastructure for {LLM} Inference Serving at Scale},
+  booktitle = {2024 IEEE International Symposium on Workload Characterization (IISWC)},
+  pages     = {15--29},
+  year      = {2024},
+  publisher = {IEEE},
+  doi       = {10.1109/IISWC63097.2024.00012}
+}
+
+@inproceedings{llmservingsim2,
+  author    = {Jaehong Cho and Hyunmin Choi and Guseul Heo and Jongse Park},
+  title     = {{LLMServingSim} 2.0: A Unified Simulator for Heterogeneous and Disaggregated {LLM} Serving Infrastructure},
+  booktitle = {2026 IEEE International Symposium on Performance Analysis of Systems and Software (ISPASS)},
+  pages     = {1--14},
+  year      = {2026},
+  publisher = {IEEE},
+  doi       = {10.1109/ISPASS69572.2026.00012}
+}
+
+@article{llmservingsim2cal,
+  author  = {Jaehong Cho and Hyunmin Choi and Jongse Park},
+  title   = {{LLMServingSim2.0}: A Unified Simulator for Heterogeneous Hardware and Serving Techniques in {LLM} Infrastructure},
+  journal = {IEEE Computer Architecture Letters},
+  volume  = {24},
+  number  = {2},
+  pages   = {361--364},
+  year    = {2025},
+  doi     = {10.1109/LCA.2025.3628325}
+}
+
+@misc{frontier,
+  author        = {Yicheng Feng and Xin Tan and Kin Hang Sew and Yimin Jiang and Yibo Zhu and Hong Xu},
+  title         = {Frontier: Simulating the Next Generation of {LLM} Inference Systems},
+  howpublished  = {arXiv preprint arXiv:2508.03148},
+  year          = {2025},
+  eprint        = {2508.03148},
+  archivePrefix = {arXiv}
+}
+
+@misc{frontier2,
+  author        = {Yicheng Feng and Xin Tan and Yangtao Deng and Yimin Jiang and Yibo Zhu and Hong Xu},
+  title         = {Frontier: Towards Comprehensive and Accurate {LLM} Inference Simulation},
+  howpublished  = {arXiv preprint arXiv:2605.21312},
+  year          = {2026},
+  eprint        = {2605.21312},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{astrasim,
+  author    = {Saeed Rashidi and Srinivas Sridharan and Sudarshan Srinivasan and Tushar Krishna},
+  title     = {{ASTRA-SIM}: Enabling {SW/HW} Co-Design Exploration for Distributed {DL} Training Platforms},
+  booktitle = {2020 IEEE International Symposium on Performance Analysis of Systems and Software (ISPASS)},
+  pages     = {81--92},
+  year      = {2020},
+  publisher = {IEEE},
+  doi       = {10.1109/ISPASS48437.2020.00018}
+}
+
+@inproceedings{astrasim2,
+  author    = {William Won and Taekyung Heo and Saeed Rashidi and Srinivas Sridharan and Sudarshan Srinivasan and Tushar Krishna},
+  title     = {{ASTRA-sim2.0}: Modeling Hierarchical Networks and Disaggregated Systems for Large-model Training at Scale},
+  booktitle = {2023 IEEE International Symposium on Performance Analysis of Systems and Software (ISPASS)},
+  pages     = {283--294},
+  year      = {2023},
+  publisher = {IEEE},
+  doi       = {10.1109/ISPASS57527.2023.00035}
+}
+
+@misc{chakra,
+  author        = {Srinivas Sridharan and Taekyung Heo and Louis Feng and Zhaodong Wang and Matt Bergeron and Wenyin Fu and Shengbao Zheng and Brian Coutinho and Saeed Rashidi and Changhai Man and Tushar Krishna},
+  title         = {Chakra: Advancing Performance Benchmarking and Co-design using Standardized Execution Traces},
+  howpublished  = {arXiv preprint arXiv:2305.14516},
+  year          = {2023},
+  eprint        = {2305.14516},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{themis,
+  author    = {Saeed Rashidi and William Won and Sudarshan Srinivasan and Srinivas Sridharan and Tushar Krishna},
+  title     = {Themis: A Network Bandwidth-Aware Collective Scheduling Policy for Distributed Training of {DL} Models},
+  booktitle = {Proceedings of the 49th Annual International Symposium on Computer Architecture (ISCA)},
+  pages     = {581--596},
+  year      = {2022},
+  publisher = {ACM},
+  doi       = {10.1145/3470496.3527382}
+}
+
+% ---------------------------------------------------------------------
+% Parallelism planners
+% ---------------------------------------------------------------------
+@inproceedings{alpa,
+  author    = {Lianmin Zheng and Zhuohan Li and Hao Zhang and Yonghao Zhuang and Zhifeng Chen and Yanping Huang and Yida Wang and Yuanzhong Xu and Danyang Zhuo and Eric P. Xing and Joseph E. Gonzalez and Ion Stoica},
+  title     = {Alpa: Automating Inter- and {Intra-Operator} Parallelism for Distributed Deep Learning},
+  booktitle = {16th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {559--578},
+  year      = {2022},
+  publisher = {USENIX Association},
+  note      = {arXiv:2201.12023}
+}
+
+@article{galvatron,
+  author  = {Xupeng Miao and Yujie Wang and Youhe Jiang and Chunan Shi and Xiaonan Nie and Hailin Zhang and Bin Cui},
+  title   = {Galvatron: Efficient Transformer Training over Multiple {GPUs} Using Automatic Parallelism},
+  journal = {Proceedings of the VLDB Endowment},
+  volume  = {16},
+  number  = {3},
+  pages   = {470--479},
+  year    = {2022},
+  doi     = {10.14778/3570690.3570697}
+}
+
+@misc{megatron,
+  author        = {Mohammad Shoeybi and Mostofa Patwary and Raul Puri and Patrick LeGresley and Jared Casper and Bryan Catanzaro},
+  title         = {{Megatron-LM}: Training Multi-Billion Parameter Language Models Using Model Parallelism},
+  howpublished  = {arXiv preprint arXiv:1909.08053},
+  year          = {2019},
+  eprint        = {1909.08053},
+  archivePrefix = {arXiv}
+}
+
+% ---------------------------------------------------------------------
+% Graph algorithms and tools
+% ---------------------------------------------------------------------
+@article{wlkernel,
+  author  = {Nino Shervashidze and Pascal Schweitzer and Erik Jan van Leeuwen and Kurt Mehlhorn and Karsten M. Borgwardt},
+  title   = {{Weisfeiler-Lehman} Graph Kernels},
+  journal = {Journal of Machine Learning Research},
+  volume  = {12},
+  pages   = {2539--2561},
+  year    = {2011},
+  url     = {https://jmlr.org/papers/v12/shervashidze11a.html}
+}
+
+@article{vf2,
+  author  = {L. P. Cordella and P. Foggia and C. Sansone and M. Vento},
+  title   = {A (Sub)Graph Isomorphism Algorithm for Matching Large Graphs},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume  = {26},
+  number  = {10},
+  pages   = {1367--1372},
+  year    = {2004},
+  doi     = {10.1109/TPAMI.2004.75}
+}
+
+@inproceedings{networkx,
+  author    = {Aric A. Hagberg and Daniel A. Schult and Pieter J. Swart},
+  title     = {Exploring Network Structure, Dynamics, and Function using {NetworkX}},
+  booktitle = {Proceedings of the 7th Python in Science Conference (SciPy2008)},
+  pages     = {11--15},
+  year      = {2008},
+  url       = {https://www.osti.gov/biblio/960616}
+}
+
+% ---------------------------------------------------------------------
+% Queueing / bandwidth sharing
+% ---------------------------------------------------------------------
+@article{kleinrock1967,
+  author  = {Leonard Kleinrock},
+  title   = {Time-shared Systems: A Theoretical Treatment},
+  journal = {Journal of the ACM},
+  volume  = {14},
+  number  = {2},
+  pages   = {242--261},
+  year    = {1967},
+  doi     = {10.1145/321386.321388}
+}
+
+@inproceedings{massoulie1999,
+  author    = {L. Massouli{\'e} and J. Roberts},
+  title     = {Bandwidth Sharing: Objectives and Algorithms},
+  booktitle = {Proceedings of IEEE INFOCOM '99, Conference on Computer Communications},
+  volume    = {3},
+  pages     = {1395--1403},
+  year      = {1999},
+  publisher = {IEEE},
+  doi       = {10.1109/INFCOM.1999.752159}
+}
+
+% ---------------------------------------------------------------------
+% Methodology
+% ---------------------------------------------------------------------
+@article{nosek2018,
+  author  = {Brian A. Nosek and Charles R. Ebersole and Alexander C. DeHaven and David T. Mellor},
+  title   = {The Preregistration Revolution},
+  journal = {Proceedings of the National Academy of Sciences},
+  volume  = {115},
+  number  = {11},
+  pages   = {2600--2606},
+  year    = {2018},
+  doi     = {10.1073/pnas.1708274114}
+}

@@ -36,8 +36,9 @@ after external reservations.
 % claim: C3
 \paragraph{Folding, and why a hash is not enough.}
 Two embeddings are folded only if their candidate graphs are isomorphic. A
-Weisfeiler--Leman hash buckets them, because comparing every pair is
-quadratic; within a bucket a VF2 isomorphism check decides, and the hash never
+Weisfeiler--Leman hash~\cite{wlkernel} buckets them, because comparing every
+pair is quadratic; within a bucket a VF2 isomorphism check~\cite{vf2}, as
+NetworkX~\cite{networkx} implements it, decides, and the hash never
 decides alone, because a collision would surface as a wrong price attributed
 to a candidate nobody evaluated---indistinguishable, in the output, from the
 search working. The bucket key also contains the planner's prediction

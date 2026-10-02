@@ -54,7 +54,7 @@ that the labels are sufficient.
 \paragraph{Inter-node contention on a disaggregated deployment is smaller than
 the model predicts.}
 Inter-node \emph{P/D} runs---prefill on one node, decode on the other, the KV
-pulled across the NIC---deployed by the experiment's own harness, because the
+pulled across the NIC by NIXL~\cite{nixl}---deployed by the experiment's own harness, because the
 deployment backend this work extends has no router. At a load the
 configuration sustains, a background stream on the same NIC lengthened the
 interval from prefill response to first decoded token by \egfivePdEffect{}
