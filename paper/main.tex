@@ -13,6 +13,7 @@
 \usepackage{amsmath}
 \usepackage{url}
 \usepackage{adjustbox}
+\usepackage{placeins}
 %% IEEEtran asks for Times. Under pdfLaTeX that is its default; tectonic is
 %% XeTeX, so the OpenType Times clone is named here, with its math and a
 %% matching typewriter face. Named by file because tectonic resolves fonts
@@ -115,7 +116,13 @@ candidate, sits an order of magnitude above delivered capacity.
 
 %% Where the references begin, for `make check-pdf`: the page this label lands
 %% on is the first that does not count toward the venue's limit. Written at
-%% shipout, so it is the page the label is actually set on.
+%% shipout, so it is the page the label is actually set on. With no
+%% bibliography after it the write rides on an empty page that is never
+%% shipped, so the label is absent -- and check_pdf.py then counts every page,
+%% which errs only toward failing.
+%% Every float is set first: the venue's limit includes figures and tables, so
+%% one deferred past this point would be content the count did not see.
+\FloatBarrier
 \makeatletter
 \protected@write\@auxout{}{\string\newlabel{sec:refs}{{}{\thepage}}}
 \makeatother

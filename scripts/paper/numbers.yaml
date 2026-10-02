@@ -78,6 +78,12 @@ egfiveReps:          {file: e_g5_real_hardware.md, find: ["placement", "vs T1"],
 egfiveToneMedian:    {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T1, column: "p99 TTFT median", pattern: "^([0-9.]+) ms$"}
 egfiveTtwoMedian:    {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T2, column: "p99 TTFT median", pattern: "^([0-9.]+) ms$"}
 egfiveToneRangeHi:   {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T1, column: range, pattern: ", ([0-9.]+)\\]$"}
+# TPOT and goodput are no longer columns of Table V (R1.1); the sentence that
+# says both clear their targets carries them.
+egfiveToneTpot:      {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T1, column: "p99 TPOT median", pattern: "^([0-9.]+) ms$"}
+egfiveTtwoTpot:      {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T2, column: "p99 TPOT median", pattern: "^([0-9.]+) ms$"}
+egfiveToneGoodput:   {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T1, column: "goodput median", pattern: "^([0-9.]+) rps$"}
+egfiveTtwoGoodput:   {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T2, column: "goodput median", pattern: "^([0-9.]+) rps$"}
 egfiveTtwoRangeLo:   {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T2, column: range, pattern: "^\\[([0-9.]+),"}
 
 # --- E-G5 widened matrix (preregistration row 8, GS-37) --------------------
