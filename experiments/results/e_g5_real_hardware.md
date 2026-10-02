@@ -29,6 +29,14 @@ Before GS-30 every row carried the search's own pick, so T1 and T2 had the same 
 | T3 | 9 | 3 | 6 | predicted met, measured MISSED |
 | all | 27 | 21 | 6 | - |
 
+Counted on independent deployments only -- the recommendation, one per repetition. The table above also counts feasible-marginal rows that duplicated the recommendation and bound-stress rows, which agree by construction:
+
+| placement | deployments | agree | disagree | disagreements |
+| --- | --- | --- | --- | --- |
+| T1 | 3 | 3 | 0 | - |
+| T2 | 3 | 3 | 0 | - |
+| T3 | 3 | 0 | 3 | predicted met, measured MISSED |
+
 ## Above the knee: the exhaustive scope, and what it decided
 
 At `high` the verdict is decided once, by evaluating every representative of GS-27's scope at seed 42 without a budget; the three repetitions repeat the deployment and the measurement of what that decided (row 8). A recommendation that saturates here is a false positive of the 6 rps prediction; a closest miss that also misses is agreement with the infeasibility verdict. They are different claims.

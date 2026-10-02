@@ -71,3 +71,23 @@ e_g5_real_hardware:
   size: small
   columns: [placement, devices, "p99 TTFT pred", predicted, "p99 TTFT median",
             range, "vs T1", measured]
+
+# E-G5, verdict agreement on independent deployments (restored by R1.4). The
+# all-rows table beside it in the results file counts duplicates and
+# bound-stress rows, and the paper does not cite it.
+e_g5_real_hardware_3:
+  width: column
+  size: small
+  columns: [placement, deployments, agree, disagree]
+
+# E-G7, the corpus-wide ablation (restored by R1.4).
+e_g7_ablation:
+  width: page
+  size: small
+  columns: [fixture, arm, false_infeasible, mismerged_pairs, compression_ratio,
+            representatives, simulations, feasible_recall]
+  labels:
+    false_infeasible: false inf.
+    mismerged_pairs: mis-merged
+    compression_ratio: ratio
+    feasible_recall: recall
