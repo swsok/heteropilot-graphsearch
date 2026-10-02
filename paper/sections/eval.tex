@@ -68,14 +68,20 @@ their range, and a single trial is not reported as a measurement.
 \subsection{Correctness under the real simulator}
 
 % claim: C10
+% claim: C13
+Under the real simulator, does the search eliminate a feasible placement or
+fold two that the oracle prices apart? No, among the placements the simulator
+judged: on all three fixtures both correctness numbers are zero
+(\texttt{false\_infeasible} is \egthreeFalseInfAbcde{} on the largest), and
+none of the three runs is complete.
+
+% claim: C10
 % claim: C11
 % claim: C12
 \input{e_g3_real_sim_oracle}
 
 Table~\ref{tab:e_g3_real_sim_oracle} reports the search against an exhaustive
-oracle, both driven by LLMServingSim. Both correctness numbers are zero on all
-three fixtures: no feasible candidate was eliminated, and no two placements the
-oracle prices differently were folded together.
+oracle, both driven by LLMServingSim.
 
 % claim: C13
 The \texttt{complete} column is \textbf{False} on all three, and that
@@ -83,11 +89,11 @@ qualification travels with the result everywhere it is quoted. The share of
 placements that failed to simulate at all ranges from a twentieth of the
 largest corpus to \egthreeUnjudgedLab{} of the \egthreeEmbeddingsLab{}
 placements on the smallest. They are reported as
-\texttt{unknown\_measurement}---the evaluator was asked and did not
-answer---and not as infeasible. The correctness claim is therefore about the
+\texttt{unknown\_measurement}, not as infeasible: the evaluator was asked and
+did not answer. The correctness claim is therefore about the
 placements the simulator judged, which is a narrower statement than it would be
 if those failures had been counted as rejections. % claim: C14
-Their cause is now established, and it is two causes rather than one. On the
+The failures have two established causes. On the
 toy corpora every failure is a missing profile: no measurement exists for that
 tensor-parallel degree on that hardware, and the simulator refuses rather than
 extrapolating. On the heterogeneous fixture every failure is instead a decode
@@ -104,10 +110,16 @@ bound evaluation all charged against the compression rather than ignored.
 
 The compression ratio is a property of the graph and not of the evaluator: it
 agrees to four decimals between the mock and the real simulator on every shared
-fixture, which is what a structural claim should do when the thing that
-evaluates it is replaced.
+fixture.
 
 \subsection{Compression, and where it fails}
+
+% claim: C23
+% claim: C4
+How much does exact equivalence fold, and where does it stop? Under the mock at
+128 devices, it folds \egsixEmbeddingsLarge{} embeddings to \egsixRepsSym{}
+representatives on a fully symmetric cluster and to \egsixRepsAsym{} on a fully
+asymmetric one; it folds nothing only where no two placements are isomorphic.
 
 % claim: C1
 % claim: C4
@@ -117,15 +129,10 @@ Table~\ref{tab:e_g6_scale} reports the compression against device count and
 cluster symmetry, for a mock evaluator, at 32, 64 and 128 devices.
 
 % claim: C23
-The symmetry axis carries the result. At 128 devices the same
-\egsixEmbeddingsLarge{} embeddings compress to \egsixRepsAsym{} representatives
-on a fully asymmetric cluster and to \egsixRepsSym{} on a fully symmetric one.
-The asymmetric ratio, \egsixRatioAsym, is still a substantial fold; the case
+The symmetry axis carries the result. The asymmetric ratio, \egsixRatioAsym, is still a substantial fold; the case
 where nothing folds is the toy corpus's asymmetric fixture, at
 \egoneRatioAsym{} (toy-corpus table in the artifact), where no two placements
-are isomorphic. Both are reported rather than the configurations omitted. A
-method whose benefit depends on a property of the input should be shown on
-inputs that lack it.
+are isomorphic. Both are reported rather than the configurations omitted.
 
 This experiment has no success target and is registered as report-only, with a
 single failure condition: the compression must not cost more than it saves on a
@@ -138,6 +145,12 @@ simulation at this scale is not offered as validation of accuracy at scale.
 
 \subsection{Contribution A: the boundary in the signature}
 
+% claim: C24
+Does dropping the shared boundary from the signature produce a mis-merge? Yes,
+on the counterexample pair it exists for, under a threshold derived from the
+oracle; across the toy corpus under the fixed tight specification no arm can
+show one.
+
 \input{e_g7_ablation}
 
 % claim: C24
@@ -147,22 +160,25 @@ the fixed tight specification, every arm reports no mis-merged pairs,
 \texttt{no\_boundary} folds together there are all infeasible, so the oracle
 cannot tell a wrong fold from a right one. The
 claim is tested on the counterexample pair it is about. There, with
-\texttt{no\_boundary}---every other label retained---the two placements that
+\texttt{no\_boundary} and every other label retained, the two placements that
 differ only in which uplink they cross are folded into one representative and
-the oracle prices them apart, a mis-merged pair; the full relation keeps them
+the oracle prices them apart, a mis-merged pair. The full relation keeps them
 as two representatives and mis-merges nothing
 (Table~\ref{tab:e_g7_ablation_4}).
 
 \input{e_g7_ablation_4}
 
 The threshold that decides ``prices them apart'' is derived from the oracle's
-own distribution rather than fixed in advance. An earlier form of this
-experiment used a fixed tight specification and found no mis-merges, because
-that specification made both placements infeasible and the oracle agreed they
-were equally bad. A mis-merge count depends on where the threshold sits, so the
-derivation is stated with the count.
+own distribution, and is stated with the count, which depends on it.
 
 \subsection{Search quality}
+
+% claim: C5
+% claim: C6
+% claim: C32
+Does the search retrieve more feasible placements than HeteroPilot's surrogate
+at the same budget? Only in part: in-sample at every $K$ tried, on the two
+holdouts only at $K = 16$, and not on the hardware-derived holdout.
 
 % claim: C5
 % claim: C6
@@ -177,19 +193,17 @@ derivation is stated with the count.
 % claim: C6
 % claim: C32
 Figure~\ref{fig:topk} and the artifact's tables report feasible recall against HeteroPilot's~\cite{heteropilot} surrogate top-$K$ under a
-specification whose SLOs bind. On the toy corpus---the diagnosis fixtures the
-ranker correction was made on, so in-sample---this search reaches higher
-recall at every $K$ tried (on \texttt{graph-toy-abcde} at $K = 16$,
+specification whose SLOs bind. The toy corpus is the set of diagnosis fixtures the
+ranker correction was made on, so it is in-sample. On it this search reaches
+higher recall at every $K$ tried (on \texttt{graph-toy-abcde} at $K = 16$,
 \egonebRecallGraphAbcde{} against the surrogate's \egonebRecallSurrogateAbcde{}). On the two holdouts it is higher at $K = 16$ and
-level at $K = 8$; at $K = 4$ it ties on one and trails on the other, and that
-is the row to read before the others. On the hardware-derived holdout below it
+level at $K = 8$; at $K = 4$ it ties on one and trails on the other. On the hardware-derived holdout below it
 is lower at $K = 16$.
 
 The baseline is scored generously and deliberately so. It ranks and judges
 templates rather than placements, so it cannot name which devices a candidate
 occupies; one verdict is therefore credited to every placement of the template
-it judged. There is no stricter reading that would be fair to it, and winning
-on a technicality would not be winning.
+it judged.
 
 % claim: C25
 % claim: C26
@@ -202,22 +216,28 @@ grid ran. On the synthetic one, \egsevenHoldoutEmbeddings{} embeddings compress
 to \egsevenHoldoutReps{} representatives, both correctness numbers are zero,
 and recall at the registered operating point is higher than the surrogate's.
 The second holdout is the hardware fixture with one PCIe-port reservation
-altered (\texttt{port-gpu0}), and it now exists.
+altered (\texttt{port-gpu0}).
 
 \textbf{On it the registered recall criterion is not met.} The invariant holds
-there---nothing feasible was removed and nothing mis-merged---but at the
+there: nothing feasible was removed and nothing mis-merged. But at the
 registered budget HeteroPilot's template-level surrogate retrieves more
 feasible placements than this search does. The response was registered before
 the run: the ranker was fitted to the diagnosis corpus, and the claim about it
-narrows to those fixtures and the synthetic holdout. It is reported here rather
-than explained, and it is reported as a failure of the \emph{ranking} and not
-of the correctness, which are separate claims and separately evidenced. That
-the altered reservation is a variation of a topology assumption rather than a
-physical claim is stated in the result file, together with what it does to the
+narrows to those fixtures and the synthetic holdout. It is reported as a
+failure of the \emph{ranking}, not of the correctness, which is separately
+evidenced. The
+result file states that the altered reservation is a variation of a topology
+assumption rather than a physical claim, together with what it does to the
 search: it moves candidates out of the feasible set, and they leave evaluated
 and rejected rather than unevaluated.
 
 \subsection{The contention model against the wire}
+
+% claim: C15
+Does processor sharing predict measured transfer time? Not on the topology
+registered before measuring, where the registered verdict is a failure. On the
+intra-node bus, on the declaration the measurements support, it does, up to a
+message size above which it is pessimistic.
 
 % claim: C15
 % claim: C16
@@ -241,9 +261,8 @@ condition, where the two flows genuinely do share endpoints, it is
 \egfourFluidMeasuredBidi\,\% against \egfourNullMeasuredBidi\,\% for the null
 model.
 
-Both are reported because they are different corrections. One would rewrite the
-contention model; the other rewrites a line of a cluster description. The
-registered verdict is computed on the registered declaration, and the corrected
+Both are reported because they are different corrections: one would rewrite
+the model, the other a line of a cluster description. The registered verdict is computed on the registered declaration, and the corrected
 figure is not offered in its place.
 
 % claim: C22
@@ -251,11 +270,10 @@ figure is not offered in its place.
 \paragraph{The same question at a second location, with the opposite answer.}
 Across an inter-node NIC between two machines, two concurrent streams take
 exactly half each: a single stream reaches \egfourNicSingle~Gbit/s and two
-reach \egfourNicTwoSame~each. That is processor sharing precisely, and it is
-what the intra-node PCIe pairs did not do.
+reach \egfourNicTwoSame~each. Processor sharing predicts exactly this, and
+the intra-node PCIe pairs did not do it.
 
-The pair of results is worth more than either alone. It is not that the model
-is right in one place and wrong in another---it is that \emph{which resource
+The model is not right in one place and wrong in another: \emph{which resource
 is genuinely shared} is a claim about hardware, settled by measurement at each
 location separately, and the model prices whatever it is told to. The
 bidirectional case says the same thing twice: the intra-node pair reaches only
@@ -271,7 +289,7 @@ figure is therefore keyed by \emph{where} it was taken as well as by how many
 ranks took part, and neither location answers for the other in either
 direction.
 
-One registered condition remains unanswered, and not for want of effort: two
+One registered condition is unanswerable here: two
 concurrent flows over \emph{disjoint} NICs is impossible on this
 hardware---each machine has exactly one InfiniBand device.
 
@@ -280,12 +298,20 @@ The model's accuracy domain has an upper end. Above a message size the hardware
 begins overlapping the two directions of one link, the pair exceeds what
 processor sharing predicts, and the model becomes pessimistic: it predicts the
 transfer about a third slower than measured.
-That boundary is stated rather than absorbed into a fitted capacity: a capacity
-chosen because it reproduces the answer is not a measurement, and it would make
-the next node's prediction wrong silently.
+That boundary is stated rather than absorbed into a fitted capacity, which
+would not be a measurement.
 
 \subsection{Hardware}
 \label{sec:eval-hw}
+
+% claim: C18
+% claim: C33
+Does the placement matter on hardware, and does the search's registered
+verdict follow it? At the load knee, yes: the two tensor-parallel pairs'
+median $p99$ time to first token differs \egfiveTtwoOverTone{}x, and the
+registered verdict matches the hardware's at both. It does not at the
+four-way group, whose \egfiveReps{} deployments are all predicted met and all
+miss.
 
 \input{e_g5_real_hardware}
 
@@ -294,12 +320,12 @@ Table~\ref{tab:e_g5_real_hardware} reports the recommendation at three
 placements, \egfiveReps{} repetitions each, at the load knee of the registered
 specification: one tensor-parallel pair on two different pairs of devices, and
 a four-way group. \textbf{The same pair's median $p99$ time to first token is
-\egfiveTtwoOverTone{}x higher on one wire than on the other}---\egfiveTtwoMedian{}
-against \egfiveToneMedian{} ms---with the same model, trace, scheduler knobs,
-seed and plan, and the ranges do not overlap: the slowest repetition on the
+\egfiveTtwoOverTone{}x higher on one wire than on the other}, \egfiveTtwoMedian{}
+against \egfiveToneMedian{} ms, with the same model, trace, scheduler knobs,
+seed and plan. The ranges do not overlap: the slowest repetition on the
 faster wire measured \egfiveToneRangeHi{} ms and the fastest on the slower wire
 \egfiveTtwoRangeLo{} ms. Against the latency target the faster wire meets and
-the slower misses. That verdict is partly by construction, and the ratio is the
+the slower misses. The verdict is partly by construction, and the ratio is the
 evidence that does not depend on it: the target was registered before the
 matrix ran, derived from the faster placement's own pilot $p99$ with a margin
 above it, and so sits between the two placements by design. Time per output
@@ -308,18 +334,15 @@ token (median $p99$ \egfiveToneTpot{} and \egfiveTtwoTpot{} ms) and goodput
 both, so the latency axis is the one that decides.
 
 HeteroPilot cannot express the difference between those two
-placements at all. It names a template, and the choice this experiment shows
-to be decisive is one it has no language for. That is the paper's claim in its
-strongest available form, and it is a hardware measurement rather than an
-argument.
+placements at all. It names a template, and has no language for the choice
+this experiment shows to be decisive.
 
 \input{e_g5_real_hardware_3}
 
 % claim: C33
 \textbf{Asked about the placement it is deployed on, with the registered
 adapter, the search tells the two pairs apart}---a reading the corrected
-adapter below qualifies. Each row's prediction is the search's verdict on that placement
-itself. Counting independent deployments of the recommendation only
+adapter below qualifies. Counting independent deployments of the recommendation only
 (Table~\ref{tab:e_g5_real_hardware_3}), the verdict matches the hardware's in every one of the \egfiveReps{} repetitions at
 both pairs, and in none at the four-way group, where each is a predicted
 \emph{met} that the hardware misses. A false \emph{met} is the direction that
@@ -328,11 +351,9 @@ further rows per repetition that are not further tests of this question. The
 feasible-marginal alternative deployed the recommendation's own template at
 the same devices, so it is the same configuration measured twice; and the
 bound-stress row, a candidate predicted to miss by tens of seconds, agrees
-trivially and is taken up below. An earlier version
-of this experiment printed the search's own pick beside every measurement, so
-the two pairs carried one identical prediction and looked indistinguishable to
-the evaluator; that reading was a defect of the harness, not a property of the
-simulator, and it is withdrawn.
+trivially and is taken up below. An earlier harness printed the search's own pick beside every
+measurement, so the two pairs looked indistinguishable; that reading was a
+harness defect and is withdrawn.
 
 % claim: C34
 \textbf{Post hoc, the four-way miss has a candidate cause.} After the
@@ -342,9 +363,9 @@ NVLink pair's edge capacity, where the all-reduce measured at four ranks on
 that group is \egfourBusbwFour~GB/s. Every registered prediction in this
 section, at the pairs as well as the group, was made with a first-pair
 figure, and
-every verdict above stands as registered. With the adapter corrected and
-every deployed row simulated again---not registered, and nothing
-redeployed---the four-way group's recommendation and closest-miss rows agree
+every verdict above stands as registered. The adapter was then corrected
+and every deployed row simulated again; this was not registered, and nothing
+was redeployed. The four-way group's recommendation and closest-miss rows agree
 with the hardware in \egfivePostTthreeReAgree{} of \egfivePostTthreeRows{},
 against \egfivePostTthreeOrigAgree{} originally, and its false \emph{met}
 verdicts fall from \egfivePostTthreeOrigFp{} to \egfivePostTthreeReFp. The
@@ -365,29 +386,26 @@ ratio between the two wires is \egfiveWideLowRatio{}x below the knee,
 is largest at the knee, the verdict differs between the wires at the knee and
 above it and not below, and the claim above is scoped to the knee. The
 four-way group's recommendation is predicted to meet its target at every level
-of both patterns; the hardware meets it only below the knee under the
+of both patterns. The hardware meets it only below the knee under the
 registered pattern, at a median of \egfiveWideTthreeLow{} ms, and misses
-everywhere else---the pattern the post-hoc re-prediction above largely
-removes.
+everywhere else, a pattern the post-hoc re-prediction above largely removes.
 
 % claim: C19
 % claim: C20
 The bound-stress alternative is deployed against the bound that rejected it,
 offered the rate \emph{its own} spec declares so that a predicted and a
 measured column answer the same question. It is the only boundary alternative
-that is a separate test: the feasible-marginal one, as above, repeated the
-recommendation. The prediction is optimistic on time to first token in most
+that is a separate test. The prediction is optimistic on time to first token in most
 rows, not all of them. This experiment does not separate the candidate
-causes---prediction error, the contention model, the engine's scheduler---and
+causes (prediction error, the contention model, the engine's scheduler), and
 does not choose the most flattering one.
 
 \textbf{The lower bound was right, and the interesting number is how loose it
 is.} The candidate the throughput bound rejected by the smallest margin was
 deployed and offered the floor it had been rejected against. It did not reach
 it, so this one rejection was not wrong on hardware. That outcome
-was expected: a bound that is a relaxation rejects only what the most
-optimistic arithmetic already misses, so a correct rejection is not news, and
-the test is registered as weak for exactly that reason. What the deployment
+was expected, and the test is registered as weak for that reason: a
+relaxation rejects only what the most optimistic arithmetic already misses. What the deployment
 buys is the ratio between the ceiling the bound computed and the capacity the
 hardware actually delivered, and it is more than an order of magnitude. That
 looseness is the price of soundness; this is its size on this machine.
