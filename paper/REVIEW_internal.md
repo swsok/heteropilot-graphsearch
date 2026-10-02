@@ -169,3 +169,19 @@ repetition, not only as medians; the C33 table matches. Fixed after the pass:
 | R1-2 | C24 "every placement there is infeasible" is contradicted by the now-visible ablation table (recall 1.0 in every arm) | fixed: the placements `no_boundary` folds together are infeasible |
 | R1-3 | the independent-deployment table's caption ("... (continued)") did not say what it counts | fixed: `tables.yaml` gains `caption:`; "verdict agreement, independent deployments of the recommendation" |
 | R1-4 | Table VI's "Reused unmodified" and Background's "used unmodified" contradict the hooks, which edit inventory, optimiser and predictor files | fixed: header "Reused (unchanged when no hook is used)"; Background says the hooks touch those modules and the planner behaves as before with none in use |
+
+## R3: figure and style (reviewer A pass)
+
+The topology figure draws only measured fixture entries; four of the six new
+openers, the Related Work fold and every abstract number were confirmed.
+Fixed after the pass:
+
+| id | finding | disposition |
+| --- | --- | --- |
+| R3-1 | abstract: "One result goes against the model" -- three registered results go against us (E-G4's verdict, the real-lab recall criterion, T3's false *met*) | fixed: "Registered results also go against us, the contention model's among them" |
+| R3-2 | hardware opener dropped V-1's qualification | fixed: "with the registered adapter, which a post-hoc correction below qualifies" |
+| R3-3 | C36 heading true only on the candidates the registered runs evaluated (GS-36); "fails on goodput alone" overstated; normal pattern only | fixed in the paragraph and in CLAIMS C36 |
+| R3-4 | Limits: the burst sentence named one of GS-35's two defects and asserted a run that never happened | fixed: both defects, fixed before registration, no reported run used either |
+| R3-5 | conclusion: the saving is measured only under the real simulator | fixed: "under the real simulator" |
+| R3-6 | figure: ports drawn as declared though E-G4 measured two PCIe pairs unshared (note) | fixed in the caption |
+| R3-7 | opener E understates real-lab K=4 (note) | kept: not a CLAIMS breach |

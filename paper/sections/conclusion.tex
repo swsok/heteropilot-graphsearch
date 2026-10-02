@@ -12,19 +12,14 @@
 % claim: C11
 % claim: C18
 % claim: C30
-Placement is a decision a serving planner has to make and, when it enumerates
-over islands rather than devices, has no language for. This work gives it one:
-an equivalence relation that folds only what a graph isomorphism confirms
-interchangeable and carries the shared communication boundary, so that
-removing the boundary mis-merges the counterexample pair the full relation
-keeps apart. Elimination is a relaxation of the feasibility test; in every
-experiment that runs an exhaustive oracle, no feasible placement the evaluator
-judged was wrongly removed and nothing differently priced was folded, and on
-hardware the bound was tested on one rejected candidate and was right. The
-budget names what it never judged, and under the real simulator the
-compression saved more time than it cost. On hardware one plan at two
-placements of itself has a median $p99$ time to first token
-\egfiveTtwoOverTone{}x apart at the load knee, with ranges that do not overlap;
-on an inter-node disaggregated deployment the model's contention prediction is
-far larger than what the hardware shows, which the registered criterion
-reports as a miss.
+Placement is a decision a serving planner has to make and, enumerating over
+islands, has no language for. This work gives it one: a relation that folds
+only what a graph isomorphism confirms interchangeable, with the shared
+boundary in the signature. Wherever an exhaustive oracle ran, no judged
+feasible placement was wrongly removed and nothing differently priced was
+folded, and under the real simulator the compression saved more time than it
+cost. On
+hardware, one plan at two of its placements is \egfiveTtwoOverTone{}x apart in
+$p99$ time to first token at the load knee; across a NIC, the contention model
+predicted far more slowdown than the hardware showed, which is reported as a
+miss.

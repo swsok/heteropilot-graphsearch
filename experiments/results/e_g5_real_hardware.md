@@ -335,6 +335,13 @@ Row 4's rule derives each level's goodput floor from the *hardware's* measured g
 
 Conditions whose recommendation appears or vanishes across these floors: normal__T1__low seed 42, normal__T1__low seed 44, normal__T2__low seed 42, normal__T2__low seed 44. Everywhere else the answer, and the template, is the same at every floor tried.
 
+| floor sensitivity | value |
+| --- | --- |
+| lowest floor tried | 1.4 |
+| highest floor tried | 1.6 |
+| condition-seeds re-judged | 42 |
+| condition-seeds whose answer changes | 4 |
+
 ## Predicted against measured (normal x knee)
 
 | condition | deployment | devices | offered rps | p99 TTFT pred | p99 TTFT meas | p99 TPOT pred | p99 TPOT meas | goodput meas | predicted | measured |

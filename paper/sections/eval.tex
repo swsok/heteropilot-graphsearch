@@ -308,8 +308,9 @@ would not be a measurement.
 % claim: C33
 Does the placement matter on hardware, and does the search's registered
 verdict follow it? At the load knee, yes: the two tensor-parallel pairs'
-median $p99$ time to first token differs \egfiveTtwoOverTone{}x, and the
-registered verdict matches the hardware's at both. It does not at the
+median $p99$ time to first token differs \egfiveTtwoOverTone{}x, and with the
+registered adapter, which a post-hoc correction below qualifies, the verdict
+matches the hardware's at both. It does not at the
 four-way group, whose \egfiveReps{} deployments are all predicted met and all
 miss.
 
@@ -376,6 +377,17 @@ all-reduce figure rather than its nominal capacity, agreement falls from
 met. This is consistent with the adapter defect being a cause the registered
 experiment did not separate, and the corrected predictions are still short in
 magnitude at the highest load; it does not replace the registered result.
+
+% claim: C36
+\textbf{Post hoc, on the candidates the registered runs evaluated, the goodput
+floor changes the answer only at low load.} Re-judging those runs' cached
+predictions at goodput floors from \egfiveFloorLow{} to \egfiveFloorHigh{}
+requests per second, with nothing simulated again, changes whether a
+recommendation exists in \egfiveFloorChanged{} of \egfiveFloorRows{}
+condition-seeds, all at the low load under the normal pattern. There a floor
+derived from the hardware's goodput sits above the simulator's lower
+prediction of it, and every candidate fails on goodput. A run made at another
+floor would also reorder what the budget reaches, which this cannot show.
 
 % claim: C35
 \textbf{The ratio depends on load.} A widened matrix, registered before its
