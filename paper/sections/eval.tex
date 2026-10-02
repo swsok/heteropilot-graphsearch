@@ -176,7 +176,7 @@ derivation is stated with the count.
 % claim: C5
 % claim: C6
 % claim: C32
-Figure~\ref{fig:topk} and the artifact's tables report feasible recall against the existing planner's surrogate top-$K$ under a
+Figure~\ref{fig:topk} and the artifact's tables report feasible recall against HeteroPilot's~\cite{heteropilot} surrogate top-$K$ under a
 specification whose SLOs bind. On the toy corpus---the diagnosis fixtures the
 ranker correction was made on, so in-sample---this search reaches higher
 recall at every $K$ tried (on \texttt{graph-toy-abcde} at $K = 16$,
@@ -206,7 +206,7 @@ altered (\texttt{port-gpu0}), and it now exists.
 
 \textbf{On it the registered recall criterion is not met.} The invariant holds
 there---nothing feasible was removed and nothing mis-merged---but at the
-registered budget the existing planner's template-level surrogate retrieves more
+registered budget HeteroPilot's template-level surrogate retrieves more
 feasible placements than this search does. The response was registered before
 the run: the ranker was fitted to the diagnosis corpus, and the claim about it
 narrows to those fixtures and the synthetic holdout. It is reported here rather
@@ -307,7 +307,7 @@ token (median $p99$ \egfiveToneTpot{} and \egfiveTtwoTpot{} ms) and goodput
 (\egfiveToneGoodput{} and \egfiveTtwoGoodput{} rps) clear their targets at
 both, so the latency axis is the one that decides.
 
-The planner being extended cannot express the difference between those two
+HeteroPilot cannot express the difference between those two
 placements at all. It names a template, and the choice this experiment shows
 to be decisive is one it has no language for. That is the paper's claim in its
 strongest available form, and it is a hardware measurement rather than an

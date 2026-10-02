@@ -15,7 +15,7 @@
 \label{sec:candidates}
 
 \paragraph{Templates and embeddings.}
-A \emph{template} is what the existing planner already produces: a role
+A \emph{template} is what HeteroPilot~\cite{heteropilot} already produces: a role
 assignment with parallelism degrees and knobs, naming islands rather than
 devices. An \emph{embedding} is a template placed on named devices. Replicas of
 one role are interchangeable, so only one ordering of each partition into
@@ -41,7 +41,7 @@ pair is quadratic; within a bucket a VF2 isomorphism check~\cite{vf2}, as
 NetworkX~\cite{networkx} implements it, decides, and the hash never
 decides alone, because a collision would surface as a wrong price attributed
 to a candidate nobody evaluated---indistinguishable, in the output, from the
-search working. The bucket key also contains the planner's prediction
+search working. The bucket key also contains HeteroPilot's prediction
 key---model, serving architecture and knobs, which change a simulation but are
 not in the graph---because two candidates that may share a prediction are, by
 that act, claimed interchangeable.

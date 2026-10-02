@@ -9,7 +9,7 @@
   \begin{adjustbox}{max width=\textwidth}
   \begin{tabular}{lll}
     \toprule
-    Reused (unchanged when no hook is used) & Hook & New in this work \\
+    Reused from HeteroPilot (unchanged when no hook is used) & Hook & New in this work \\
     \midrule
     \texttt{planner.inventory}      & H1 service contract& \texttt{schema} \\
     \texttt{candidate\_generator}   & H2 v2 inventory schema& \texttt{paths} \\
@@ -29,9 +29,9 @@
   \end{adjustbox}
   \par
   \vspace{2pt}
-  \footnotesize Each hook is a pull request against the planner's own
+  \footnotesize Each hook is a pull request against HeteroPilot's own
   repository with a numbered deviation entry, not a patch applied from here;
-  the planner's behaviour is unchanged when a hook is not used, which its own
+  its behaviour is unchanged when a hook is not used, which its own
   golden tests check. Thirteen new modules, four hooks, and no file of the
   planner edited in place.
 \end{table*}
