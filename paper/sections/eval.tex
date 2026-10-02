@@ -52,6 +52,17 @@ Analyses added after a result was known---the hardware re-prediction of
 Section~\ref{sec:eval-hw} among them---are labelled post hoc wherever they
 appear, and none of them tests a registered prediction.
 
+\paragraph{Provenance tags} Every table and figure caption carries one of
+three tags, and the tag is what its numbers are. \sourcetag{MOCK}: the mock
+predictor. These are not performance numbers. The mock obeys the same physics
+as the elimination bounds, which is what makes a disagreement with the oracle
+meaningful, but no figure so tagged is a measurement or a simulation of any
+hardware. \sourcetag{REAL SIM}: LLMServingSim. Simulated, not measured. The
+figures are the simulator's output under a cache the artifact names, and no
+hardware was run. \sourcetag{REAL HARDWARE}: measured, on nodes whose serials
+the raw files record; a percentile is the median of the repetitions, with
+their range, and a single trial is not reported as a measurement.
+
 \subsection{Correctness under the real simulator}
 
 % claim: C10
