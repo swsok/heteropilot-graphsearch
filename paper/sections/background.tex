@@ -27,8 +27,9 @@ whose \emph{twin} keys agree, is a different and deliberately approximate
 merge, and is not replaced here.
 
 \paragraph{The simulator.}
-Latency predictions come from a discrete-event simulator with an analytical
-network backend. It accepts a link bandwidth and a latency per collective and
+Latency predictions come from LLMServingSim~\cite{llmservingsim,llmservingsim2},
+a discrete-event simulator built on ASTRA-sim~\cite{astrasim,astrasim2} and
+its Chakra traces~\cite{chakra}, here with an analytical network backend. It accepts a link bandwidth and a latency per collective and
 has no representation of a link graph, so it cannot be told that two groups
 share a wire (Section~\ref{sec:adapter}).
 

@@ -22,7 +22,11 @@ one service specification, which accelerators run which role at which degree of
 parallelism. The choice is a placement and not merely a configuration: two
 groups of devices identical in model, memory and price can still differ in the
 interconnect their tensor-parallel collective crosses, and that difference
-reaches the served latency.
+reaches the served latency. Recent systems make that choice at cluster scale:
+Helix~\cite{helix} places a model over heterogeneous GPUs and networks,
+DistServe~\cite{distserve} and Splitwise~\cite{splitwise} split prefill and
+decode across machines, and each group runs an engine such as
+vLLM~\cite{vllm}.
 
 % claim: C18
 On the eight-GPU node used here, one plan---same engine, model, trace,

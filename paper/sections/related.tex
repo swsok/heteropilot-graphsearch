@@ -14,7 +14,7 @@
 \label{sec:related}
 
 \paragraph{Placement on heterogeneous clusters.}
-Helix formulates serving over heterogeneous GPUs and network as a max-flow
+Helix~\cite{helix} formulates serving over heterogeneous GPUs and network as a max-flow
 problem and jointly optimises model placement and request scheduling. The
 overlap is the object: it also represents the cluster as a graph, and this work
 does not claim otherwise. The difference is what the representation is used
@@ -22,15 +22,21 @@ for. Helix solves a flow problem to place and route; the search here
 enumerates complete placements and folds them by exact equivalence so that an
 expensive evaluator is invoked once per class, with the shared boundary in the
 equivalence signature so that two placements crossing different contended links
-are not folded together. ThunderServe and ShuntServe likewise optimise
-placement and parallelism across heterogeneous or spot GPUs; both search
-directly for a good configuration, where this work's contribution is the
+are not folded together. ThunderServe~\cite{thunderserve} and
+ShuntServe~\cite{shuntserve} likewise optimise placement and parallelism across
+heterogeneous or spot GPUs, as do HexGen~\cite{hexgen} over decentralised
+GPUs, Mélange~\cite{melange} in choosing a cost-efficient GPU mix, and
+SpotServe~\cite{spotserve} on preemptible instances; Alpa~\cite{alpa} and
+Galvatron~\cite{galvatron} search parallelisation plans automatically. They
+search directly for a good configuration, where this work's contribution is the
 elimination discipline and the accounting of what was never evaluated.
 
 \paragraph{Prefill--decode disaggregation.}
-DistServe separates the two phases onto different resources and schedules them
-independently, and the design has since become common enough that recent work
-treats it as the baseline. This work generates disaggregated candidates and
+DistServe~\cite{distserve} separates the two phases onto different resources
+and schedules them independently; Splitwise~\cite{splitwise},
+TetriInfer~\cite{tetriinfer} and Mooncake~\cite{mooncake} disaggregate as well,
+and Llumnix~\cite{llumnix} reschedules requests across engine instances. The
+design has become common enough that recent work treats it as the baseline. This work generates disaggregated candidates and
 prices the transfer between the phases as a flow over the graph, which is what
 makes the counterexample in Section~\ref{sec:candidates} expressible at
 all---two prefill groups sending to one decode group differ only in the uplink
@@ -40,8 +46,9 @@ deployment backend this work extends has no router
 (Section~\ref{sec:limits}).
 
 \paragraph{Simulation.}
-Vidur and LLMServingSim provide simulators for LLM serving; Frontier argues for
-more comprehensive and accurate simulation, including of disaggregated
+Vidur~\cite{vidur} and LLMServingSim~\cite{llmservingsim,llmservingsim2}
+provide simulators for LLM serving; Frontier~\cite{frontier,frontier2} argues
+for more comprehensive and accurate simulation, including of disaggregated
 architectures. The dependence here is direct---the evaluator is LLMServingSim
 with an analytical backend---and so is the limitation: that simulator has no
 representation of a link graph, so the evaluator sees a placement's own
@@ -52,7 +59,7 @@ This work measures search accuracy with prediction accuracy held fixed, which
 is a different question from the one a simulator paper asks.
 
 \paragraph{What this work does not claim.}
-It is not the first graph representation of a serving cluster; Helix precedes
-it. It does not contribute a scheduler, a disaggregation policy, or a
+It is not the first graph representation of a serving cluster;
+Helix~\cite{helix} precedes it. It does not contribute a scheduler, a disaggregation policy, or a
 simulator. Its claims are the three in Section~\ref{sec:intro} and nothing
 wider.
