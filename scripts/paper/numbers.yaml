@@ -113,3 +113,10 @@ egoneRatioAsym:  {file: e_g1_toy_pilot.md, table: 0, row: graph-toy-asym, column
 # The table is in the artifact; the paper carries one fixture at the largest K.
 egonebRecallSurrogateAbcde: {file: e_g1b_topk.md, table: 0, row: graph-toy-abcde, where: {arm: heteropilot, k: "16"}, column: feasible_recall}
 egonebRecallGraphAbcde:     {file: e_g1b_topk.md, table: 0, row: graph-toy-abcde, where: {arm: graphsearch, k: "16"}, column: feasible_recall}
+
+# GS-38 floor sensitivity (analysis, no deployment), for one sentence in the
+# hardware subsection.
+egfiveFloorLow:     {file: e_g5_real_hardware.md, find: ["floor sensitivity", "value"], row: lowest floor tried, column: value}
+egfiveFloorHigh:    {file: e_g5_real_hardware.md, find: ["floor sensitivity", "value"], row: highest floor tried, column: value}
+egfiveFloorRows:    {file: e_g5_real_hardware.md, find: ["floor sensitivity", "value"], row: condition-seeds re-judged, column: value}
+egfiveFloorChanged: {file: e_g5_real_hardware.md, find: ["floor sensitivity", "value"], row: condition-seeds whose answer changes, column: value}

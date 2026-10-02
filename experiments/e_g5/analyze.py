@@ -1112,7 +1112,12 @@ def floor_sections(raw_root: Path) -> list[str]:
                    + " | ".join(cell(r, s) for s in r["sensitivity"]) + " |")
     out += ["", f"Conditions whose recommendation appears or vanishes across these "
             f"floors: {', '.join(changed) if changed else 'none'}. Everywhere else the "
-            "answer, and the template, is the same at every floor tried."]
+            "answer, and the template, is the same at every floor tried.", "",
+            "| floor sensitivity | value |", "| --- | --- |",
+            f"| lowest floor tried | {min(floors)} |",
+            f"| highest floor tried | {max(floors)} |",
+            f"| condition-seeds re-judged | {len(rows_)} |",
+            f"| condition-seeds whose answer changes | {len(changed)} |"]
     return out
 
 

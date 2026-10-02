@@ -377,6 +377,15 @@ met. This is consistent with the adapter defect being a cause the registered
 experiment did not separate, and the corrected predictions are still short in
 magnitude at the highest load; it does not replace the registered result.
 
+% claim: C36
+\textbf{Post hoc, the goodput floor matters only at low load.} Re-judging the
+registered runs' own cached predictions at goodput floors from
+\egfiveFloorLow{} to \egfiveFloorHigh{} requests per second, with nothing
+simulated again, changes whether a recommendation exists in
+\egfiveFloorChanged{} of \egfiveFloorRows{} condition-seeds, all at the low
+load. There a floor derived from the hardware's goodput sits above the
+simulator's lower prediction of it, so every candidate fails on goodput alone.
+
 % claim: C35
 \textbf{The ratio depends on load.} A widened matrix, registered before its
 first request, repeats the three placements at a lower and a higher load and

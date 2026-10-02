@@ -75,7 +75,11 @@ specification was derived from and are excluded from validation; no results
 file carries it, and the paper does not claim it.
 
 \paragraph{Deferred by scope.}
-NPU deployment (no backend exists), a tensor-parallel group spanning two
+Every hardware result here runs on one accelerator model: the placements are
+heterogeneous in interconnect, not in accelerator. A burstier arrival pattern
+was first handed to the simulator as the reciprocal of the hardware trace's
+parameter; it was corrected before the widened matrix was registered, and no
+reported run used it. NPU deployment (no backend exists), a tensor-parallel group spanning two
 accelerator vendors, KV-cache format conversion between them, learned rankers
 and mixed parallelism degrees within one group are outside this work; nothing
 here shows they cannot be done.

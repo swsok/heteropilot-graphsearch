@@ -17,7 +17,7 @@
 Helix~\cite{helix} formulates serving over heterogeneous GPUs and network as a max-flow
 problem and jointly optimises model placement and request scheduling. The
 overlap is the object: it also represents the cluster as a graph, and this work
-does not claim otherwise. The difference is what the representation is used
+does not claim otherwise; nor does it contribute a scheduler. The difference is what the representation is used
 for. Helix solves a flow problem to place and route; the search here
 enumerates complete placements and folds them by exact equivalence so that an
 expensive evaluator is invoked once per class, with the shared boundary in the
@@ -57,9 +57,3 @@ Section~\ref{sec:adapter} reports what could not be expressed rather than
 folding it into a bandwidth number.
 This work measures search accuracy with prediction accuracy held fixed, which
 is a different question from the one a simulator paper asks.
-
-\paragraph{What this work does not claim.}
-It is not the first graph representation of a serving cluster;
-Helix~\cite{helix} precedes it. It does not contribute a scheduler, a disaggregation policy, or a
-simulator. Its claims are the three in Section~\ref{sec:intro} and nothing
-wider.
