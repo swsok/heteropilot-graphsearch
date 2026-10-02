@@ -148,3 +148,12 @@ Open, for the submission rather than the text:
 | D-1 | four sentences point to "the artifact" (timing table, toy-corpus table, corpus-wide ablation, toy-corpus recall); under double-blind a reviewer cannot see it | the toy-corpus recall now carries its numbers in the text (two macros from `e_g1b_topk.md`); the rest needs an anonymised artifact link at submission (user decision) |
 | D-2 | "registered" / "preregistration" and "accompanying repository" appear with no anonymised pointer | same as D-1 |
 | D-3 | the reuse table plus "hooks" and "golden tests" may identify the extended planner | check against the 2027 anonymity rules when the call appears |
+
+## Revision R1.4: layout, and the two restored tables
+
+| id | what | where it lives now |
+| --- | --- | --- |
+| L-1 | Table VI (reuse) moved from Limitations to Background, `[!t]`; the near-empty page 9 is gone | `background.tex`, top of page 2 |
+| L-2 | the E-G5 placement table's `\input` moved to the start of its subsection, so the `table*` lands on the page after its first reference instead of two pages later | `eval.tex`, Hardware |
+| L-3 | **restored, but not the table the work order named.** The "agree/disagree 3x3" table in the results file counts all 27 rows, including the 9 duplicate feasible-marginal rows and 9 bound-stress rows -- the overcount A-3 removed. `analyze.py` now writes a second table counting independent recommendation deployments only (T1 3/3, T2 3/3, T3 0/3), and that is the one the paper restores and cites; the all-rows table stays in the results file | `e_g5_real_hardware_3`, C33 |
+| L-4 | restored: the corpus-wide E-G7 ablation, with chosen columns | `e_g7_ablation`, C24 |

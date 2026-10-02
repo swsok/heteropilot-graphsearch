@@ -136,8 +136,10 @@ simulation at this scale is not offered as validation of accuracy at scale.
 
 \subsection{Contribution A: the boundary in the signature}
 
+\input{e_g7_ablation}
+
 % claim: C24
-Across the toy corpus (full ablation table in the artifact), under
+Across the toy corpus (Table~\ref{tab:e_g7_ablation}), under
 the fixed tight specification, every arm reports no mis-merged pairs,
 \texttt{no\_boundary} included, even where it folds more: every placement there
 is infeasible, so the oracle cannot tell a wrong fold from a right one. The
@@ -282,6 +284,8 @@ the next node's prediction wrong silently.
 \subsection{Hardware}
 \label{sec:eval-hw}
 
+\input{e_g5_real_hardware}
+
 % claim: C18
 Table~\ref{tab:e_g5_real_hardware} reports the recommendation at three
 placements, \egfiveReps{} repetitions each, at the load knee of the registered
@@ -306,12 +310,14 @@ to be decisive is one it has no language for. That is the paper's claim in its
 strongest available form, and it is a hardware measurement rather than an
 argument.
 
+\input{e_g5_real_hardware_3}
+
 % claim: C33
 \textbf{Asked about the placement it is deployed on, with the registered
 adapter, the search tells the two pairs apart}---a reading the corrected
 adapter below qualifies. Each row's prediction is the search's verdict on that placement
-itself. Counting independent deployments of the recommendation only, the
-verdict matches the hardware's in every one of the \egfiveReps{} repetitions at
+itself. Counting independent deployments of the recommendation only
+(Table~\ref{tab:e_g5_real_hardware_3}), the verdict matches the hardware's in every one of the \egfiveReps{} repetitions at
 both pairs, and in none at the four-way group, where each is a predicted
 \emph{met} that the hardware misses. A false \emph{met} is the direction that
 matters to a planner, and it is reported as a miss. The table carries two
@@ -383,4 +389,3 @@ buys is the ratio between the ceiling the bound computed and the capacity the
 hardware actually delivered, and it is more than an order of magnitude. That
 looseness is the price of soundness; this is its size on this machine.
 
-\input{e_g5_real_hardware}

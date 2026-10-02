@@ -569,6 +569,36 @@ def agreement_table(data: list[dict]) -> list[str]:
     return out
 
 
+def deployment_agreement_table(data: list[dict]) -> list[str]:
+    """The same question, counted on independent deployments only.
+
+    `agreement_table` counts every measured row, and two kinds of row in it are
+    not independent tests of the recommendation's verdict: a feasible-marginal
+    row that duplicated the recommendation (GS-37/38) measured the same
+    configuration twice, and a bound-stress row agrees by construction -- it
+    is predicted to miss by tens of seconds. This counts the recommendation
+    rows alone, one per repetition, which is what the paper's claim is about.
+    """
+    groups: dict[str, list[tuple[str, str]]] = {}
+    for row in data:
+        if row["deployment"] != "recommendation" or not row.get("measured"):
+            continue
+        pv = predicted_verdict(row)
+        if pv not in ("met", "MISSED"):
+            continue
+        groups.setdefault(row["condition"].split("__")[2], []).append((pv, verdict(row)[0]))
+    head = ["placement", "deployments", "agree", "disagree", "disagreements"]
+    out = ["| " + " | ".join(head) + " |",
+           "| " + " | ".join("---" for _ in head) + " |"]
+    for topo in sorted(groups):
+        pairs = groups[topo]
+        agree = sum(1 for a, b in pairs if a == b)
+        kinds = sorted({f"predicted {a}, measured {b}" for a, b in pairs if a != b})
+        out.append(f"| {topo} | {len(pairs)} | {agree} | {len(pairs) - agree} | "
+                   f"{'; '.join(kinds) or '-'} |")
+    return out
+
+
 def _pair_rows(root: Path) -> list[dict]:
     """Row 7 (d): the two conditions of one repetition, paired request by request.
 
@@ -1132,6 +1162,11 @@ def markdown(data: list[dict], args) -> str:
     )
     out.append("")
     out += agreement_table(data)
+    out += ["", "Counted on independent deployments only -- the recommendation, one per "
+            "repetition. The table above also counts feasible-marginal rows that "
+            "duplicated the recommendation and bound-stress rows, which agree by "
+            "construction:", ""]
+    out += deployment_agreement_table(data)
 
     hs = high_scope_table(RAW, everything)
     if hs:
