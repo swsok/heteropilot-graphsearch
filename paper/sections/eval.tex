@@ -52,8 +52,9 @@ Analyses added after a result was known---the hardware re-prediction of
 Section~\ref{sec:eval-hw} among them---are labelled post hoc wherever they
 appear, and none of them tests a registered prediction.
 
-\paragraph{Provenance tags} Every table and figure caption carries one of
-three tags, and the tag is what its numbers are. \sourcetag{MOCK}: the mock
+\paragraph{Provenance tags} Every table and figure of results carries one of
+three tags in its caption, and the tag is what its numbers are; the reuse
+table, which holds no result, is marked as not a measurement. \sourcetag{MOCK}: the mock
 predictor. These are not performance numbers. The mock obeys the same physics
 as the elimination bounds, which is what makes a disagreement with the oracle
 meaningful, but no figure so tagged is a measurement or a simulation of any
@@ -141,8 +142,9 @@ simulation at this scale is not offered as validation of accuracy at scale.
 % claim: C24
 Across the toy corpus (Table~\ref{tab:e_g7_ablation}), under
 the fixed tight specification, every arm reports no mis-merged pairs,
-\texttt{no\_boundary} included, even where it folds more: every placement there
-is infeasible, so the oracle cannot tell a wrong fold from a right one. The
+\texttt{no\_boundary} included, even where it folds more: the placements
+\texttt{no\_boundary} folds together there are all infeasible, so the oracle
+cannot tell a wrong fold from a right one. The
 claim is tested on the counterexample pair it is about. There, with
 \texttt{no\_boundary}---every other label retained---the two placements that
 differ only in which uplink they cross are folded into one representative and

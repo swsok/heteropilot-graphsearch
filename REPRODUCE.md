@@ -74,32 +74,50 @@ bash scripts/reproduce/archive_outputs.sh --verify  # every file in it
 The repository URL is not in the paper, which is under double-blind review. The several GB of per-run simulator work
 directories under `outputs/` are scratch and are not archived.
 
-## The build
+## Building the paper
 
 ```bash
-make -C paper paper     # tables + numbers + figures + PDF
-make -C paper check     # no literal numbers, no forbidden claims, claim status
+make -C paper pdf        # the PDF from what is in the tree -- works on a fresh clone
+make -C paper paper      # tables + numbers + figures + PDF -- needs the archive (below)
+make -C paper check      # sources: no literal numbers, no forbidden claims, claim
+                         # status; then the PDF: check-pdf
+make -C paper check-pdf  # the PDF alone: pages before the references <= 9,
+                         # no overfull box over 20 pt, no undefined reference,
+                         # no identifying text (account, repository URL, D-/GS- numbers)
 ```
 
-`tables` regenerates `paper/tables/*.tex` from the results files (they are
-gitignored, except the hand-written `reuse.tex`); `numbers` regenerates
-`paper/numbers.tex` from `scripts/paper/numbers.yaml`; `figures` regenerates
-every PDF in `paper/figures/` deterministically (no embedded date) and fails
-rather than skip when an input is missing. The E-G3 timing macros look up only
-rows whose `cold` column is `True`, so a warm re-run cannot enter the paper.
-The PDF is built with tectonic, else latexmk, else pdflatex (about a minute).
+**On a fresh clone `make paper` fails and `make pdf` works.** `make paper`
+regenerates the figures, and the scale figures read `outputs/e_g6/scale.json`,
+which is gitignored and comes only from the E-G6 grid or the archive; a missing
+figure input is an error, not a skip, so the build cannot pass over a stale
+figure. Unpack the archive first, or build with `make pdf` from the committed
+figures. Everything else `make paper` needs is committed or derived from
+committed raw files (the contention figure's input is rebuilt from
+`experiments/microbench/raw/` in under a second).
+
+`tables` regenerates `paper/tables/*.tex` from the results files (gitignored,
+except the hand-written `reuse.tex`), showing the columns
+`scripts/paper/tables.yaml` names for each table the paper uses; `numbers`
+regenerates `paper/numbers.tex` from `scripts/paper/numbers.yaml`; `figures`
+regenerates every PDF in `paper/figures/` deterministically (no embedded date).
+The E-G3 timing macros look up only rows whose `cold` column is `True`, so a
+warm re-run cannot enter the paper. The PDF is built with tectonic, else
+latexmk, else pdflatex (about a minute); `check-pdf` reads it with `pypdf`, so
+it needs no poppler install.
 
 ## Per artefact
 
 Paths are relative to the repository root; "md" is the results file under
-`experiments/results/`.
+`experiments/results/`. Rows marked *(artifact)* are tables the 9-page paper
+does not print; their numbers that the text cites are macros, and the full table
+is the results file.
 
 | paper artefact | md / raw | command | class | time | needs |
 | --- | --- | --- | --- | --- | --- |
-| Tab. `e_g1_toy_pilot`; C1-C4 | `e_g1_toy_pilot.md` | `.venv/bin/python experiments/scripts/e_g1_toy_pilot.py --out experiments/results/e_g1_toy_pilot.md` | mock | ~30 s | -- |
-| Tab. `e_g1b_topk`; C5 | `e_g1b_topk.md` | `... e_g1b_topk.py --out experiments/results/e_g1b_topk.md` | mock | ~20 s | -- |
+| Tab. `e_g1_toy_pilot` *(artifact)*; C1-C4 | `e_g1_toy_pilot.md` | `.venv/bin/python experiments/scripts/e_g1_toy_pilot.py --out experiments/results/e_g1_toy_pilot.md` | mock | ~30 s | -- |
+| Tab. `e_g1b_topk` *(artifact)*; C5 | `e_g1b_topk.md` | `... e_g1b_topk.py --out experiments/results/e_g1b_topk.md` | mock | ~20 s | -- |
 | C7 | `e_g2_ranker_diagnosis.md` | `... e_g2_ranker_diagnosis.py --out ...` | mock | ~10 s | -- |
-| Tab. `e_g2_topk_holdout`, Fig. `topk_holdout.pdf`; C6, C8 | `e_g2_topk_holdout.md` | `... e_g2_topk_holdout.py --out ...`, then `make -C paper figures` | mock | ~1 min | -- |
+| Tab. `e_g2_topk_holdout` *(artifact)*, Fig. `topk_holdout.pdf`; C6, C8 | `e_g2_topk_holdout.md` | `... e_g2_topk_holdout.py --out ...`, then `make -C paper figures` | mock | ~1 min | -- |
 | Tab. `e_g3_real_sim_oracle`; `\egthree*`; C10-C13 | `e_g3_real_sim_oracle.md` | re-render: `vendor/heteropilot/.venv/bin/python experiments/scripts/e_g3_real_sim_oracle.py --from-json outputs/eg3.json`, then `... e_g3_cache_check.py` for its P1.4 section. Rerun: `bash experiments/scripts/e_g3_oracle_run.sh` (writes `outputs/eg3.json`), then the cache check | real sim | re-render: seconds; with the cache: minutes, **timings warm**; cold: ~1.6 h at 4 workers | archive: `eg3.json`, `eg3-cache.json`, `cache-eg3` |
 | C14 | `e_g3_sim_error_causes.md` | the oracle arm per fixture into a **fresh** cache, then `... e_g3_sim_error_causes.py --work-dir outputs/eg3-diag` (the md's own block) | real sim, cold by design | ~1.6 h | nothing: a cached success would hide the failure. The tracebacks were not archived, so C14 is re-derived, not re-read |
 | Tab. `e_g4_microbench`; Fig. `contention_error.pdf`; `\egfour*`; C15-C17, C22, C29, C31 | `e_g4_microbench.md` <- `experiments/microbench/raw/` | `.venv/bin/python experiments/microbench/analyze.py` (measurement: `run_matrix.sh`, `run_collective.sh`, `run_nic.py`) | hardware | < 1 s | -- |
@@ -107,7 +125,7 @@ Paths are relative to the repository root; "md" is the results file under
 | C21 (not established) | `experiments/e_g5/raw/pilot/` | `experiments/e_g5/pilot_placement.py` | hardware, fitted pilot | -- | not a validation result; no results file by design |
 | Tab. `e_g6_scale`; `\egsix*`; C23 | `e_g6_scale.md` | re-render: `... e_g6_scale.py --from-json outputs/e_g6/scale.json`. Grid: `bash experiments/scripts/e_g6_run.sh` | mock (timings machine-dependent) | < 1 s / ~20 min serial | archive: `e_g6/scale.json` (re-render, scale figures) |
 | Tab. `e_g7_ablation`; C24 | `e_g7_ablation.md` | `... e_g7_ablation.py --out ...` | mock | ~40 s | -- |
-| Tab. `e_g7_baseline_fairness`; C25 | `e_g7_baseline_fairness.md` | `... e_g7_baseline_fairness.py --out ...` | mock | ~20 s | -- |
+| Tab. `e_g7_baseline_fairness` *(artifact)*; C25 | `e_g7_baseline_fairness.md` | `... e_g7_baseline_fairness.py --out ...` | mock | ~20 s | -- |
 | Tab. `e_g7_holdout`; `\egseven*`; C26, C32 | `e_g7_holdout.md` | `... e_g7_holdout.py --out ...` | mock | 10-16 min | -- |
 | Tab. `reuse`, Fig. `concept_sec9` | hand-written | -- | -- | -- | -- |
 | C9 | `tests/test_oracle_agreement.py` | `.venv/bin/pytest -q tests/test_oracle_agreement.py` | test | seconds | -- |

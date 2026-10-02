@@ -157,3 +157,15 @@ Open, for the submission rather than the text:
 | L-2 | the E-G5 placement table's `\input` moved to the start of its subsection, so the `table*` lands on the page after its first reference instead of two pages later | `eval.tex`, Hardware |
 | L-3 | **restored, but not the table the work order named.** The "agree/disagree 3x3" table in the results file counts all 27 rows, including the 9 duplicate feasible-marginal rows and 9 bound-stress rows -- the overcount A-3 removed. `analyze.py` now writes a second table counting independent recommendation deployments only (T1 3/3, T2 3/3, T3 0/3), and that is the one the paper restores and cites; the all-rows table stays in the results file | `e_g5_real_hardware_3`, C33 |
 | L-4 | restored: the corpus-wide E-G7 ablation, with chosen columns | `e_g7_ablation`, C24 |
+
+### Verification of R1's prose (reviewer A)
+
+The TPOT/goodput macros are the right cells and clear their targets per
+repetition, not only as medians; the C33 table matches. Fixed after the pass:
+
+| id | finding | disposition |
+| --- | --- | --- |
+| R1-1 | "every table and figure caption carries one of three tags": Table VI carries a fourth, NOT A MEASUREMENT | fixed: "every table and figure of results", and the reuse table's marker named |
+| R1-2 | C24 "every placement there is infeasible" is contradicted by the now-visible ablation table (recall 1.0 in every arm) | fixed: the placements `no_boundary` folds together are infeasible |
+| R1-3 | the independent-deployment table's caption ("... (continued)") did not say what it counts | fixed: `tables.yaml` gains `caption:`; "verdict agreement, independent deployments of the recommendation" |
+| R1-4 | Table VI's "Reused unmodified" and Background's "used unmodified" contradict the hooks, which edit inventory, optimiser and predictor files | fixed: header "Reused (unchanged when no hook is used)"; Background says the hooks touch those modules and the planner behaves as before with none in use |
