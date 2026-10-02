@@ -66,3 +66,35 @@ egfiveTthreeDisagree:   {file: e_g5_real_hardware.md, find: ["placement", "agree
 egfivePdEffect:     {file: e_g5_real_hardware.md, find: ["quantity", "value"], row: measured change, column: value, pattern: "^\\+?(-?[0-9.]+)$"}
 egfivePdPredicted:  {file: e_g5_real_hardware.md, find: ["quantity", "value"], row: predicted change, column: value, pattern: "^\\+?(-?[0-9.]+)$"}
 egfivePdRatio:      {file: e_g5_real_hardware.md, find: ["quantity", "value"], row: ratio, column: value}
+egfivePdSd:         {file: e_g5_real_hardware.md, find: ["quantity", "value"], row: SD across pairs, column: value}
+
+# --- E-G5, read without the threshold (A-2) and per deployment (A-3) -------
+# The ranges are the threshold-free evidence: the 550 ms target was set from
+# T1's own pilot, so "met on one, missed on the other" is partly by design.
+egfiveReps:          {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T1, column: reps}
+egfiveToneMedian:    {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T1, column: "p99 TTFT median", pattern: "^([0-9.]+) ms$"}
+egfiveTtwoMedian:    {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T2, column: "p99 TTFT median", pattern: "^([0-9.]+) ms$"}
+egfiveToneRangeHi:   {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T1, column: range, pattern: ", ([0-9.]+)\\]$"}
+egfiveTtwoRangeLo:   {file: e_g5_real_hardware.md, find: ["placement", "vs T1"], row: T2, column: range, pattern: "^\\[([0-9.]+),"}
+
+# --- E-G5 widened matrix (preregistration row 8, GS-37) --------------------
+# The T2/T1 ratio by load level, normal pattern; and T3 at the one level the
+# hardware meets its target.
+egfiveWideLowRatio:   {file: e_g5_real_hardware.md, find: ["pattern", "level", "ratio to T1 at this level"], row: normal, where: {level: low, placement: T2}, column: "ratio to T1 at this level", pattern: "^([0-9.]+)x$"}
+egfiveWideHighRatio:  {file: e_g5_real_hardware.md, find: ["pattern", "level", "ratio to T1 at this level"], row: normal, where: {level: high, placement: T2}, column: "ratio to T1 at this level", pattern: "^([0-9.]+)x$"}
+egfiveWideTthreeLow:  {file: e_g5_real_hardware.md, find: ["pattern", "level", "ratio to T1 at this level"], row: normal, where: {level: low, placement: T3}, column: "median p99 TTFT", pattern: "^([0-9.]+) ms$"}
+
+# --- E-G5 post-hoc re-prediction (preregistration row 9, GS-38) ------------
+# Recommendation and closest-miss rows only, every pattern and level. POST HOC:
+# no registered prediction is tested by these, and nothing was redeployed.
+egfivePostToneRows:       {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T1, column: rows}
+egfivePostToneOrigAgree:  {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T1, column: "original agrees"}
+egfivePostToneReAgree:    {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T1, column: "re-prediction agrees"}
+egfivePostTthreeRows:     {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T3, column: rows}
+egfivePostTthreeOrigAgree: {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T3, column: "original agrees"}
+egfivePostTthreeReAgree:  {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T3, column: "re-prediction agrees"}
+egfivePostTthreeOrigFp:   {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T3, column: "original false positives"}
+egfivePostTthreeReFp:     {file: e_g5_real_hardware.md, find: ["placement", "original false positives"], row: T3, column: "re-prediction false positives"}
+
+# --- E-G1: the cluster on which nothing folds (A-8) ------------------------
+egoneRatioAsym:  {file: e_g1_toy_pilot.md, table: 0, row: graph-toy-asym, column: compression_ratio}

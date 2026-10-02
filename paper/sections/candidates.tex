@@ -50,10 +50,13 @@ would merge them silently, and the failure would surface as a wrong price
 attributed to a candidate nobody evaluated---which is indistinguishable, in the
 output, from the search working correctly.
 
-The bucket key is also the prediction cache key, and that is deliberate rather
-than convenient: if two candidates may share a cached prediction they are, by
-that act, being claimed interchangeable, so the claim should be made once and
-checked once.
+The bucket key also contains the planner's own prediction key---model,
+serving architecture and scheduler knobs, the fields that change a simulation
+but are not in the graph---and that is deliberate rather than convenient: if
+two candidates may share a prediction they are, by that act, being claimed
+interchangeable, so the claim should be made once and checked once. (The
+oracle's per-placement result cache, Section~\ref{sec:adapter}, is a different
+cache.)
 
 % claim: C24
 \paragraph{The boundary is what makes the relation correct.}

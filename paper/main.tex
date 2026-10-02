@@ -68,15 +68,15 @@ accelerators run which role at which degree of parallelism. Planners that
 enumerate configurations over groups of interchangeable devices cannot express
 that choice, because two placements of one configuration are, to them, one
 candidate---and on real hardware the difference between two such placements is
-large enough to move the load at which a service still meets its latency
-target.
+large enough to decide whether a service meets its latency target.
 
 We enumerate placements instead, and make the resulting space tractable with an
 equivalence relation that folds two placements only when a graph isomorphism
 confirms their candidate graphs agree. Those graphs carry the shared
 communication boundary, so placements alike in every local attribute but
 crossing different contended links are kept apart; removing the boundary from
-the signature produces mis-merges that the full relation does not. Elimination
+the signature folds the counterexample pair the relation exists for, which the
+oracle prices apart. Elimination
 is a relaxation of the feasibility test---a candidate is removed only when
 arithmetic optimistic on every uncertain term still misses a declared
 constraint---and each check publishes the optimism it assumed. The evaluation
@@ -84,18 +84,21 @@ budget is bounded and reports what it never reached, because a search that
 omits what it did not evaluate has made a claim about a space from evidence
 about part of it.
 
-Across every experiment reported here no feasible candidate was wrongly
-eliminated and no two differently-priced placements were folded together; both
-counts are reported for every arm rather than summarised once. Under a
+In every experiment that runs an exhaustive oracle, mock or real simulator, no
+feasible placement the evaluator judged was wrongly eliminated and no two
+differently-priced placements were folded together; both counts are reported
+for every arm rather than summarised once. Under a
 discrete-event simulator the compression saved more time than it cost, with its
 own hashing and isomorphism checks charged against it. On hardware, one plan
-deployed at two placements of itself **meets its latency target on one and
-misses it sevenfold on the other**---a difference the planner it extends cannot
-express. We also measure that a contention model's accuracy depends on which
-resource a cluster description claims is shared, a claim we found wrong on one
-bus and exactly right on another, and that an optimistic throughput bound,
-while never eliminating a candidate it should not, sits an order of magnitude
-above the capacity the machine delivers.
+deployed at two placements of itself has a median $p99$ time to first token
+\egfiveTtwoOverTone{}x apart at the knee, with ranges that do not overlap---a
+difference the planner it extends cannot express. We also measure that a
+contention model's accuracy depends on which resource a cluster description
+claims is shared, a claim we found wrong on one bus and borne out on an
+inter-node NIC, where a disaggregated deployment nevertheless slowed far less
+than the model predicted; and that an optimistic throughput bound, tested on
+one rejected candidate, sits an order of magnitude above the capacity the
+machine delivers.
 \end{abstract}
 
 \maketitle

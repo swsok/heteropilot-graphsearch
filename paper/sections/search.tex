@@ -45,7 +45,9 @@ The graph makes one check possible that an island-level planner cannot express:
 the maximum flow between a candidate's device sets, over nominal capacities
 minus external reservations, is a ceiling on what its traffic can achieve. A
 candidate whose demand exceeds that ceiling misses its target under the most
-favourable routing available, which is a proof and not an estimate.
+favourable routing available. That is a proof relative to the declared cluster
+description---its capacities and its reservations---and not an estimate; it is
+as right about the hardware as the description is.
 
 % claim: C7
 % claim: C8
@@ -78,8 +80,12 @@ increasing $K$, stopping when the budget is exhausted or when no unevaluated
 candidate could beat the incumbent. It reports which of those happened.
 
 Against the existing planner's surrogate top-$K$ on a specification whose SLOs
-bind, this reaches higher feasible recall at $K = 8$ and $K = 16$. At $K = 4$
-it does not: it ties on one holdout fixture and trails on the other. That is
+bind, this reaches higher feasible recall at every $K$ on the toy corpus (the
+diagnosis fixtures the correction was made on, so in-sample), and
+at $K = 16$ on the two holdout fixtures, where it is level at $K = 8$. At
+$K = 4$ on those holdouts it does not: it ties on one and trails on the other.
+On the hardware-derived holdout it is lower at $K = 16$
+(Section~\ref{sec:eval}). That is
 reported here and in the table rather than left to the appendix, because a
 method whose advantage appears only above a budget threshold has a threshold,
 and the reader is entitled to it.
