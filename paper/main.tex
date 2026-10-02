@@ -78,23 +78,23 @@
 \pagestyle{plain}
 
 \begin{abstract}
-%% Every sentence here traces to a row of paper/CLAIMS.md. The hardware
-%% sentence is deliberately the weakest one in the abstract, because the
-%% strongest hardware result available is a failure.
+%% Every sentence here traces to a row of paper/CLAIMS.md; the last one is a
+%% registered result that goes against the model, and the abstract says so.
 Serving a large language model on a heterogeneous cluster means placing roles
 on accelerators. Planners that enumerate configurations over interchangeable
 devices conflate a configuration's placements, yet placement can decide whether
 a latency target is met. We enumerate placements
-and fold two only when graph isomorphism confirms that their candidate graphs,
+and fold two only when graph isomorphism confirms their candidate graphs,
 which carry the shared communication boundary, agree. Elimination
 relaxes the feasibility test, and a bounded budget reports what it never
 evaluated. On hardware, one plan at two of its placements has a median $p99$
 time to first token \egfiveTtwoOverTone{}x apart at the load knee. Against an
 exhaustive simulated oracle on the largest toy fixture, \egthreeFalseInfAbcde{}
 judged feasible placements were wrongly eliminated, and compression
-saved \egthreeSavingAbcde{} of \egthreeSimOracleAbcde{} seconds. One result goes
-against the model: across an inter-node NIC it predicted a
-\egfivePdPredicted{}~ms slowdown of a disaggregated KV transfer; the hardware
+saved \egthreeSavingAbcde{} of \egthreeSimOracleAbcde{} seconds. Registered
+results also go against us, the contention model's among them: across a
+NIC it predicted a
+\egfivePdPredicted{}~ms slowdown of a disaggregated KV transfer; hardware
 showed \egfivePdEffect{}~ms, not distinguishable from zero.
 \end{abstract}
 

@@ -31,12 +31,10 @@ vLLM~\cite{vllm}.
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{topology.pdf}
-  \caption{The eight-GPU node and the three placements of Section~\ref{sec:eval-hw}
-  \sourcetag{REAL HARDWARE}. Devices, NVLink pairs, PCIe ports and every link
-  figure are read from the node's cluster description, whose measured entries
-  come from the microbenchmarks' raw files; T2 is devices 0 and 2, not the span
-  between them. The description does not record which CPU socket or PCIe switch
-  a device hangs off, so neither is drawn.}
+  \caption{The eight-GPU node and the placements of Section~\ref{sec:eval-hw}
+  \sourcetag{REAL HARDWARE}, drawn from its cluster description; T2 is devices
+  0 and 2. Ports are as declared (two PCIe pairs measured unshared,
+  Section~\ref{sec:eval}); sockets and switches are not recorded, so not drawn.}
   \label{fig:topology}
 \end{figure}
 
