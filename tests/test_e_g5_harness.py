@@ -177,3 +177,34 @@ def test_closest_miss_breaks_ties_by_candidate_id() -> None:
                     Violation(metric="p99_ttft_ms", target=550, predicted=660)]))
 
     assert harness.closest_miss([pair("b"), pair("a"), pair("c")], 2)[0].candidate.id == "a"
+
+
+def test_feasible_marginal_is_a_different_template() -> None:
+    """GS-38: another embedding of the recommended template is not an alternative.
+
+    The condition places every row on its own devices, so `tpl@b` would be
+    deployed exactly as `tpl@a` was. The closest-to-1 plan is `tpl@b`; the
+    rule must pass over it to `other@c`.
+    """
+    harness = _harness()
+
+    def plan(cid, ttft):
+        return SimpleNamespace(
+            candidate=SimpleNamespace(id=cid, total_devices=4),
+            predicted=SimpleNamespace(p99_ttft_ms=ttft, p99_tpot_ms=1.0,
+                                      slo_goodput_rps=5.0),
+        )
+
+    spec = SimpleNamespace(slo=SimpleNamespace(
+        ttft=SimpleNamespace(max_ms=100.0), tpot=SimpleNamespace(max_ms=100.0),
+        min_goodput_rps=None))
+    plans = [plan("tpl@a", 10.0), plan("tpl@b", 99.0), plan("other@c", 50.0)]
+    objects = SimpleNamespace(audit=SimpleNamespace(
+        feasible_plans=plans, evaluated=3, feasible_ids=["tpl@a", "tpl@b", "other@c"]))
+
+    chosen, _ = harness.feasible_marginal(objects, spec, 4, "tpl@a")
+    assert chosen.candidate.id == "other@c"
+    only_one_template = SimpleNamespace(audit=SimpleNamespace(
+        feasible_plans=plans[:2], evaluated=2, feasible_ids=["tpl@a", "tpl@b"]))
+    chosen, why = harness.feasible_marginal(only_one_template, spec, 4, "tpl@a")
+    assert chosen is None and "template other than" in why

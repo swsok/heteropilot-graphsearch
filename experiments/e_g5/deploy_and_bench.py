@@ -490,16 +490,24 @@ def feasible_marginal(objects, spec, devices: int, exclude: str | None):
     Deploying it asks whether the ORDER is real: if the thing ranked below the
     recommendation does as well on hardware, the ordering was not carrying
     information.
+
+    **A different TEMPLATE, not merely a different embedding** (GS-38). The
+    condition deploys every row at the placement it names, so two embeddings
+    of one template become the same deployment; excluding only the
+    recommendation's embedding id let normal-T3-knee measure the
+    recommendation twice under two labels. `exclude` is an embedding id or a
+    template id; its template is what is excluded.
     """
+    excluded_template = None if exclude is None else exclude.split("@", 1)[0]
     plans = [
         plan for plan in getattr(objects.audit, "feasible_plans", [])
         if plan.candidate.total_devices == devices
-        and plan.candidate.id != exclude
+        and plan.candidate.id.split("@", 1)[0] != excluded_template
     ]
     if not plans:
         return None, (
-            f"no evaluated feasible candidate of {devices} devices below the "
-            f"recommendation (the search evaluated "
+            f"no evaluated feasible candidate of {devices} devices with a "
+            f"template other than the recommendation's (the search evaluated "
             f"{objects.audit.evaluated} representative(s) and found "
             f"{len(objects.audit.feasible_ids)} feasible overall)"
         )

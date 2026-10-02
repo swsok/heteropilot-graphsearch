@@ -87,7 +87,7 @@ TOPOLOGIES = {
     # The registered condition, unchanged: one node, aggregated.
     "T1": Topology(
         key="T1", devices=(0, 1), tp=2,
-        link="NVLink NV4, measured 52.64 GB/s p2p / 19.34 GB/s busbw world 2",
+        link="NVLink NV4, measured 52.64 GB/s p2p / 39.24 GB/s all_reduce busbw world 2",
     ),
     # Substitutes for "inter-node P/D over independent uplinks". Identical
     # engine, identical model, identical load; the only difference is a wire

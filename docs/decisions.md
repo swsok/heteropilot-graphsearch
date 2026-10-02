@@ -1727,3 +1727,100 @@ levels were not evaluated exhaustively.
 `experiments/results/e_g5_real_hardware.md`, the raw directories of the 45
 conditions. The paper's numbers are unchanged; the widened findings are for P7
 to place.
+
+## GS-38 — the adapter told the simulator T3's first NVLink pair; four post-hoc analyses · 2026-10-02
+
+**The check, and its two numbers.** The T3 simulator configuration
+(`outputs/e_g5/*__T3__*/*/sim/sims/*/cluster.json`) carried **`link_bw` =
+112.5 GB/s**. That is neither the path's bottleneck as the graph carries it
+(25.12, the PCIe p2p figure) nor the busbw E-G4 condition 5 measured at world 4
+(**8.71**): it is gpu0-gpu1's NVLink edge capacity. `_flow_bottleneck` read
+`flow.allowed_paths[0]` only, and a TP flow carries one path set per rank pair
+(six for TP=4), the first being gpu0-gpu1. It also never consulted
+`Link.measurement_for`, so heteropilot's `(collective, world_size)` selection
+(S3/D112) was bypassed for every TP group. **An adapter defect, not a predictor
+limit.**
+
+**Fix.** `graphsearch/adapter.py` `_tp_bottleneck`: the minimum over every
+pair's best path, each link replaced by its measured `all_reduce` busbw at
+`world_size = tp` where the fixture has one, else the edge capacity net of its
+shared resource as before. What the simulator is told now: T1 112.5 -> **39.24**,
+T2 25.12 -> **19.34**, T3 112.5 -> **8.71** (`tests/test_adapter_tp_bottleneck.py`).
+The work order's "T1 52.3" is the NVLink pair's *p2p* figure (52.64); its
+`all_reduce` world-2 measurement is 39.24, and that is what an all-reduce group
+is given. `conditions.py`'s T1 description had the PCIe figure (19.34) as
+NVLink's busbw; the label is corrected for later runs, and the raw files that
+recorded it are left as written.
+
+**Re-prediction, post hoc, no deployment** (`experiments/e_g5/repredict.py`,
+`raw/repredict-gs38.json`): every deployed row, 124, simulated again at its own
+placement, seed and spec with a fresh cache. The envelope key bands `link_bw`
+(`network_class`), and the corrected figures fall in other bands, so the old
+cache could not have answered; a fresh one is used regardless. A first pass at
+14-way parallelism lost 12 T3 simulations to the harness's 1800 s timeout (the
+simulations finished after the predictor had given up); a second pass at 6-way
+with 7200 s evaluated them, and no row the first pass evaluated changed.
+Recommendation and closest-miss rows, all patterns and levels:
+
+| placement | rows | original agrees | re-prediction agrees | false positives, original -> re |
+| --- | --- | --- | --- | --- |
+| T1 | 10 | 8 | 6 | 0 -> 0 |
+| T2 | 10 | 10 | 10 | 0 -> 0 |
+| T3 | 18 | 3 | 17 | 15 -> 0 |
+
+T3's fifteen false positives are gone: every T3 row the hardware missed is now
+predicted to miss. The magnitude is still short at high load (burst-high
+predicted 9.7-12.2 s against 16.7-17.2 s measured; normal-knee 0.74-1.34 s
+against 1.83-2.05 s) and normal-low seed 43 becomes a false negative (597 ms
+predicted, 394 measured). **T1 gets worse**: NVLink at 39.24 instead of 112.5
+moves normal-knee seeds 42, 43 and normal-high seed 43 to predicted misses that
+the hardware met (597, 572, 655 ms predicted; 405, 421, 497 measured). The
+hardware columns and every registered verdict are unchanged; the paper's
+macros read the registered predictions and do not move.
+
+**burst T1/T2 at low and knee: no recommendation, diagnosed** from the registered
+runs' cached predictions (`floor_diagnosis.py`, run under the pre-GS-38 adapter so
+that every lookup hit, cache misses 0). **Every evaluated candidate of size 2
+failed p99 TTFT** in all twelve rows; none failed on goodput alone; the lowest
+predicted p99 TTFT among them is 607 ms against 550. At knee they fail goodput
+too. **Not the normal-low goodput-floor artifact**, and relaxing the floor
+recovers nothing.
+
+**Floor sensitivity, analysis only.** Re-judging the same cached predictions at
+1.4, 1.5 and 1.6 (latency verdicts as the run's feasibility reports gave them,
+goodput re-tested): the only conditions whose answer depends on the floor are
+**normal-low T1 and T2, seeds 42 and 44**, where a recommendation exists at 1.4
+and 1.5 (16 feasible of size 2) and none at 1.6 -- its template,
+`tp2-dp1-s128-t2048`, is the one seed 43 deployed. Every other condition has the
+same answer and the same template at every floor tried. This is the property of
+a floor derived from the hardware (row 4) and applied to a simulator whose
+goodput prediction is lower than the hardware's: at low load the floor sits
+between the two. The evaluated set is the registered floor's; a run made at
+another floor would reorder the ranker's budget (GS-36).
+
+**`feasible_marginal` must be a different template.** The condition deploys
+every row at its own placement, so another embedding of the recommendation's
+template is the same deployment; 26 of the 32 measured marginal rows were
+exactly that (all but normal- and burst-T3-high). The rule now excludes the recommendation's template for later
+runs (`tests/test_e_g5_harness.py`); the measured rows are labelled *duplicate
+of recommendation* in the results and are not redeployed.
+
+**From the review of this change.** A measured figure is capped by its
+shared resource's availability (it was taken on an idle link), and converted
+with the link's declared unit; a template with pp > 1, whose TP flow's
+participants are tp x pp ranks, keeps the first-pair figure and says so in the
+basis rather than being given a wrong world size. None of these touches an
+E-G5 number: the a40x8 reservations are zero, its units GB/s, and no E-G5
+template has pp > 1 -- the test still gives 39.24 / 19.34 / 8.71. The selector
+is asked with binding `unknown`, which ignores binding; every a40x8
+measurement is `numa_pinned`, so it chooses the same figure.
+
+**Not fixed here, recorded.** The same first-pair read remains in
+`embeddings._resource_demand`, `contention.py` (both fluid models) and
+`ranker.py`'s cut margin. Those decide demand, contention and order, not what the
+simulator is told, and changing them would change which candidates the
+registered runs reached; they are left for a step of their own.
+
+**What it affects.** `graphsearch/adapter.py`, `experiments/e_g5/{repredict,
+floor_diagnosis,analyze,deploy_and_bench,conditions}.py`,
+`experiments/results/e_g5_real_hardware.md`, preregistration row 9.
