@@ -218,6 +218,9 @@ class TableSpec:
     joins: list = field(default_factory=list)
     width: str = "column"
     size: str = "small"
+    #: Replaces the "<file title> (continued)" caption, for a table whose
+    #: caption should say what it counts.
+    caption: str | None = None
 
 
 _SIZES = ("small", "footnotesize", "scriptsize")
@@ -238,6 +241,7 @@ def load_specs(path: Path = TABLES_YAML) -> dict[str, TableSpec]:
             joins=list(entry.get("join", [])),
             width=entry.get("width", "column"),
             size=entry.get("size", "small"),
+            caption=entry.get("caption"),
         )
         if spec.width not in ("column", "page"):
             raise TableSpecError(f"{key}: width must be column or page, not {spec.width!r}")
@@ -378,9 +382,11 @@ def convert(path: Path, out_dir: Path) -> list[Path]:
         target = out_dir / f"{key}.tex"
         spec = specs.get(key)
         width, size = None, "small"
+        this_caption = caption if position == 1 else f"{caption} (continued)"
         if spec is not None:
             header, rows = apply_spec(key, header, rows, spec, tables)
             width, size = spec.width, spec.size
+            this_caption = spec.caption or this_caption
         elif len(header) > MANY_COLUMNS:
             print(f"md_to_tex: {key} has {len(header)} columns and no entry in "
                   f"tables.yaml; set whole", file=sys.stderr)
@@ -390,7 +396,7 @@ def convert(path: Path, out_dir: Path) -> list[Path]:
                 rows,
                 width=width,
                 size=size,
-                caption=caption if position == 1 else f"{caption} (continued)",
+                caption=this_caption,
                 label=f"tab:{path.stem}{suffix}",
                 source=source,
                 kind=kind,

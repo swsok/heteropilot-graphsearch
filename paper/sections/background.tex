@@ -34,8 +34,9 @@ share a wire (Section~\ref{sec:adapter}).
 
 \paragraph{What is reused and what is new.}
 The inventory, candidate generator, predictor interface, optimiser and
-deployment backends are the existing planner's, used unmodified; four hooks
-were added to it, each a numbered deviation in that repository; the graph
+deployment backends are the existing planner's. Four hooks were added to it,
+in its own repository and each a numbered deviation there; they touch some of
+those modules, and with no hook in use the planner behaves as before; the graph
 representation, equivalence, elimination, ranking, adaptive budget, simulator
 adapter and restoration are new (Table~\ref{tab:reuse}). No behaviour of the
 existing planner changes when the hooks are not used, which its own golden

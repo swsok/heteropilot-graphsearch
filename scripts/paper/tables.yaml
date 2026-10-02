@@ -76,6 +76,7 @@ e_g5_real_hardware:
 # all-rows table beside it in the results file counts duplicates and
 # bound-stress rows, and the paper does not cite it.
 e_g5_real_hardware_3:
+  caption: "E-G5 -- verdict agreement, independent deployments of the recommendation"
   width: column
   size: small
   columns: [placement, deployments, agree, disagree]
