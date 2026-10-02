@@ -10,7 +10,7 @@ everything here is re-checked against the 2027 call when it appears:
 | at most **9** pages, double-column, single-spaced; everything but references (figures, appendices) inside them | `make -C paper pdf`; the page count is checked after every edit |
 | references unlimited; every author listed for works with fewer than 10 authors | `IEEEtran` style; no bibliography yet (P6.4) |
 | IEEE conference style, 10-point, US letter | `\documentclass[conference,10pt]{IEEEtran}`; Times via TeX Gyre Termes under tectonic (XeTeX) |
-| pages numbered | IEEEtran's conference mode does not number pages by default -- checked at submission against the 2027 call |
+| pages numbered | `\pagestyle{plain}` after `\maketitle` (IEEEtran's conference mode omits them) |
 | double-blind: no names, self-citation in the third person, no identifying URLs | author block "Anonymous submission"; the existing planner is named in the third person; no repository URL in the PDF |
 
 2026 dates for scale: abstract 2025-12-08, paper 2025-12-15, notification
