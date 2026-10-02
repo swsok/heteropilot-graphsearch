@@ -106,3 +106,19 @@ def test_the_source_check_holds_the_same_identifying_strings(tmp_path: Path) -> 
     assert any("repository URL" in f for f in failures)
     assert any("decision number" in f for f in failures)
     assert src.anonymity_failures([ROOT / "paper" / "tables" / "reuse.tex"]) == []
+
+
+def test_the_planner_is_named_and_a_pending_reference_is_counted(tmp_path: Path) -> None:
+    """R2.3: one gloss is allowed, two are a planner left unnamed; and an
+    entry whose arXiv number is not out yet is reported, not hidden."""
+    src = _check_src()
+    once = tmp_path / "a.tex"
+    once.write_text("HeteroPilot, the existing planner, is cited.\n")
+    twice = tmp_path / "b.tex"
+    twice.write_text("The planner this work extends. %% the existing planner\n")
+    assert src.unnamed_planner_failures([once]) == []
+    assert src.unnamed_planner_failures([once, twice])
+    bib = tmp_path / "refs.bib"
+    bib.write_text("@misc{a,\n  note = {arXiv preprint, number pending}\n}\n"
+                   "@article{b,\n  doi = {10.1/x}\n}\n")
+    assert src.pending_references(bib) == ["a"]

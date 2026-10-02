@@ -36,8 +36,9 @@ $p99$ time to first token \egfiveTtwoOverTone{}x apart at the load knee, over
 latency target registered beforehand from the faster placement's own pilot, one
 meets it and the other does not; Section~\ref{sec:eval} reports how the target
 was chosen and how the ratio changes with load. A planner that enumerates
-configurations rather than placements has no name for that choice. The planner
-this work builds on is such a planner by construction: it maps a candidate to
+configurations rather than placements has no name for that choice.
+HeteroPilot~\cite{heteropilot}, on which this work builds, is such a planner by
+construction: it maps a candidate to
 an \emph{execution island} and hands the island's whole device list to the
 runtime, so two placements of one candidate are, to it, one candidate.
 
@@ -81,7 +82,7 @@ placements they stand for. Under the real simulator the compression saved
 simulation on the largest fixture, with its own hashing, isomorphism and bound
 checks charged against it.
 
-The work is built on an existing planner, and Table~\ref{tab:reuse} says which
+The work is built on HeteroPilot, and Table~\ref{tab:reuse} says which
 parts are reused, which are modified through hooks, and which are new. It does
 not claim to be the first graph representation of a serving cluster, nor that
 a top-$K$ procedure yields a global optimum.

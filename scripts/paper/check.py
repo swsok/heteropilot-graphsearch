@@ -191,6 +191,37 @@ def anonymity_failures(paths) -> list[str]:
     return out
 
 
+#: Revision rule 0.3: HeteroPilot is named in the third person and cited. The
+#: euphemisms it replaced may survive at most once, as a gloss.
+UNNAMED = re.compile(r"the\s+(existing\s+planner|planner\s+this\s+work\s+extends)", re.I)
+
+
+def unnamed_planner_failures(paths) -> list[str]:
+    count, where = 0, []
+    for path in paths:
+        prose = re.sub(r"\s+", " ", strip_tex(path.read_text()))
+        hits = UNNAMED.findall(prose)
+        count += len(hits)
+        if hits:
+            where.append(path.name)
+    if count > 1:
+        return [f"'the existing planner' / 'the planner this work extends' appears "
+                f"{count} times ({', '.join(where)}); name HeteroPilot (rule 0.3)"]
+    return []
+
+
+def pending_references(bib: Path = ROOT / "paper" / "refs.bib") -> list[str]:
+    """Entries whose number is not out yet -- reported with the pending markers."""
+    if not bib.exists():
+        return []
+    keys = []
+    for entry in re.split(r"\n(?=@)", bib.read_text()):
+        head = re.match(r"@\w+\{([^,]+),", entry.strip())
+        if head and re.search(r"\bpending\b", entry, re.I):
+            keys.append(head.group(1))
+    return keys
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sections", type=Path, default=SECTIONS)
@@ -264,6 +295,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.sections == SECTIONS:
         failures += anonymity_failures(HANDWRITTEN)
+        failures += unnamed_planner_failures(sorted(args.sections.glob("*.tex")))
+        for key in pending_references():
+            pendings.append(f"  paper/refs.bib  {key}: number pending")
 
     print(f"pending placeholders: {len(pendings)}")
     for item in pendings:

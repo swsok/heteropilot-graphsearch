@@ -55,7 +55,7 @@ that the labels are sufficient.
 the model predicts.}
 Inter-node \emph{P/D} runs---prefill on one node, decode on the other, the KV
 pulled across the NIC by NIXL~\cite{nixl}---deployed by the experiment's own harness, because the
-deployment backend this work extends has no router. At a load the
+deployment backend of HeteroPilot~\cite{heteropilot} has no router. At a load the
 configuration sustains, a background stream on the same NIC lengthened the
 interval from prefill response to first decoded token by \egfivePdEffect{}
 ms, with a standard deviation of \egfivePdSd{} ms over three pairs, so not

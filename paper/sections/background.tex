@@ -13,7 +13,7 @@
 \input{reuse}
 
 \paragraph{Execution islands.}
-The planner this work extends describes a cluster as a set of \emph{execution
+HeteroPilot~\cite{heteropilot} describes a cluster as a set of \emph{execution
 islands}: maximal groups of accelerators of one model, joined by one kind of
 intra-island interconnect, that can host a single serving engine. A candidate
 names an island and a parallelism degree; the deployer resolves the island to
@@ -35,10 +35,10 @@ share a wire (Section~\ref{sec:adapter}).
 
 \paragraph{What is reused and what is new.}
 The inventory, candidate generator, predictor interface, optimiser and
-deployment backends are the existing planner's. Four hooks were added to it,
+deployment backends are HeteroPilot's. Four hooks were added to it,
 in its own repository and each a numbered deviation there; they touch some of
 those modules, and with no hook in use the planner behaves as before; the graph
 representation, equivalence, elimination, ranking, adaptive budget, simulator
 adapter and restoration are new (Table~\ref{tab:reuse}). No behaviour of the
-existing planner changes when the hooks are not used, which its own golden
+HeteroPilot changes when the hooks are not used, which its own golden
 tests check.
