@@ -105,3 +105,5 @@ after the pass:
 | V-2 | C35 "the knee is where the wire decides": above the knee the wires still differ in verdict | fixed: the ratio is largest at the knee; the verdict differs at and above it, not below |
 | V-3 | C34 "identifies a cause": a post-hoc re-prediction is consistent with one, and is still short at high load | fixed: "consistent with ... still short in magnitude at the highest load" |
 | V-4 | stale `% pending` on the C13/C14 paragraph in `limits.tex` | fixed: removed |
+| V-5 | A-23's text cites the criterion-2 result, but its table was not in the paper | fixed: `\input{e_g7_ablation_4}` (full 2 representatives / 0 mis-merged; `no_boundary` 1 / 1) beside the paragraph |
+| V-6 | A-32 was taken on the text alone | checked in code: `Signature.bucket(prediction_key)` (`graphsearch/equivalence.py`) carries the planner's prediction key; the sentence stands |
