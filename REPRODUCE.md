@@ -18,7 +18,7 @@ byte-identically, and E-G4/E-G5 re-analysed byte-identically from raw.
 
 | what | pin |
 | --- | --- |
-| this repository | the commit tagged at submission (after PR #42 and its stack merge) |
+| this repository | tag **`ispass27-submission`** = `68f6913` |
 | `vendor/heteropilot` | `b339adfcf21d1642143c1587454d7e34fd0ada25` (submodule) |
 | `vendor/heteropilot/astra-sim` | `f82fb3d` (v1.1.0, nested submodule) |
 | Python | **3.10**, for both venvs (CI, heteropilot `uv venv --python 3.10`) |
@@ -58,10 +58,20 @@ no GPU is touched.
 
 **The archive.** A few gitignored files are inputs that cannot be regenerated
 without hours of simulation: the E-G3 cold-run rows and cache, the E-G6 grid
-rows, and the E-G5 prediction caches -- about 18 MB, listed in
-`scripts/reproduce/archive_outputs.sh`. Unpack it at the repository root and
-check it with `bash scripts/reproduce/archive_outputs.sh --verify`. Its hosting
-location is fixed at submission. The several GB of per-run simulator work
+rows, and the E-G5 prediction caches -- about 18 MB (1.2 MB compressed),
+listed in `scripts/reproduce/archive_outputs.sh`. It is the release asset of
+the tag:
+
+```bash
+gh release download ispass27-submission -R swsok/heteropilot-graphsearch
+sha256sum -c outputs-archive.tar.gz.sha256        # the archive itself
+tar -xzf outputs-archive.tar.gz                   # at the repository root
+bash scripts/reproduce/archive_outputs.sh --verify  # every file in it
+```
+
+(or the same two files from the release page,
+`https://github.com/swsok/heteropilot-graphsearch/releases/tag/ispass27-submission`).
+The repository URL is not in the paper, which is under double-blind review. The several GB of per-run simulator work
 directories under `outputs/` are scratch and are not archived.
 
 ## The build
