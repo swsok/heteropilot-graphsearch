@@ -97,7 +97,24 @@ def test_conversion_is_deterministic(tmp_path: Path) -> None:
     second = [p.read_text(encoding="utf-8") for p in MD.convert(source, tmp_path / "b")]
     assert first == second
     assert "false\\_infeasible" in first[0]
-    assert "not performance numbers" in first[0]
+    assert "\\sourcetag{MOCK}" in first[0]
+
+
+def test_the_paper_says_what_each_tag_means_in_the_notes_own_words() -> None:
+    """R1.2: the notes left the tables for one paragraph; this keeps them equal.
+
+    Each note's bold sentence is its claim. If the paragraph in the paper and
+    the sentence here drift, a tag would mean one thing to the converter and
+    another to the reader.
+    """
+    import re
+
+    eval_tex = (paths_root.GRAPHSEARCH_ROOT / "paper" / "sections" / "eval.tex").read_text()
+    prose = " ".join(eval_tex.split())
+    for kind, note in MD.NOTES.items():
+        assert f"\\sourcetag{{{MD.TAGS[kind]}}}" in prose, kind
+        for claim in re.findall(r"\\textbf\{([^}]*)\}", note):
+            assert claim in prose, (kind, claim)
 
 
 def test_a_numeric_column_is_right_aligned_and_a_text_one_is_not() -> None:
