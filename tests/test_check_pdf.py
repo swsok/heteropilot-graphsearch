@@ -122,3 +122,14 @@ def test_the_planner_is_named_and_a_pending_reference_is_counted(tmp_path: Path)
     bib.write_text("@misc{a,\n  note = {arXiv preprint, number pending}\n}\n"
                    "@article{b,\n  doi = {10.1/x}\n}\n")
     assert src.pending_references(bib) == ["a"]
+
+
+def test_the_abstract_is_counted_with_a_macro_as_one_word(tmp_path: Path) -> None:
+    """R3.2: at most 150 words; a macro prints one number, so it is one word."""
+    src = _check_src()
+    tex = tmp_path / "main.tex"
+    tex.write_text("\\begin{abstract}\n%% a comment is not counted\n"
+                   "Three words here, \\egfiveTtwoOverTone{}x apart, $p99$ ms.\n"
+                   "\\end{abstract}\n")
+    assert src.abstract_words(tex) == 7
+    assert src.abstract_words() <= src.ABSTRACT_WORD_LIMIT

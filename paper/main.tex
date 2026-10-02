@@ -82,24 +82,20 @@
 %% sentence is deliberately the weakest one in the abstract, because the
 %% strongest hardware result available is a failure.
 Serving a large language model on a heterogeneous cluster means placing roles
-on accelerators. Planners that enumerate
-configurations over groups of interchangeable devices treat two placements of
-one configuration as one candidate, yet on hardware the placement can decide
-whether a service meets its latency target. We enumerate placements and fold
-two only when a graph isomorphism confirms their candidate graphs agree; the
-graphs carry the shared communication boundary, and removing it mis-merges the
-counterexample pair the relation exists for. Elimination is a relaxation of the
-feasibility test that publishes the optimism it assumed, and the bounded
-evaluation budget reports what it never reached. In every experiment with an
-exhaustive oracle, no feasible placement the evaluator
-judged was wrongly eliminated and nothing differently priced was folded; under
-the simulator the compression saved more time than it cost. On hardware, one
-plan at two placements of itself has a median $p99$ time to first token
-\egfiveTtwoOverTone{}x apart at the load knee, with non-overlapping ranges. Which resource is shared
-must be measured: a declaration we found wrong on one bus held on an
-inter-node NIC, where a disaggregated deployment nevertheless slowed far less
-than predicted; an optimistic throughput bound, tested on one rejected
-candidate, sits an order of magnitude above delivered capacity.
+on accelerators. Planners that enumerate configurations over interchangeable
+devices conflate a configuration's placements, yet placement can decide whether
+a latency target is met. We enumerate placements
+and fold two only when graph isomorphism confirms that their candidate graphs,
+which carry the shared communication boundary, agree. Elimination
+relaxes the feasibility test, and a bounded budget reports what it never
+evaluated. On hardware, one plan at two of its placements has a median $p99$
+time to first token \egfiveTtwoOverTone{}x apart at the load knee. Against an
+exhaustive simulated oracle on the largest toy fixture, \egthreeFalseInfAbcde{}
+judged feasible placements were wrongly eliminated, and compression
+saved \egthreeSavingAbcde{} of \egthreeSimOracleAbcde{} seconds. One result goes
+against the model: across an inter-node NIC it predicted a
+\egfivePdPredicted{}~ms slowdown of a disaggregated KV transfer; the hardware
+showed \egfivePdEffect{}~ms, not distinguishable from zero.
 \end{abstract}
 
 \input{sections/intro}

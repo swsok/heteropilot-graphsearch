@@ -16,6 +16,7 @@ egthreeUnjudgedAbcde:     {file: e_g3_real_sim_oracle.md, table: 0, row: graph-t
 egthreeSavingAbcde:       {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, where: {cold: "True"}, column: saving_s, format: "{:.0f}"}
 egthreeSimOracleAbcde:    {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, where: {cold: "True"}, column: t_sim_oracle_s, format: "{:.0f}"}
 egthreeSimProposedAbcde:  {file: e_g3_real_sim_oracle.md, table: 1, row: graph-toy-abcde, where: {cold: "True"}, column: t_sim_proposed_s, format: "{:.0f}"}
+egthreeFalseInfAbcde:     {file: e_g3_real_sim_oracle.md, table: 0, row: graph-toy-abcde, column: false_infeasible}
 egthreeRatioLab:          {file: e_g3_real_sim_oracle.md, table: 0, row: heterogeneous-lab, column: compression_ratio}
 egthreeSavingLab:         {file: e_g3_real_sim_oracle.md, table: 1, row: heterogeneous-lab, where: {cold: "True"}, column: saving_s, format: "{:.0f}"}
 
