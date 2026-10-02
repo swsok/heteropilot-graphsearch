@@ -17,108 +17,54 @@
 \section{Limitations}
 \label{sec:limits}
 
-Some of these were stated before the experiment that could have revealed
-them: the asymmetric precondition and the scope deferrals are the research
-design's own failure conditions and scope. Others were found by running the experiments---the causes
-of the simulator's failures, the adapter's first-pair figure, the size of the
-inter-node contention effect---and each is recorded with the decision that
-found it. Neither kind is argued away.
-
 % claim: C4
-\paragraph{The compression has a precondition, and clusters can fail it.}
+\paragraph{The compression has a precondition.}
 Exact equivalence folds placements only where the cluster has repeated
-structure. On the toy asymmetric fixture, where no two placements are
-isomorphic, it folds nothing: the ratio is \egoneRatioAsym. The synthetic
-scaling clusters still fold at their asymmetric end: at 128 devices the ratio
-runs from \egsixRatioAsym{} there to \egsixRatioSym{} at full symmetry. The asymmetric configurations are in the corpus precisely so
-the number is reported. Where the isomorphism check costs more than the simulation
-it saves, the registered response is to demote exact compression to a cache key
-rather than to argue the cost away.
+structure; on the toy asymmetric fixture it folds nothing (ratio
+\egoneRatioAsym). Where the isomorphism check costs more than the simulation it
+saves, the registered response is to demote exact compression to a cache key.
 
 % claim: C13
 % claim: C14
-\paragraph{A share of placements never simulate, and on one fixture it is a fifth of them.}
-On the smallest corpus \egthreeUnjudgedLab{} of \egthreeEmbeddingsLab{} placements returned no verdict.
-% claim: C14
-They are reported as \texttt{unknown\_measurement} and are not counted as
-infeasible, so every correctness result in this paper is a statement about the
-placements the simulator judged. The cause is two causes---a missing profile
-for a parallelism degree, and a decode instance exhausting its KV---and neither
-becomes a verdict by being understood. The second is the more interesting: the
-evaluator detects that the run cannot proceed and raises, so the failure
-carries a reason but not a verdict, and it is reported exactly as a simulator
-error of any other kind is.
-
-% claim: C15
-\paragraph{The contention model is fluid, and has an upper message size.}
-It is processor sharing over declared shared resources, recomputed when a flow
-starts or finishes. It is not packet-level; it does not model contention
-\emph{between} candidates, which are alternatives rather than co-tenants; and
-above a message size the hardware overlaps the two directions of one link in a
-way processor sharing does not capture, making the model pessimistic there: it
-predicts those transfers about a third slower than measured. That boundary is stated rather than absorbed into a fitted
-capacity.
+\paragraph{Some placements never simulate.}
+On the smallest corpus \egthreeUnjudgedLab{} of \egthreeEmbeddingsLab{}
+placements returned no verdict, so every correctness result here is a
+statement about the placements the simulator judged. Neither of the two causes
+identified in Section~\ref{sec:eval} becomes a
+verdict by being understood: the KV exhaustion is detected and raised, so the
+failure carries a reason but not a verdict.
 
 % claim: C34
-\paragraph{The simulator is told a placement's bandwidth, not what it shares.}
-For each placement the adapter replaces the simulator's link figure with that
-placement's own: for a tensor-parallel group, the minimum over every rank pair
-of that pair's best path, each link given its measured all-reduce bus bandwidth
-at the group's own number of ranks where the cluster description carries one,
-and its edge capacity otherwise, capped in either case by what its shared
-resource's reservations leave. That is the corrected adapter. The registered
-hardware rows were all predicted by the earlier one, which read the group's
-first rank pair at its edge capacity; Section~\ref{sec:eval-hw} reports what
-re-predicting them changes, post hoc. What the adapter cannot pass on is which
-\emph{shared resource} a flow crosses, so contention between a candidate's own
-flows on one port or NIC is invisible to the evaluator. The adapter's report
-names the shared resources it dropped, which makes that gap legible but does
-not close it---and it is not a complete account of what the simulator was not
-told: the rank pairs the earlier adapter ignored were never in it. Closing the
-gap needs a simulator with a link graph, or a model that folds contention into
-the numbers passed---and the second would make the simulator's output
-unattributable, which is why it was not done.
-
 % claim: C3
-For a tensor-parallel group of more than two ranks the compression's demand
-labels still read the first rank pair, as the earlier adapter did, so on such
-groups the label and the evaluator shared one blind spot, and the zero
-mis-merge count there is not independent evidence that the labels are
-sufficient. The same first-pair read remains in the fluid contention model's
-choice of a flow's path and in the ranker's cut margin; neither decides what
-the simulator is told, and correcting them would change which candidates the
-registered runs reached, so they are recorded rather than changed here.
+\paragraph{The simulator is told a placement's bandwidth, not what it shares.}
+Every registered hardware prediction used the earlier adapter's first-pair
+figure; the correction is evaluated only post hoc (Section~\ref{sec:eval-hw}).
+Contention between a candidate's own flows on one port or NIC remains
+invisible to the evaluator, and closing that needs a simulator with a link
+graph. The same first-pair read remains in the compression's demand labels,
+in the fluid model's choice of a flow's path and in the ranker's cut margin;
+correcting them would change which candidates the registered runs reached, so
+they are recorded rather than changed. For a tensor-parallel group of more
+than two ranks, the labels and the earlier evaluator therefore shared one
+blind spot, and the zero mis-merge count there is not independent evidence
+that the labels are sufficient.
 
 % claim: C22
 % claim: C30
 \paragraph{Inter-node contention on a disaggregated deployment is smaller than
 the model predicts.}
-The contention measurements cover an intra-node bus and an inter-node NIC, and
-inter-node \emph{P/D} now runs: prefill on one node, decode on the other, the
-KV pulled across the NIC, every request completed. It is deployed by the
-experiment's own harness, because the deployment backend this work extends
-serves a single engine and has no router. Measured as a paired mean over
-requests, at a load the configuration sustains, a background stream on the
-same NIC lengthened the interval from prefill response to first decoded token
-by \egfivePdEffect{} ms---with a standard deviation of \egfivePdSd{} ms over
-three pairs, so not distinguishable from zero---where the fluid model
-predicted \egfivePdPredicted{} ms: a ratio of \egfivePdRatio{}, outside the
-registered agreement band. The model
-enters the background as a standing reservation of its duty cycle, which slows
-a transfer more than a competing flow of that duty cycle would; even so, the
-hardware's effect is below what processor sharing with such a flow predicts,
-and this experiment does not separate why. Deployment to the NPU in the
-design's scope is impossible, because no backend for it exists.
-
-\paragraph{Every fixture but three is fictional.}
-The toy clusters and the synthetic scaling clusters are invented and say so in
-their headers; a result computed from one is a result about the search, never
-about hardware. The exceptions are the eight-GPU node's and the two-node
-pair's descriptions, generated from the microbenchmarks' raw files with
-unmeasured figures marked as placeholders, and the holdout derived from the
-first by one assumed reservation, which is a topology variation rather than a
-measurement. A simulation at 128 devices is not a large-scale
-accuracy result and is not offered as one.
+Inter-node \emph{P/D} runs---prefill on one node, decode on the other, the KV
+pulled across the NIC---deployed by the experiment's own harness, because the
+deployment backend this work extends has no router. At a load the
+configuration sustains, a background stream on the same NIC lengthened the
+interval from prefill response to first decoded token by \egfivePdEffect{}
+ms, with a standard deviation of \egfivePdSd{} ms over three pairs, so not
+distinguishable from zero, where the fluid model predicted
+\egfivePdPredicted{} ms: a ratio of \egfivePdRatio{}, outside the registered
+agreement band. The model enters the background as a standing reservation of
+its duty cycle, which slows a transfer more than a competing flow would; even
+so, the hardware's effect is below what processor sharing predicts, and this
+experiment does not separate why.
 
 % claim: C21
 % not-established
@@ -128,16 +74,10 @@ it, was observed only in the pilot runs, which are the fitted set the
 specification was derived from and are excluded from validation; no results
 file carries it, and the paper does not claim it.
 
-\paragraph{What a certificate certifies.}
-Where the search can certify that nothing unevaluated could have been better,
-that statement is bounded by the declared candidate space and by the evaluation
-model. It does not say that no better deployment exists; it says that none
-exists among candidates this specification admits, judged by this evaluator.
-
 \input{reuse}
 
 \paragraph{Deferred by scope.}
-A single tensor-parallel group spanning two accelerator vendors, and KV-cache
-format conversion between them, are outside this work. Learned rankers and
-mixed parallelism degrees within one group are future work. These are stated as
-scope rather than as difficulty: nothing here shows they cannot be done.
+NPU deployment (no backend exists), a tensor-parallel group spanning two
+accelerator vendors, KV-cache format conversion between them, learned rankers
+and mixed parallelism degrees within one group are outside this work; nothing
+here shows they cannot be done.

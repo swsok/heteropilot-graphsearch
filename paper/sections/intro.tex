@@ -20,43 +20,34 @@
 Serving a large language model on a heterogeneous cluster means choosing, for
 one service specification, which accelerators run which role at which degree of
 parallelism. The choice is a placement and not merely a configuration: two
-groups of devices that are identical in model, memory and price can still
-differ in the interconnect their tensor-parallel collective crosses, and that
-difference reaches the served latency.
+groups of devices identical in model, memory and price can still differ in the
+interconnect their tensor-parallel collective crosses, and that difference
+reaches the served latency.
 
 % claim: C18
-The size of the difference is easy to underestimate. On the eight-GPU node used
-here, one plan---same engine, model, trace, scheduler knobs and seed---deployed
-at two placements of itself has a median $p99$ time to first token
-\egfiveTtwoOverTone{}x apart at the load knee, over \egfiveReps{} repetitions per
-placement whose ranges do not overlap. Against a latency target registered
-beforehand from the faster placement's own pilot, one meets it and the other
-does not; Section~\ref{sec:eval} reports the measurement, how the target was
-chosen, and how the ratio changes with load.
-
-A planner that enumerates configurations rather than placements cannot make
-that choice, because it has no name for the thing being chosen. The planner
-this work builds on is such a planner, by construction: it maps a candidate to
+On the eight-GPU node used here, one plan---same engine, model, trace,
+scheduler knobs and seed---deployed at two placements of itself has a median
+$p99$ time to first token \egfiveTtwoOverTone{}x apart at the load knee, over
+\egfiveReps{} repetitions per placement whose ranges do not overlap. Against a
+latency target registered beforehand from the faster placement's own pilot, one
+meets it and the other does not; Section~\ref{sec:eval} reports how the target
+was chosen and how the ratio changes with load. A planner that enumerates
+configurations rather than placements has no name for that choice. The planner
+this work builds on is such a planner by construction: it maps a candidate to
 an \emph{execution island} and hands the island's whole device list to the
-serving runtime, which takes as many devices as the parallelism degree needs.
-Two placements of one candidate are, to it, one candidate.
+runtime, so two placements of one candidate are, to it, one candidate.
 
 % claim: C1
 % claim: C3
-Enumerating placements instead is immediately expensive, and the expense is not
-in the enumeration but in the evaluation: each candidate's latency comes from a
-discrete-event simulation costing seconds to minutes. The space is also highly
-redundant, because a cluster is built from repeated parts. The obvious response
-is to evaluate one member of each class of interchangeable placements, and the
-obvious way to find those classes is to hash a description of each placement
-and merge the collisions.
-
-That is the step where correctness is lost, and the loss is silent. Two
-placements can agree in every local attribute---same device model, same
-parallelism, same price---and still be distinguishable, because one of them
-crosses a link that something outside the deployment is already using. A
-signature built from local attributes merges them; the evaluator then prices
-the representative and attributes that price to both.
+Enumerating placements instead is expensive in evaluation, not enumeration:
+each candidate's latency comes from a discrete-event simulation costing seconds
+to minutes. The space is also redundant, because a cluster is built from
+repeated parts, and the obvious response---hash a description of each
+placement and evaluate one member per collision class---is where correctness
+is lost silently. Two placements can agree in every local attribute and still
+differ, because one crosses a link that something outside the deployment is
+already using; a local signature merges them, and the evaluator's price for
+the representative is attributed to both.
 
 \paragraph{Contributions.}
 
@@ -64,37 +55,29 @@ the representative and attributes that price to both.
 \textbf{A. An equivalence relation over placements that carries the shared
 communication boundary.} Placements are folded only after a graph isomorphism
 check confirms their candidate graphs agree, and those graphs carry the shared
-resources their traffic crosses along with the capacity each one has left.
-Dropping the boundary from the signature is an ablation, and it produces
-a mis-merge on the counterexample pair the relation exists for, which the
-full relation does not (Section~\ref{sec:eval}).
+resources their traffic crosses with the capacity each has left. Dropping the
+boundary mis-merges the counterexample pair the relation exists for, which
+the full relation does not.
 
 % claim: C2
 \textbf{B. Elimination that is a relaxation of the feasibility test.} A
-candidate is removed only when arithmetic that is optimistic on every uncertain
-term still misses a declared constraint; each check publishes the relaxations
-it made. Anything that cannot be shown to be a relaxation is a heuristic and is
-reported in a different state, because a candidate that was never evaluated is
-not a candidate that was shown to be infeasible. In every experiment that runs
-an exhaustive oracle the count of feasible placements wrongly eliminated is
-zero among those the evaluator judged, and it is reported for every arm of
-those tables rather than summarised once; on hardware the bound is tested on
-one rejected candidate.
+candidate is removed only when arithmetic optimistic on every uncertain term
+still misses a declared constraint, and each check publishes its relaxations;
+anything else is reported as a heuristic, in a different state. In every
+experiment that runs an exhaustive oracle the count of feasible placements
+wrongly eliminated is zero among those the evaluator judged; on hardware the
+bound is tested on one rejected candidate.
 
 % claim: C11
 % claim: C26
 \textbf{C. An evaluation budget that reports what it did not reach.} The search
-spends a bounded number of simulations and returns, with the recommendation,
-the number of representatives it never judged and the number of placements
-those stand for. On the three fixtures where the full oracle was also run under
-the real simulator, the compression saved more simulation time than it cost:
+returns, with the recommendation, the representatives it never judged and the
+placements they stand for. Under the real simulator the compression saved
 \egthreeSavingAbcde~seconds against \egthreeSimOracleAbcde~seconds of oracle
-simulation on the largest, with the compression's own hashing, isomorphism and
-bound checks charged against it.
+simulation on the largest fixture, with its own hashing, isomorphism and bound
+checks charged against it.
 
-This work is built on an existing planner and says throughout which parts are
-reused, which are modified through a small number of hooks, and which are new;
-Section~\ref{sec:limits} carries that table. It does not claim to be the first
-graph representation of a serving cluster, and it does not claim that a
-top-$K$ procedure yields a global optimum---the search's contribution is the
-opposite, that it states what it left unevaluated.
+The work is built on an existing planner, and Table~\ref{tab:reuse} says which
+parts are reused, which are modified through hooks, and which are new. It does
+not claim to be the first graph representation of a serving cluster, nor that
+a top-$K$ procedure yields a global optimum.

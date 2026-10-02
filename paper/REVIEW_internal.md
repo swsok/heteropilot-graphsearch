@@ -107,3 +107,44 @@ after the pass:
 | V-4 | stale `% pending` on the C13/C14 paragraph in `limits.tex` | fixed: removed |
 | V-5 | A-23's text cites the criterion-2 result, but its table was not in the paper | fixed: `\input{e_g7_ablation_4}` (full 2 representatives / 0 mis-merged; `no_boundary` 1 / 1) beside the paragraph |
 | V-6 | A-32 was taken on the text alone | checked in code: `Signature.bucket(prediction_key)` (`graphsearch/equivalence.py`) carries the planner's prediction key; the sentence stands |
+
+## Length cut for ISPASS (9 pages)
+
+IEEEtran conference 10pt put the draft at 13 pages; ISPASS allows 9 (no
+bibliography yet, so the whole PDF). After the cut: **9 pages**, `make check`
+passes, no Overfull box or undefined reference in the final TeX pass (the four
+`TU/ptm` font-shape warnings come from the template and are unchanged). Every
+P7.1 qualification is kept in at least one place; where a statement appeared in
+several sections, the copies were removed and the qualified one kept.
+
+| cut | kind | where its evidence still lives |
+| --- | --- | --- |
+| `e_g2_topk_holdout` table | removed (figure shows it) | `topk_holdout.pdf` (Fig.); `experiments/results/e_g2_topk_holdout.md`; in-sample/holdout scoping (A-10) stays in `eval.tex` Search quality |
+| `e_g3_real_sim_oracle_2` table (timings) | removed (macros carry it) | `\egthreeSimOracleAbcde`, `\egthreeSimProposedAbcde`, `\egthreeSavingAbcde` in eval; `e_g3_real_sim_oracle.md` table 1 |
+| `e_g4_microbench_2` table (verdicts) | removed (macros + figure) | `\egfour*` macros in eval; `contention_error.pdf`; `e_g4_microbench.md` |
+| `e_g1_toy_pilot` table | removed (secondary) | `e_g3_real_sim_oracle` covers three of the four fixtures; graph-toy-asym ratio via `\egoneRatioAsym`; `e_g1_toy_pilot.md` |
+| `e_g1b_topk` table | removed (secondary) | the in-sample sentence in eval; `e_g1b_topk.md` |
+| `e_g7_baseline_fairness` table | removed (secondary) | the "scored generously" paragraph in eval; `e_g7_baseline_fairness.md` (C25) |
+| `e_g7_ablation` corpus-wide table | removed (`e_g7_ablation_4` carries C24) | the "property of the ruler" sentence in eval; `e_g7_ablation.md` |
+| abstract | rewritten, 366 -> about 210 words | same claims; A-15 scope (exhaustive-oracle experiments, judged placements), one-candidate bound test, knee scoping kept |
+| intro | the C18/C21 paragraph and the planner paragraph merged; contributions shortened | qualifications kept: pilot-derived target, knee, judged placements, one hardware candidate |
+| background | "approximate merging" folded into "execution islands"; the simulator paragraph reduced to a pointer | `adapter.tex` |
+| problem | candidate + objective merged; the five-state list inlined | unchanged content, minus the unpriced-device reasoning (now one clause) |
+| graph, candidates | paragraphs merged; the "which resource is shared" paragraph reduced to a pointer | eval, Contention model |
+| search | the recall-by-K paragraph **dropped** from this section; ranking paragraphs merged; "what was not reached" merged into the budget paragraph | eval, Search quality (A-10 wording intact) |
+| adapter | the corrected-adapter description moved here from limits (C34); predictor binding and cache paragraphs merged; the accuracy-domain sentence dropped | eval, 128 MiB paragraph (A-9, pessimistic) |
+| limits | opening paragraph, "contention model is fluid", "every fixture but three", "what a certificate certifies" dropped as duplicates; others shortened | eval Setup (fixtures), eval 128 MiB (A-9), adapter (not packet-level), search (certificate); GS-38 first-pair limits, judged-placements scope and C21 kept in limits |
+| conclusion | four paragraphs -> one | same claims, same qualifications (exhaustive-oracle scope, one-candidate bound test, knee, P/D miss) |
+
+### Verification of the cut (reviewer A)
+
+Every A-n and V-n qualification is kept at least once (file:line per item in
+the reviewer's report); no shortened sentence is stronger; every `\ref` resolves
+to a table still in the paper; every number whose table was cut is a macro.
+Open, for the submission rather than the text:
+
+| id | note | status |
+| --- | --- | --- |
+| D-1 | four sentences point to "the artifact" (timing table, toy-corpus table, corpus-wide ablation, toy-corpus recall); under double-blind a reviewer cannot see it | needs an anonymised artifact link at submission (user decision) |
+| D-2 | "registered" / "preregistration" and "accompanying repository" appear with no anonymised pointer | same as D-1 |
+| D-3 | the reuse table plus "hooks" and "golden tests" may identify the extended planner | check against the 2027 anonymity rules when the call appears |
