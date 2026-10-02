@@ -113,6 +113,12 @@ candidate, sits an order of magnitude above delivered capacity.
 \input{sections/limits}
 \input{sections/conclusion}
 
+%% Where the references begin, for `make check-pdf`: the page this label lands
+%% on is the first that does not count toward the venue's limit. Written at
+%% shipout, so it is the page the label is actually set on.
+\makeatletter
+\protected@write\@auxout{}{\string\newlabel{sec:refs}{{}{\thepage}}}
+\makeatother
 \bibliographystyle{IEEEtran}
 %% No .bib yet -- P6.4 builds it from research design section 13 plus a fresh
 %% search. \bibliography is deliberately absent rather than pointing at a file

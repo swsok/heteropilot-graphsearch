@@ -26,7 +26,7 @@ RESULTS := $(wildcard $(ROOT)/experiments/results/*.md)
 # than pretending either way.
 FIGURE_SCRIPTS := $(wildcard $(ROOT)/scripts/paper/figures/*.py)
 
-.PHONY: paper pdf tables figures numbers check clean help
+.PHONY: paper pdf tables figures numbers check check-pdf clean help
 
 help:
 	@echo "make tables   regenerate tables/*.tex from experiments/results/*.md"
@@ -49,7 +49,7 @@ paper: tables numbers figures pdf
 pdf:
 	@set -e; \
 	if command -v tectonic >/dev/null 2>&1; then \
-	    tectonic --keep-logs --print main.tex; \
+	    tectonic --keep-logs --keep-intermediates --print main.tex; \
 	elif command -v latexmk >/dev/null 2>&1; then \
 	    latexmk -pdf -halt-on-error main.tex; \
 	elif command -v pdflatex >/dev/null 2>&1; then \
@@ -110,3 +110,11 @@ numbers:
 check: numbers
 	$(PYTHON) $(ROOT)/scripts/paper/numbers.py --check
 	$(PYTHON) $(ROOT)/scripts/paper/check.py
+	$(PYTHON) $(ROOT)/scripts/paper/check_pdf.py
+
+# What only the compiled PDF can show: overfull boxes past 20 pt, undefined
+# references, pages before the references, identifying text. `check` runs it
+# too, and fails with "run make pdf first" when there is no PDF -- a check that
+# passes because there was nothing to check is the failure this exists for.
+check-pdf:
+	$(PYTHON) $(ROOT)/scripts/paper/check_pdf.py

@@ -11,10 +11,10 @@
     \toprule
     Reused unmodified & Modified by hook & New in this work \\
     \midrule
-    \texttt{planner.inventory}      & H1 \small(D121)  & \texttt{schema} \\
-    \texttt{candidate\_generator}   & H2 \small(D120)  & \texttt{paths} \\
-    \texttt{predictor} interface    & H3 \small(D122)  & \texttt{demand} \\
-    \texttt{optimizer.exhaustive}   & H4 \small(D127)  & \texttt{embeddings} \\
+    \texttt{planner.inventory}      & H1 service contract& \texttt{schema} \\
+    \texttt{candidate\_generator}   & H2 v2 inventory schema& \texttt{paths} \\
+    \texttt{predictor} interface    & H3 search and compile hooks& \texttt{demand} \\
+    \texttt{optimizer.exhaustive}   & H4 bench prefix-caching knob& \texttt{embeddings} \\
     \texttt{optimizer.surrogate}    &                  & \texttt{equivalence} \\
     \texttt{deploy.vllm\_cuda}      &                  & \texttt{bounds} \\
     \texttt{util.percentile}        &                  & \texttt{ranker} \\
