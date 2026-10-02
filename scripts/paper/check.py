@@ -222,6 +222,21 @@ def pending_references(bib: Path = ROOT / "paper" / "refs.bib") -> list[str]:
     return keys
 
 
+#: Revision R3.2. A macro counts as one word -- it prints one number.
+ABSTRACT_WORD_LIMIT = 150
+
+
+def abstract_words(main_tex: Path = ROOT / "paper" / "main.tex") -> int:
+    text = main_tex.read_text()
+    body = text[text.index("\\begin{abstract}") + len("\\begin{abstract}"):
+                text.index("\\end{abstract}")]
+    body = re.sub(r"(?<!\\)%.*$", "", body, flags=re.M)
+    # `\\egfiveTtwoOverTone{}x` prints "8.3x": one word, suffix included.
+    body = re.sub(r"\\[A-Za-z]+(\{\})?\w*", " N ", body)
+    body = body.replace("$", "").replace("~", " ")
+    return sum(1 for token in body.split() if re.search(r"[A-Za-z0-9]", token))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sections", type=Path, default=SECTIONS)
@@ -294,6 +309,11 @@ def main(argv: list[str] | None = None) -> int:
             pendings.append(f"  {rel}:{line}  {match.group(1)}")
 
     if args.sections == SECTIONS:
+        words = abstract_words()
+        print(f"abstract: {words} words (limit {ABSTRACT_WORD_LIMIT})")
+        if words > ABSTRACT_WORD_LIMIT:
+            failures.append(f"paper/main.tex: the abstract is {words} words, over "
+                            f"{ABSTRACT_WORD_LIMIT}")
         failures += anonymity_failures(HANDWRITTEN)
         failures += unnamed_planner_failures(sorted(args.sections.glob("*.tex")))
         for key in pending_references():
