@@ -46,3 +46,7 @@ mypy
 # does not need it -- but the paper pipeline does, and a dependency the build
 # needs belongs here rather than in a README sentence.
 matplotlib
+
+# `make check-pdf` (revision R1.3) counts pages and reads the PDF's text for
+# identifying strings. Pure Python, so the gate needs no poppler install.
+pypdf
