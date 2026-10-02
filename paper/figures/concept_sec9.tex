@@ -12,6 +12,7 @@
 \begin{figure}[t]
   \centering
   \footnotesize
+  \begin{adjustbox}{max width=\columnwidth}
   \begin{tikzpicture}[
       node distance=6mm,
       stage/.style={draw, rounded corners=2pt, align=center,
@@ -36,6 +37,7 @@
     \node[lab, below=7mm of bound.south, text width=30mm]
       {each removal is recorded in its own state};
   \end{tikzpicture}
+  \end{adjustbox}
   \caption{The worked example of the research design, one stage per arrow.
   Folding is not rejection: the 45 pairs become 8 representatives without any
   candidate being judged, and the mapping back to all 28 surviving physical

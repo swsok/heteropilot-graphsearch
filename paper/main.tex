@@ -9,7 +9,24 @@
 %% BUILD: `make paper` from this directory. Do not run pdflatex by hand -- the
 %% tables under tables/ are generated from experiments/results/*.md by
 %% `make tables`, and a hand build silently compiles whatever was there last.
-\documentclass[sigconf,nonacm]{acmart}
+\documentclass[conference,10pt]{IEEEtran}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{adjustbox}
+%% IEEEtran asks for Times. Under pdfLaTeX that is its default; tectonic is
+%% XeTeX, so the OpenType Times clone is named here, with its math and a
+%% matching typewriter face. Named by file because tectonic resolves fonts
+%% from its bundle, not from the system.
+\usepackage{iftex}
+\ifXeTeX
+  \usepackage{fontspec}
+  \setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular,
+    BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+  \setmonofont{texgyrecursor}[Extension=.otf, UprightFont=*-regular,
+    BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+  \usepackage{unicode-math}
+  \setmathfont{texgyretermes-math.otf}
+\fi
 
 \usepackage{booktabs}
 \usepackage{tikz}
@@ -52,12 +69,9 @@
 \title{Graph-Based Placement Search for Heterogeneous LLM Serving Clusters}
 
 %% Placeholder. Replaced when the venue and the author list are settled (P7.3).
-\author{Anonymous}
-\affiliation{%
-  \institution{Anonymous Institution}
-  \country{}
-}
-\email{anonymous@example.org}
+\author{\IEEEauthorblockN{Anonymous submission}}
+
+\maketitle
 
 \begin{abstract}
 %% Every sentence here traces to a row of paper/CLAIMS.md. The hardware
@@ -101,8 +115,6 @@ one rejected candidate, sits an order of magnitude above the capacity the
 machine delivers.
 \end{abstract}
 
-\maketitle
-
 \input{sections/intro}
 \input{sections/background}
 \input{sections/problem}
@@ -115,7 +127,7 @@ machine delivers.
 \input{sections/limits}
 \input{sections/conclusion}
 
-\bibliographystyle{ACM-Reference-Format}
+\bibliographystyle{IEEEtran}
 %% No .bib yet -- P6.4 builds it from research design section 13 plus a fresh
 %% search. \bibliography is deliberately absent rather than pointing at a file
 %% that does not exist, which would fail the build for a reason unrelated to

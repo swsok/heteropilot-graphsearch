@@ -2,10 +2,11 @@
 %% overwrite. It carries no measured number: it is a statement about which
 %% repository each piece of code lives in, which contribution C requires the
 %% paper to make explicitly rather than leave to a reader's inference.
-\begin{table}[t]
+\begin{table*}[t]
   \caption{What is reused, what is modified, and what is new~\sourcetag{NOT A MEASUREMENT}}
   \label{tab:reuse}
   \small
+  \begin{adjustbox}{max width=\textwidth}
   \begin{tabular}{lll}
     \toprule
     Reused unmodified & Modified by hook & New in this work \\
@@ -25,10 +26,11 @@
                                     &                  & \texttt{contention} \\
     \bottomrule
   \end{tabular}
+  \end{adjustbox}
   \vspace{2pt}
   \footnotesize Each hook is a pull request against the planner's own
   repository with a numbered deviation entry, not a patch applied from here;
   the planner's behaviour is unchanged when a hook is not used, which its own
   golden tests check. Thirteen new modules, four hooks, and no file of the
   planner edited in place.
-\end{table}
+\end{table*}
