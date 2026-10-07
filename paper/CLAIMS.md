@@ -20,11 +20,12 @@ validation (C21): nothing that could test it has run.
 cannot quietly reacquire it.
 
 **A status may be qualified, and the qualification travels with the claim.**
-E-G3's correctness row reads "Established, for the placements the simulator
-judged" because `complete` is False on all three fixtures: between 4.5 % and
-21 % of placements came back `SIM_ERROR` and have no verdict either way. Dropping the clause would
-turn a bounded result into an unbounded one, which is the failure this file
-exists to prevent.
+E-G3's correctness row reads "for the placements the simulator judged" on
+`heterogeneous-lab`, whose run is still incomplete: 21 % of its placements came
+back `SIM_ERROR` and have no verdict either way. On the two toy fixtures the
+clause was dropped only after a re-run judged every placement (R4.3). Dropping
+it without that run would turn a bounded result into an unbounded one, which is
+the failure this file exists to prevent.
 
 ---
 
@@ -41,10 +42,10 @@ exists to prevent.
 | C7 | The ranker's goodput term must divide by a knob-aware throughput estimate, not by the elimination bound's optimistic ceiling | `experiments/results/e_g2_ranker_diagnosis.md` | mock | Established |
 | C8 | The correction generalises to fixtures the diagnosis never saw | `experiments/results/e_g2_topk_holdout.md` | mock | Established |
 | C9 | A ranker change cannot move either correctness number | `tests/test_oracle_agreement.py` | — (test) | Established |
-| C10 | The correctness result survives replacing the mock with LLMServingSim | `experiments/results/e_g3_real_sim_oracle.md` | real-sim | Established, **for the placements the simulator judged** |
+| C10 | The correctness result survives replacing the mock with LLMServingSim | `experiments/results/e_g3_real_sim_oracle.md` (re-run section for the toy fixtures) | real-sim | Established: **for every placement** on both toy fixtures (R4.3 re-run, `complete` True), **for the placements the simulator judged** on `heterogeneous-lab` |
 | C11 | The compression's own cost is smaller than the simulation time it saves | `experiments/results/e_g3_real_sim_oracle.md` (`saving_s`) | real-sim | Established |
 | C12 | The compression ratio is a property of the graph, not of the predictor | `e_g1_toy_pilot.md` and `e_g3_real_sim_oracle.md` agree to four decimals on all three shared fixtures | mock + real-sim | Established |
-| C13 | Between 4.5 % and 21 % of placements fail to simulate at all (`SIM_ERROR`), and are reported as `unknown_measurement` rather than infeasible | `experiments/results/e_g3_real_sim_oracle.md` (`unjudged`, `complete`) | real-sim | Established as a limitation; cause **not** established |
+| C13 | In the first run between 4.5 % and 21 % of placements failed to simulate at all (`SIM_ERROR`) and were reported as `unknown_measurement` rather than infeasible; after the A5000 tp=2 profile only `heterogeneous-lab`'s remain | `experiments/results/e_g3_real_sim_oracle.md` (`unjudged`, `complete`, and the re-run section) | real-sim | Established as a limitation; causes in C14 |
 | C14 | Those failures have **two** causes, not one: a missing profile for a tensor-parallel degree, and a decode instance exhausting its KV mid-run | `experiments/results/e_g3_sim_error_causes.md` | real-sim | Established[^simerr] |
 | C15 | A processor-sharing contention model predicts measured transfer time better than pricing each flow alone | `experiments/results/e_g4_microbench.md` | hardware | Established, **at location (a) only, and within 4–64 MiB**[^eg4] |
 | C16 | The A40's intra-node PCIe path is **not** a shared resource: two concurrent peer copies between disjoint device pairs each sustain the single-copy rate | `experiments/results/e_g4_microbench.md` | hardware | Established |
@@ -231,8 +232,10 @@ exists to prevent.
     | heterogeneous-lab | 24 | `RuntimeError` |
 
     The first is **no profile data** for tp=2 on that hardware --- the bundle
-    holds tp1 only --- and the simulator refuses rather than extrapolating,
-    which is the right refusal. The second is the simulator's memory model
+    held tp1 only --- and the simulator refuses rather than extrapolating,
+    which is the right refusal. It is now resolved. heteropilot D129 added
+    the tp=2 profile, and the R4.3 re-run judged every placement on both toy
+    fixtures; every verdict both runs reached was unchanged. The second is the simulator's memory model
     finding a decode instance out of KV mid-run and raising instead of
     returning a verdict; every one of those is a P/D candidate with prefill on
     the 96 GB device and decode on the 24 GB one, and the **reverse direction

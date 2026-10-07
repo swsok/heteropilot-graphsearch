@@ -73,8 +73,9 @@ their range, and a single trial is not reported as a measurement.
 Under the real simulator, does the search eliminate a feasible placement or
 fold two that the oracle prices apart? No, among the placements the simulator
 judged: on all three fixtures both correctness numbers are zero
-(\texttt{false\_infeasible} is \egthreeFalseInfAbcde{} on the largest), and
-none of the three runs is complete.
+(\texttt{false\_infeasible} is \egthreeFalseInfAbcde{} on the largest). The
+first run was complete on none of them; re-run once the missing profile was
+measured, both toy fixtures are complete and both numbers stay zero.
 
 % claim: C10
 % claim: C11
@@ -85,23 +86,20 @@ Table~\ref{tab:e_g3_real_sim_oracle} reports the search against an exhaustive
 oracle, both driven by LLMServingSim.
 
 % claim: C13
-The \texttt{complete} column is \textbf{False} on all three, and that
-qualification travels with the result everywhere it is quoted. The share of
-placements that failed to simulate at all ranges from a twentieth of the
-largest corpus to \egthreeUnjudgedLab{} of the \egthreeEmbeddingsLab{}
-placements on the smallest. They are reported as
-\texttt{unknown\_measurement}, not as infeasible: the evaluator was asked and
-did not answer. The correctness claim is therefore about the
-placements the simulator judged, which is a narrower statement than it would be
-if those failures had been counted as rejections. % claim: C14
-The failures have two established causes. On the
-toy corpora every failure is a missing profile: no measurement exists for that
-tensor-parallel degree on that hardware, and the simulator refuses rather than
-extrapolating. On the heterogeneous fixture every failure is instead a decode
-instance running out of KV mid-run---all of them prefill on the larger device
-feeding decode on the smaller, with the reverse direction succeeding. Both
-remain \texttt{unknown\_measurement}: a missing profile is not a property of
-the placement, and a crash is not a verdict.
+The \texttt{complete} column above is the first run's, and the failures in it
+have two established causes. % claim: C14
+On the toy corpora every failure was a missing profile: no measurement existed
+for that tensor-parallel degree on that hardware, and the simulator refused
+rather than extrapolating. With the profile measured, a re-run judged every
+placement on both: each verdict the first run reached was unchanged, and some
+formerly unjudged placements proved feasible, which counting failures as
+rejections would have eliminated unnoticed. On the heterogeneous fixture
+\egthreeUnjudgedLab{} of the \egthreeEmbeddingsLab{} placements still return
+no verdict, each a decode instance running out of KV mid-run---all of them
+prefill on the larger device feeding decode on the smaller, with the reverse
+direction succeeding. They remain \texttt{unknown\_measurement}, not
+infeasible: a crash is not a verdict, and on that fixture the correctness claim
+is about the placements the simulator judged.
 
 Against what it saved, the compression is cheap (full timing table in the
 artifact). On the largest fixture, \egthreeSimOracleAbcde~seconds
