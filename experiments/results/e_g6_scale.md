@@ -46,6 +46,8 @@ E-G6's registered failure condition is `saving < 0` at `symmetry = 1`, and **thi
 
 **That question is E-G3's, and E-G3 answered it** under the real simulator: `saving` +2475 s, +1220 s and +269 s on the three fixtures, against a compression that cost about half a second in total. What E-G6 adds is the other half — how the compression's OWN cost and the ratio behave as the cluster grows — and the two are read together.
 
+**The condition itself was then run under the real simulator**, on this grid's 32-device, symmetry-1 cell, both arms end to end (preregistration change-log row 10): `e_g6_real_sim.md`. It does not fire there.
+
 ## The compression's cost, and what it is not
 
 `t_hash_s` and `t_vf2_s` are the compression's whole cost and are kept apart because they scale differently — hashing is linear in embeddings, VF2 is quadratic inside a bucket, and a lumped number could not say which one ate the budget.

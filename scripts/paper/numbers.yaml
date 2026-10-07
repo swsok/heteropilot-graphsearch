@@ -28,6 +28,10 @@ egsixRatioAsym:           {file: e_g6_scale.md, table: 0, row: "128", where: {sy
 egsixRepsSym:             {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "1.0"}, column: representatives}
 egsixRatioSym:            {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "1.0"}, column: compression_ratio}
 egsixEnumerateLarge:      {file: e_g6_scale.md, table: 0, row: "128", where: {symmetry: "0.0"}, column: t_enumerate_s, format: "{:.0f}"}
+egsixRealOracleSims:      {file: e_g6_real_sim.md, table: 0, row: d32-s1.0, column: oracle_simulations}
+egsixRealProposedSims:    {file: e_g6_real_sim.md, table: 0, row: d32-s1.0, column: proposed_simulations}
+egsixRealOracleS:         {file: e_g6_real_sim.md, table: 0, row: d32-s1.0, column: t_oracle_s, format: "{:.0f}"}
+egsixRealProposedS:       {file: e_g6_real_sim.md, table: 0, row: d32-s1.0, column: t_proposed_s, format: "{:.0f}"}
 
 # --- E-G7: holdout ---------------------------------------------------------
 egsevenHoldoutEmbeddings: {file: e_g7_holdout.md, table: 0, row: synth-holdout-1, column: embeddings}

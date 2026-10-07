@@ -62,6 +62,7 @@ exists to prevent.
 | C35 | In the widened matrix (row 8) the T2/T1 ratio depends on load (normal pattern: 1.1x low, 8.3x knee, 1.4x high), and T3's recommendation is predicted met at every level of both patterns while the hardware meets it only at normal-low | `experiments/results/e_g5_real_hardware.md` (widened matrix), `docs/decisions.md` GS-37 | hardware | Established |
 | C36 | **Post hoc** (preregistration row 9, GS-38; analysis only, no new simulation): re-judging the registered runs' cached predictions at goodput floors 1.4-1.6 changes whether a recommendation exists in 4 of 42 condition-seeds, all at the low load (normal T1/T2, seeds 42 and 44). Only on the candidates the registered runs evaluated: a run at another floor would reorder the ranker's budget (GS-36) | `experiments/results/e_g5_real_hardware.md` (floor sensitivity), `docs/decisions.md` GS-38 | hardware + real-sim | Established, **post hoc** |
 | C23 | The compression ratio and the search's own cost are reported as a function of device count and cluster symmetry | `experiments/results/e_g6_scale.md` | mock | Established, **report-only**[^eg6] |
+| C37 | E-G6's registered failure condition (`saving < 0` at symmetry 1) does not fire under the real simulator on the 32-device, fully symmetric cell: every placement judged, no feasible placement lost, none mis-merged | `experiments/results/e_g6_real_sim.md` | real-sim | Established, **one condition**[^eg6] |
 | C24 | Dropping the shared boundary from the signature mis-merges the counterexample pair (criterion 2), which the full relation keeps apart; the corpus-wide row cannot show it | `experiments/results/e_g7_ablation.md` | mock | Established[^eg7] |
 | C25 | The baseline comparison is fair: same candidate space, predictor and cache, with the template-level scoring credited generously to the baseline | `experiments/results/e_g7_baseline_fairness.md` | mock | Established |
 | C26 | On both holdouts, fixed before the scaling grid ran, the invariant holds: no feasible placement removed, nothing mis-merged | `experiments/results/e_g7_holdout.md` | mock | Established |
@@ -80,10 +81,14 @@ exists to prevent.
 
 [^eg6]: Registered as report-only in `docs/preregistration.md`: E-G6 has **no
     success target**, only the failure condition `saving < 0` at symmetry 1.
-    The grid is mock, and the one real-sim condition the research design asks
-    for has **not** been run. Research design section 12 forbids presenting a
-    128-device simulation as large-scale accuracy validation, and this row is
-    written so it cannot be read that way.
+    The grid is mock. The one real-sim condition the research design asks for
+    (32 devices, symmetry 1) ran on 2026-10-07 as revision R4.1, registered
+    beforehand as preregistration change-log row 10, and is C37: complete, so
+    the condition is judged, and it does not fire. It is one cell on synthetic
+    placeholder devices that borrow the A5000 perf bundle. Research design
+    section 12 forbids presenting a simulation at this scale as large-scale
+    accuracy validation, and both rows are written so they cannot be read that
+    way.
 
 [^eg7]: The first attempt found zero mis-merges, because a fixed tight spec
     made both placements infeasible and the oracle agreed they were equally
