@@ -102,3 +102,33 @@ Every cache file records the `candidate_id` that wrote it. `distinct owners` bel
 This is D126 and the reason the search exists. On `graph-toy-shared-nic`, `P on X -> D on Z` and `P on Y -> D on Z` are identical in every local attribute and differ only in that X's uplink already has 6 of its 10 GB/s held. `EnvelopeKey` describes parallelism and hardware and cannot express that; without the graph signature extending the key the two would collide on one file and the second would silently read the first's TTFT.
 
 The pair is **found**, not hard-coded: a fixture edit that removed the counterexample would otherwise leave this check passing against a pair that no longer has the property.
+
+## Re-run after the A5000 tp=2 profile, 2026-10-07
+
+Revision R4.3. Everything above this heading is the original run and is left as it was. The submodule now pins heteropilot `60df943` (#62), whose A5000 Llama-3.1-8B bf16 bundle gained `tp2/` and `tp4/` (heteropilot D129); `tp1/` is byte-identical. The two toy fixtures, whose every failure was `No profile data for tp=[2]` (`e_g3_sim_error_causes.md`), were re-run with the same command and the same settings as the original: the A40 node, 8 workers, cold caches, one fixture per invocation. `heterogeneous-lab` was **not** re-run: its 24 failures are a decode instance exhausting KV, a different cause that a profile does not touch.
+
+| re-run fixture | embeddings | representatives | compression_ratio | oracle_simulations | proposed_simulations | oracle_feasible | proposed_feasible | false_infeasible | mismerged_pairs | correct | unjudged | unjudged_pairs | complete |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| graph-toy-abcde | 528 | 78 | 0.1477 | 528 | 78 | 80 | 80 | 0 | 0 | True | 0 | 0 | True |
+| graph-toy-shared-nic | 288 | 60 | 0.2083 | 288 | 60 | 48 | 48 | 0 | 0 | True | 0 | 0 | True |
+
+| re-run fixture | t_sim_oracle_s | t_sim_proposed_s | t_hash_s | t_vf2_s | t_bounds_s | saving_s | cold |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| graph-toy-abcde | 3023.4 | 420.6 | 0.221 | 0.177 | 0.102 | 2602.4 | True |
+| graph-toy-shared-nic | 1587.1 | 342.5 | 0.114 | 0.079 | 0.055 | 1244.4 | True |
+
+**Both rows are complete, and both correctness counts are still zero.** The 42 `FileNotFoundError`s are gone: no placement on either fixture is unjudged, so the invariant now holds over every placement and not only over the judged ones. The compression ratios match the original run's to four decimals, as they must: the profile changes what the simulator can answer, not which placements exist or how they fold.
+
+**The placements that used to fail are now judged, and some of them are feasible.** Feasible placements rose from 72 to 80 on `graph-toy-abcde` and from 42 to 48 on `graph-toy-shared-nic`, in both arms alike: 8 of the 24 and 6 of the 18 formerly unjudged placements. That attribution was checked rather than assumed. The original run's cache files (`outputs/cache-eg3/oracle`) and this run's share a key for every placement both runs judged: 504 on `graph-toy-abcde`, 270 on `graph-toy-shared-nic`. In every pair, every metric is identical except `sim_wall_seconds`, the simulator's own run time. The files only this run has are exactly the 24 and 18 placements, every one of them at tp=2. That is the reason `unknown_measurement` never merges with infeasible: had the failures been counted as rejections, those would have been false eliminations that nothing would have caught.
+
+**The seconds are a second cold run, not a correction of the first.** Simulation time is higher than in the original run on both fixtures. Two things contribute, and neither was separated from the other. The 42 placements that used to fail early now simulate to the end. And one simulation's own wall time varies from run to run: for the 504 shared placements on `graph-toy-abcde`, `sim_wall_seconds` differs between the two runs by a median of 10 % and at most 66 %. `saving_s` keeps its sign and its size, with the same formula and the compression's own cost charged once. The paper's timing figures stay the original run's (table 1 above); this section adds completeness, not a new timing result.
+
+Reproducing (the outputs go to `outputs/r43/`, so the original table is never overwritten):
+
+```bash
+for f in graph-toy-abcde graph-toy-shared-nic; do
+  MAX_WORKERS=8 CACHE_DIR=outputs/cache-eg3-r43/$f \
+  OUT=outputs/r43/$f.md JSON_OUT=outputs/r43/$f.json LOG=outputs/r43/$f.log \
+    bash experiments/scripts/e_g3_oracle_run.sh --only $f
+done
+```
