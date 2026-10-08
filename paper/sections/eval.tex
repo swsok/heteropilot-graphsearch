@@ -15,7 +15,8 @@
 %%   E-G3           the same correctness check under the real simulator
 %%   E-G4           the contention model against a microbenchmark (hardware)
 %%   E-G5           deployment on real hardware, recommendation vs boundary
-%%   E-G6           scalability, 32-128 devices by symmetry
+%%   E-G6           scalability, 32-128 devices by symmetry; its failure
+%%                  condition once under the real simulator (R4.1)
 %%   E-G7           holdout, ablation, baseline fairness
 %%
 %% The two correctness numbers are reported for every arm, in every table, and
@@ -134,14 +135,18 @@ where nothing folds is the toy corpus's asymmetric fixture, at
 \egoneRatioAsym{} (toy-corpus table in the artifact), where no two placements
 are isomorphic. Both are reported rather than the configurations omitted.
 
-This experiment has no success target and is registered as report-only, with a
-single failure condition: the compression must not cost more than it saves on a
-fully symmetric cluster. This table cannot evaluate that condition: the grid is
-driven by the mock, where a simulation costs microseconds and any compression
-loses against it. The question is answered at toy scale, under the real
-simulator, by the saving above; what this grid adds is
-how the compression's own cost and its ratio grow with the cluster. A
-simulation at this scale is not offered as validation of accuracy at scale.
+% claim: C37
+This experiment is report-only, with one registered failure condition: the
+compression must not cost more than it saves on a fully symmetric cluster. The
+mock cannot judge it; run once under the real simulator on the 32-device
+symmetric cell (Table~\ref{tab:e_g6_real_sim}), the oracle simulated
+\egsixRealOracleSims{} placements in \egsixRealOracleS{}~s and the search
+\egsixRealProposedSims{} in \egsixRealProposedS{}~s, overheads included. All
+were judged, nothing feasible was lost or mis-merged: the condition does not
+fire. It is not accuracy validation at scale.
+
+% claim: C37
+\input{e_g6_real_sim}
 
 \subsection{Contribution A: the boundary in the signature}
 

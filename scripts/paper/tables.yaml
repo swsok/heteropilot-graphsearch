@@ -42,6 +42,20 @@ e_g6_scale:
     t_vf2_s: VF2 (s)
     t_total_s: total (s)
 
+# Below Table II -- E-G6's registered failure condition, under the real
+# simulator (revision R4.1). One row; the correctness counts are in the prose.
+e_g6_real_sim:
+  width: column
+  size: footnotesize
+  columns: [condition, oracle_simulations, proposed_simulations, t_oracle_s,
+            t_proposed_s, saving_s, complete]
+  labels:
+    oracle_simulations: oracle sims
+    proposed_simulations: proposed sims
+    t_oracle_s: oracle (s)
+    t_proposed_s: proposed (s)
+    saving_s: saving (s)
+
 # Table IV -- E-G7, holdout. Page width: in one column its seven columns were
 # shrunk past reading size.
 e_g7_holdout:

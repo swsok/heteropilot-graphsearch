@@ -445,6 +445,13 @@ def markdown(rows: list[dict], args) -> str:
         "cost and the ratio behave as the cluster grows — and the two are read "
         "together."
     )
+    out.append("")
+    out.append(
+        "**The condition itself was then run under the real simulator**, on "
+        "this grid's 32-device, symmetry-1 cell, both arms end to end "
+        "(preregistration change-log row 10): `e_g6_real_sim.md`. It does not "
+        "fire there."
+    )
 
     out += ["", "## The compression's cost, and what it is not", ""]
     out.append(

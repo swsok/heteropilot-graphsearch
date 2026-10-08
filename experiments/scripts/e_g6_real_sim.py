@@ -169,6 +169,10 @@ def run(args) -> dict:
     }
 
 
+def _hits(stats: dict) -> str:
+    return f"{stats.get('hits', '-')} hits / {stats.get('misses', '-')} misses"
+
+
 def markdown(row: dict, args) -> str:
     banner = MOCK_BANNER if row["predictor"] == "mock" else BANNER.format(cache=args.cache_dir)
     head = ["condition", "embeddings", "representatives", "oracle_simulations",
@@ -194,6 +198,23 @@ def markdown(row: dict, args) -> str:
            f"E-G6): {verdict}.", ""]
     if row.get("unjudged_reasons"):
         out += [f"Unjudged placements by reason: {row['unjudged_reasons']}.", ""]
+    timings = row.get("proposed_timings") or {}
+    if timings:
+        cost = ["t_enumerate_s", "t_hash_s", "t_vf2_s", "t_bounds_s", "t_sim_s", "t_proposed_s"]
+        values = [timings.get(k[2:-2]) for k in cost[:-1]] + [row["t_proposed_s"]]
+        out += ["## What the proposed arm's time was spent on", "",
+                "| " + " | ".join(cost) + " |", "| " + " | ".join("---" for _ in cost) + " |",
+                "| " + " | ".join("-" if v is None else f"{v:.2f}" for v in values) + " |", "",
+                "`t_proposed_s` is the whole arm's wall clock, so enumeration, hashing, VF2 "
+                "and the bounds are all charged to it, once. `t_oracle_s` is the oracle "
+                "arm's wall clock likewise, its own enumeration included. Both arms ran "
+                f"with {args.max_workers} concurrent simulations, each from a cold cache "
+                f"(oracle {_hits(row['oracle_cache'])}, proposed "
+                f"{_hits(row['proposed_cache'])}).", ""]
+    if "oracle_feasible" in row:
+        out += [f"Feasible placements: oracle {row['oracle_feasible']}, proposed "
+                f"{row['proposed_feasible']}; `feasible_recall` {row.get('feasible_recall')}, "
+                f"`cost_regret` {row.get('cost_regret')} (report-only, as in E-G3).", ""]
     if row["smoke"]:
         out += ["**Smoke run** (`--smoke`): a few tp=1 templates only. It rehearses the "
                 "harness and judges nothing.", ""]
@@ -222,7 +243,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--work-dir", default="outputs/e_g6-real")
     parser.add_argument("--out", default="experiments/results/e_g6_real_sim.md")
     parser.add_argument("--json-out", default="outputs/e_g6/real-sim.json")
+    parser.add_argument("--from-json", default=None,
+                        help="re-render --out from an earlier run's --json-out; nothing runs")
     args = parser.parse_args(argv)
+
+    if args.from_json:
+        row = json.loads(Path(args.from_json).read_text())
+        Path(args.out).write_text(markdown(row, args))
+        _say(f"re-rendered {args.out} from {args.from_json}; nothing ran")
+        return 0 if row.get("correct", True) else 1
 
     row = run(args)
     Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
