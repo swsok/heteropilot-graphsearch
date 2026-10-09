@@ -4,7 +4,7 @@
 had to decide **which KV path E-G8 can use** before its registration (row 11)
 is written. They are probes, not the experiment. Nothing here is a
 prediction or a verdict. Every raw file is under `../raw/` or
-`../../microbench/raw/`, with `nvidia-smi` occupancy before and after each run
+`../raw/a5000-links/`, with `nvidia-smi` occupancy before and after each run
 where a GPU was used. Every run that used a GPU found no other process on any
 GPU, before or after.
 
@@ -42,8 +42,15 @@ Mean of the nine sizes, 1 to 256 MiB:
 | A5000 -> `s8` | 53.5 Gb/s | 52.6 Gb/s |
 | `s8` -> A5000 | 57.3 Gb/s | 58.0 Gb/s |
 
-Files: `microbench/raw/2026-10-09-nic-s8-a5000-<n>/` (A5000 sends) and
-`2026-10-09-nic-s8-to-a5000-<n>/` (`s8` sends). Both directions sit below the
+Files: `../raw/a5000-links/2026-10-09-nic-s8-a5000-<n>/` (A5000 sends) and
+`2026-10-09-nic-s8-to-a5000-<n>/` (`s8` sends). They were written to the default location and moved; the next run passes `run_nic.py
+--out-root`.
+
+**They are not under `microbench/raw/`, and must not be.** `analyze.py`'s
+`nic_results` merges every `*-nic-*` directory there by condition name. There
+an A5000 `single` replaced E-G4's A40 pair: 88.61 became 52.61 Gbit/s, and
+the two ratios computed from it moved too. That was caught before merge by
+re-running `analyze.py` against `e_g4_microbench.md`. Both directions sit below the
 EDR line rate, near the PCIe Gen3 x8 slot each A5000 NIC is in. The ~4 Gb/s
 asymmetry is reported, not explained.
 
@@ -102,7 +109,7 @@ The first D1 attempt failed for a different reason: `s8`'s
 `failed-a40-no-weights/`. The weights were copied from `a5000-2`, and every
 run above was made after that.
 
-### NCCL all-reduce across the fabric (`microbench/raw/2026-10-09-nic-collective-s8-a5000-<n>/`)
+### NCCL all-reduce across the fabric (`../raw/a5000-links/2026-10-09-nic-collective-s8-a5000-<n>/`)
 
 PREP.md step D, `xnode-a40-a5000`. World 2, one rank per node, 10 runs each.
 `NCCL_IB_HCA` is `mlx5_0` on `s8` and `mlx5_1` on the A5000. Rank 1 runs with
