@@ -24,6 +24,7 @@ all three nodes; on the A5000s these are in `~/.venv-eg8`.
 | `nixl_pair.sh <n> <s8-to-a5k\|a5k-to-s8> <out>` | `../nixl_target.py` on the receiving node and `../nixl_bw.py` on the sending node, with `UCX_PROTO_INFO=y` on the sender. `NBYTES` sets the buffer size (default 256 MiB) |
 | `decode_probe.sh <n> <out> [util]` | one vLLM decode instance (`kv_consumer`, `NixlConnector`) alone on `a5000-<n>` GPU 0. `CFG` overrides the connector config |
 | `pd_two_node.sh <n> <D1\|D2> <out>` | a prefill engine and a decode engine on two nodes, then `../pd_client.py` six times. D1 is `s8` prefill to A5000 decode, D2 the reverse. `S8BUF` and `ABUF` (`cuda`/`cpu`) set each end's `kv_buffer_device` |
+| `gpu0_rebar.sh [out]` | from `s8`, before each E-G8 run: resize `a5000-2` GPU 0's BAR1 to 32 GB and record before/after; refuses if the GPU is held, and stops if the unbind does not return within 30 s |
 | `nccl_xnode.sh <n> <rep> <out>` | heteropilot's `link_probe.py`, unmodified, under a two-node `torchrun`: rank 0 on `s8`, rank 1 on the A5000 |
 
 `../../microbench/run_nic.py` gained `--local-ib-dev` and `--peer-ib-dev`.
@@ -131,4 +132,7 @@ local copies on `s8`, as in the A40 pair's file.
 - **The GPUDirect path, the one E-G5 used, works on `a5000-2` GPU 0 once its
   BAR1 is 32 GB.** That resize is done at run time and is lost on reboot. On
   `a5000-1`, enabling Re-Size BAR in the BIOS did not change BAR1.
-- Which path E-G8 registers is the user's decision, recorded with row 11.
+- **Decided (user, 2026-10-09):** E-G8 uses `a5000-2` GPU 0 over the
+  GPUDirect path (`cuda`/`cuda`, E-G5's path). BAR1 is resized by hand with
+  `gpu0_rebar.sh` before every run, because the boot-time attempt hung the
+  node (`docs/nodes/a5000.md`).

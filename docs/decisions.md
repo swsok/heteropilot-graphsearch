@@ -1855,3 +1855,10 @@ after.
 
 **What it affects.** `WORK_ORDER_revision.md` R5 (the claim PR is not made),
 row 11's conditions, and `experiments/pd_probe/a5000/`.
+
+**Decided the same day (user).** E-G8 runs on `a5000-2` GPU 0 over the
+GPUDirect path, which is E-G5's path. `a5000-1` is not used, because its BIOS
+setting did not take. BAR1 is resized by hand with
+`experiments/pd_probe/a5000/gpu0_rebar.sh` before every run, and its output
+goes into the run's raw files. A boot-time unit doing the same unbind hung
+the node, and a load-time hook was declined as boot persistence.
