@@ -1,0 +1,35 @@
+a5000-1:3050:3050 [1] NCCL INFO cudaDriverVersion 12050
+a5000-1:3050:3050 [1] NCCL INFO NCCL_SOCKET_IFNAME set by environment to ibp179s0f1
+a5000-1:3050:3050 [1] NCCL INFO Bootstrap: Using ibp179s0f1:192.168.210.111<0>
+a5000-1:3050:3050 [1] NCCL INFO NCCL version 2.27.5+cuda12.9
+a5000-1:3050:3050 [1] NCCL INFO Comm config Blocking set to 1
+a5000-1:3050:3077 [1] NCCL INFO NET/Plugin: Could not find: libnccl-net.so. 
+a5000-1:3050:3077 [1] NCCL INFO NCCL_SOCKET_IFNAME set by environment to ibp179s0f1
+a5000-1:3050:3077 [1] NCCL INFO NCCL_IB_HCA set to mlx5_1
+a5000-1:3050:3077 [1] NCCL INFO NET/IB : Using [0]mlx5_1:1/IB [RO]; OOB ibp179s0f1:192.168.210.111<0>
+a5000-1:3050:3077 [1] NCCL INFO Initialized NET plugin IB
+a5000-1:3050:3077 [1] NCCL INFO Assigned NET plugin IB to comm
+a5000-1:3050:3077 [1] NCCL INFO Using network IB
+a5000-1:3050:3077 [1] NCCL INFO ncclCommInitRankConfig comm 0x240887f0 rank 1 nranks 2 cudaDev 1 nvmlDev 0 busId 17000 commId 0xfcc7419081fb5057 - Init START
+a5000-1:3050:3077 [1] NCCL INFO RAS client listening socket at 127.0.0.1<28028>
+a5000-1:3050:3077 [1] NCCL INFO Bootstrap timings total 0.001668 (create 0.000042, send 0.000289, recv 0.000579, ring 0.000086, delay 0.000000)
+a5000-1:3050:3077 [1] NCCL INFO Setting affinity for GPU 0 to 0-19
+a5000-1:3050:3077 [1] NCCL INFO comm 0x240887f0 rank 1 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+a5000-1:3050:3077 [1] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] 0/-1/-1->1->-1
+a5000-1:3050:3077 [1] NCCL INFO P2P Chunksize set to 131072
+a5000-1:3050:3077 [1] NCCL INFO PROFILER/Plugin: Could not find: libnccl-profiler.so. 
+a5000-1:3050:3081 [1] NCCL INFO [Proxy Service UDS] Device 1 CPU core 17
+a5000-1:3050:3080 [1] NCCL INFO [Proxy Service] Device 1 CPU core 16
+a5000-1:3050:3077 [1] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+a5000-1:3050:3077 [1] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 2 p2p channels per peer
+a5000-1:3050:3077 [1] NCCL INFO TUNER/Plugin: Could not find: libnccl-tuner.so. Using internal tuner plugin.
+a5000-1:3050:3077 [1] NCCL INFO ncclCommInitRankConfig comm 0x240887f0 rank 1 nranks 2 cudaDev 1 nvmlDev 0 busId 17000 commId 0xfcc7419081fb5057 - Init COMPLETE
+a5000-1:3050:3077 [1] NCCL INFO Init timings - ncclCommInitRankConfig: rank 1 nranks 2 total 0.20 (kernels 0.13, alloc 0.04, bootstrap 0.00, allgathers 0.00, topo 0.02, graphs 0.00, connections 0.00, rest 0.00)
+a5000-1:3050:3083 [1] NCCL INFO [Proxy Progress] Device 1 CPU core 8
+a5000-1:3050:3082 [1] NCCL INFO Channel 00/0 : 0[0] -> 1[0] [receive] via NET/IB/0
+a5000-1:3050:3082 [1] NCCL INFO Channel 01/0 : 0[0] -> 1[0] [receive] via NET/IB/0
+a5000-1:3050:3082 [1] NCCL INFO Channel 00/0 : 1[0] -> 0[0] [send] via NET/IB/0
+a5000-1:3050:3082 [1] NCCL INFO Channel 01/0 : 1[0] -> 0[0] [send] via NET/IB/0
+a5000-1:3050:3082 [1] NCCL INFO Connected all rings, use ring PXN 0 GDR 0
+a5000-1:3050:3050 [1] NCCL INFO comm 0x240887f0 rank 1 nranks 2 cudaDev 1 busId 17000 - Destroy COMPLETE
+rank1 exit=0

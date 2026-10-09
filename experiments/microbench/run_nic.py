@@ -98,9 +98,14 @@ def serials(peer: str | None, port: int) -> str:
     return "unknown"
 
 
-def ib_device(peer: str | None, port: int) -> dict:
-    """Which IB device, and what rate it reports. Read, never assumed."""
-    command = "ibstat 2>/dev/null"
+def ib_device(peer: str | None, port: int, dev: str | None = None) -> dict:
+    """Which IB device, and what rate it reports. Read, never assumed.
+
+    `dev` names the HCA when a node has more than one: `ibstat` with no
+    argument reports the first, which on the A5000 nodes is the uncabled
+    `mlx5_0` while the fabric is on `mlx5_1`.
+    """
+    command = f"ibstat {shlex.quote(dev)} 2>/dev/null" if dev else "ibstat 2>/dev/null"
     text = (ssh(peer, port, command) if peer else
             subprocess.run(["bash", "-c", command], capture_output=True,
                            text=True, check=False).stdout)
@@ -171,6 +176,9 @@ def one_stream(peer: str, port: int, size: int, ib_port: int, args,
               "-p", str(ib_port), "-F", "-N"]
     if bidirectional:
         common.append("-b")
+    # `-d` per end: the two nodes need not name their HCA alike.
+    local = [*common, *(["-d", args.local_ib_dev] if args.local_ib_dev else [])]
+    common = [*common, *(["-d", args.peer_ib_dev] if args.peer_ib_dev else [])]
 
     if getattr(args, "reverse", False):
         # --reverse: the server on the PEER and the client -- the sender --
@@ -183,12 +191,12 @@ def one_stream(peer: str, port: int, size: int, ib_port: int, args,
         )
         time.sleep(2.5)                  # ssh plus bind, before dialling
         client_out = subprocess.run(
-            ["ib_send_bw", *common, args.peer_ip], capture_output=True, text=True,
+            ["ib_send_bw", *local, args.peer_ip], capture_output=True, text=True,
             timeout=args.duration + 120,
         ).stdout
     else:
         server = subprocess.Popen(
-            ["ib_send_bw", *common],
+            ["ib_send_bw", *local],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         )
         time.sleep(1.5)                  # let the server bind before dialling
@@ -256,6 +264,10 @@ def main(argv: list[str] | None = None) -> int:
              "it the peer sends and the data crosses peer -> here, which is the "
              "direction E-G4(b)'s 2026-09-29 files measured.",
     )
+    parser.add_argument("--local-ib-dev", default=None,
+                        help="this node's HCA (ib_send_bw -d); default: the first")
+    parser.add_argument("--peer-ib-dev", default=None,
+                        help="the peer's HCA (ib_send_bw -d); default: the first")
     parser.add_argument("--peer-ip", default=None,
                         help="the peer's InfiniBand IP; required with --reverse")
     args = parser.parse_args(argv)
@@ -267,10 +279,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     here = {"serials": serials(None, args.ssh_port),
-            "ib": ib_device(None, args.ssh_port),
+            "ib": ib_device(None, args.ssh_port, args.local_ib_dev),
             "hostname": socket.gethostname()}
     there = {"serials": serials(args.peer, args.ssh_port),
-             "ib": ib_device(args.peer, args.ssh_port),
+             "ib": ib_device(args.peer, args.ssh_port, args.peer_ib_dev),
              "hostname": ssh(args.peer, args.ssh_port, "hostname").strip()}
     if there["ib"]["state"] != "Active" or here["ib"]["state"] != "Active":
         print(f"refusing: an InfiniBand port is not Active "
@@ -362,6 +374,8 @@ def main(argv: list[str] | None = None) -> int:
         "method": (
             "ib_send_bw --report_gbits -s <size> -n <iterations> -F -N"
             + (" -b" if args.condition == "bidirectional" else "")
+            + (f"; -d {args.local_ib_dev} here" if args.local_ib_dev else "")
+            + (f"; -d {args.peer_ib_dev} on the peer" if args.peer_ib_dev else "")
             + ("; two streams on ports 18515,18516"
                if args.condition == "two-same"
                else "; one stream on port 18515")

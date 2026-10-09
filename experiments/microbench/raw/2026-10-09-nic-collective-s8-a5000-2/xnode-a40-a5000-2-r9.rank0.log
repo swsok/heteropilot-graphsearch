@@ -1,0 +1,59 @@
+s8:1245873:1245873 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to ibs8
+s8:1245873:1245873 [0] NCCL INFO Bootstrap: Using ibs8:192.168.210.108<0>
+s8:1245873:1245873 [0] NCCL INFO cudaDriverVersion 12060
+s8:1245873:1245873 [0] NCCL INFO NCCL version 2.27.5+cuda12.9
+s8:1245873:1245873 [0] NCCL INFO Comm config Blocking set to 1
+s8:1245873:1245946 [0] NCCL INFO NET/Plugin: Could not find: libnccl-net.so. 
+s8:1245873:1245946 [0] NCCL INFO NCCL_SOCKET_IFNAME set by environment to ibs8
+s8:1245873:1245946 [0] NCCL INFO NCCL_IB_HCA set to mlx5_0
+s8:1245873:1245946 [0] NCCL INFO NET/IB : Using [0]mlx5_0:1/IB [RO]; OOB ibs8:192.168.210.108<0>
+s8:1245873:1245946 [0] NCCL INFO Initialized NET plugin IB
+s8:1245873:1245946 [0] NCCL INFO Assigned NET plugin IB to comm
+s8:1245873:1245946 [0] NCCL INFO Using network IB
+s8:1245873:1245946 [0] NCCL INFO DMA-BUF is available on GPU device 0
+s8:1245873:1245946 [0] NCCL INFO ncclCommInitRankConfig comm 0x26231b90 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1000 commId 0xcaba2c32cae0d868 - Init START
+s8:1245873:1245946 [0] NCCL INFO RAS client listening socket at 127.0.0.1<28028>
+s8:1245873:1245946 [0] NCCL INFO Bootstrap timings total 0.020696 (create 0.000026, send 0.000089, recv 0.011908, ring 0.008085, delay 0.000000)
+s8:1245873:1245946 [0] NCCL INFO Setting affinity for GPU 0 to 0-15,32-47
+s8:1245873:1245946 [0] NCCL INFO comm 0x26231b90 rank 0 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+s8:1245873:1245946 [0] NCCL INFO Channel 00/02 : 0 1
+s8:1245873:1245946 [0] NCCL INFO Channel 01/02 : 0 1
+s8:1245873:1245946 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+s8:1245873:1245946 [0] NCCL INFO P2P Chunksize set to 131072
+s8:1245873:1245946 [0] NCCL INFO PROFILER/Plugin: Could not find: libnccl-profiler.so. 
+s8:1245873:1245946 [0] NCCL INFO Check P2P Type isAllDirectP2p 0 directMode 0
+s8:1245873:1245950 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 9
+s8:1245873:1245949 [0] NCCL INFO [Proxy Service] Device 0 CPU core 39
+s8:1245873:1245946 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+s8:1245873:1245946 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 2 p2p channels per peer
+s8:1245873:1245946 [0] NCCL INFO CC Off, workFifoBytes 1048576
+s8:1245873:1245946 [0] NCCL INFO TUNER/Plugin: Could not find: libnccl-tuner.so. Using internal tuner plugin.
+s8:1245873:1245946 [0] NCCL INFO ncclCommInitRankConfig comm 0x26231b90 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1000 commId 0xcaba2c32cae0d868 - Init COMPLETE
+s8:1245873:1245946 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 0 nranks 2 total 0.16 (kernels 0.09, alloc 0.02, bootstrap 0.02, allgathers 0.00, topo 0.01, graphs 0.00, connections 0.00, rest 0.00)
+s8:1245873:1245952 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 36
+s8:1245873:1245951 [0] NCCL INFO Channel 00/0 : 1[0] -> 0[0] [receive] via NET/IB/0
+s8:1245873:1245951 [0] NCCL INFO Channel 01/0 : 1[0] -> 0[0] [receive] via NET/IB/0
+s8:1245873:1245951 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[0] [send] via NET/IB/0
+s8:1245873:1245951 [0] NCCL INFO Channel 01/0 : 0[0] -> 1[0] [send] via NET/IB/0
+s8:1245873:1245951 [0] NCCL INFO Connected all rings, use ring PXN 0 GDR 0
+/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+           8 KiB       73.4 us  algbw    0.11 GB/s  busbw    0.11 GB/s
+          16 KiB       65.8 us  algbw    0.25 GB/s  busbw    0.25 GB/s
+          32 KiB       88.8 us  algbw    0.37 GB/s  busbw    0.37 GB/s
+          64 KiB      117.4 us  algbw    0.56 GB/s  busbw    0.56 GB/s
+         128 KiB      185.2 us  algbw    0.71 GB/s  busbw    0.71 GB/s
+         256 KiB      197.7 us  algbw    1.33 GB/s  busbw    1.33 GB/s
+         512 KiB      323.9 us  algbw    1.62 GB/s  busbw    1.62 GB/s
+        1024 KiB      567.8 us  algbw    1.85 GB/s  busbw    1.85 GB/s
+        2048 KiB      497.3 us  algbw    4.22 GB/s  busbw    4.22 GB/s
+        4096 KiB      893.5 us  algbw    4.69 GB/s  busbw    4.69 GB/s
+        8192 KiB     1670.5 us  algbw    5.02 GB/s  busbw    5.02 GB/s
+       16384 KiB     3287.3 us  algbw    5.10 GB/s  busbw    5.10 GB/s
+       32768 KiB     6272.3 us  algbw    5.35 GB/s  busbw    5.35 GB/s
+       65536 KiB    12201.5 us  algbw    5.50 GB/s  busbw    5.50 GB/s
+  p2p 0-1:   52.23 GB/s  lat    26.1 us  peer_access=True
+  p2p 0-2:   25.02 GB/s  lat    25.6 us  peer_access=True
+wrote /home/swsok/heteropilot-graphsearch/experiments/microbench/raw/2026-10-09-nic-collective-s8-a5000-2/xnode-a40-a5000-2-r9.json
+s8:1245873:1245873 [0] NCCL INFO comm 0x26231b90 rank 0 nranks 2 cudaDev 0 busId 1000 - Destroy COMPLETE
+rank0 exit=0

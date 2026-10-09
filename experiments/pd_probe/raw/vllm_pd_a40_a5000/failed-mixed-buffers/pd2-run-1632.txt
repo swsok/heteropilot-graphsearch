@@ -1,0 +1,68 @@
+=== 1 D1
+healthy=yes after 11x5s
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)
+=== 1 D2
+healthy=yes after 8x5s
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)
+=== 2 D1
+healthy=yes after 8x5s
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)
+=== 2 D2
+healthy=yes after 8x5s
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+    response = self.parent.error(
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 559, in error
+  File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 500: Internal Server Error
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+ConnectionRefusedError: [Errno 111] Connection refused
+    raise URLError(err)

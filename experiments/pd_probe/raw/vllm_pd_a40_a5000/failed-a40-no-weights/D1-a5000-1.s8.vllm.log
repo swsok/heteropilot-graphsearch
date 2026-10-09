@@ -1,0 +1,63 @@
+(APIServer pid=1216075) INFO 10-09 16:15:35 [utils.py:299] 
+(APIServer pid=1216075) INFO 10-09 16:15:35 [utils.py:299]        █     █     █▄   ▄█
+(APIServer pid=1216075) INFO 10-09 16:15:35 [utils.py:299]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.19.0
+(APIServer pid=1216075) INFO 10-09 16:15:35 [utils.py:299]   █▄█▀ █     █     █     █  model   meta-llama/Llama-3.1-8B
+(APIServer pid=1216075) INFO 10-09 16:15:35 [utils.py:299]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=1216075) INFO 10-09 16:15:35 [utils.py:299] 
+(APIServer pid=1216075) INFO 10-09 16:15:35 [utils.py:233] non-default args: {'model_tag': 'meta-llama/Llama-3.1-8B', 'host': '0.0.0.0', 'port': 8100, 'model': 'meta-llama/Llama-3.1-8B', 'dtype': 'bfloat16', 'max_model_len': 8192, 'gpu_memory_utilization': 0.6, 'enable_prefix_caching': False, 'max_num_batched_tokens': 2048, 'max_num_seqs': 256, 'kv_transfer_config': KVTransferConfig(kv_connector='NixlConnector', engine_id='1699f2ec-d0c9-41b3-ac84-400dca68e691', kv_buffer_device='cuda', kv_buffer_size=1000000000.0, kv_role='kv_producer', kv_rank=None, kv_parallel_size=1, kv_ip='127.0.0.1', kv_port=14579, kv_connector_extra_config={}, kv_connector_module_path=None, enable_permute_local_kv=False, kv_load_failure_policy='fail')}
+(APIServer pid=1216075) INFO 10-09 16:15:35 [arg_utils.py:665] HF_HUB_OFFLINE is True, replace model_id [meta-llama/Llama-3.1-8B] to model_path [/home/swsok/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B/snapshots/d04e592bb4f6aa9cfee91e2e20afa771667e1d4b]
+(APIServer pid=1216075) Traceback (most recent call last):
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/bin/vllm", line 10, in <module>
+(APIServer pid=1216075)     sys.exit(main())
+(APIServer pid=1216075)              ^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/cli/main.py", line 75, in main
+(APIServer pid=1216075)     args.dispatch_function(args)
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/cli/serve.py", line 122, in cmd
+(APIServer pid=1216075)     uvloop.run(run_server(args))
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/uvloop/__init__.py", line 96, in run
+(APIServer pid=1216075)     return __asyncio.run(
+(APIServer pid=1216075)            ^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/asyncio/runners.py", line 195, in run
+(APIServer pid=1216075)     return runner.run(main)
+(APIServer pid=1216075)            ^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/asyncio/runners.py", line 118, in run
+(APIServer pid=1216075)     return self._loop.run_until_complete(task)
+(APIServer pid=1216075)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/uvloop/__init__.py", line 48, in wrapper
+(APIServer pid=1216075)     return await main
+(APIServer pid=1216075)            ^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 670, in run_server
+(APIServer pid=1216075)     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 684, in run_server_worker
+(APIServer pid=1216075)     async with build_async_engine_client(
+(APIServer pid=1216075)                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=1216075)     return await anext(self.gen)
+(APIServer pid=1216075)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 100, in build_async_engine_client
+(APIServer pid=1216075)     async with build_async_engine_client_from_engine_args(
+(APIServer pid=1216075)                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=1216075)     return await anext(self.gen)
+(APIServer pid=1216075)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 124, in build_async_engine_client_from_engine_args
+(APIServer pid=1216075)     vllm_config = engine_args.create_engine_config(usage_context=usage_context)
+(APIServer pid=1216075)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/engine/arg_utils.py", line 1549, in create_engine_config
+(APIServer pid=1216075)     model_config = self.create_model_config()
+(APIServer pid=1216075)                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/vllm/engine/arg_utils.py", line 1398, in create_model_config
+(APIServer pid=1216075)     return ModelConfig(
+(APIServer pid=1216075)            ^^^^^^^^^^^^
+(APIServer pid=1216075)   File "/home/swsok/heteropilot/.venv-vllm/lib/python3.12/site-packages/pydantic/_internal/_dataclasses.py", line 121, in __init__
+(APIServer pid=1216075)     s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)
+(APIServer pid=1216075) pydantic_core._pydantic_core.ValidationError: 1 validation error for ModelConfig
+(APIServer pid=1216075)   Value error, Invalid repository ID or local directory specified: '/home/swsok/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B/snapshots/d04e592bb4f6aa9cfee91e2e20afa771667e1d4b'.
+(APIServer pid=1216075) Please verify the following requirements:
+(APIServer pid=1216075) 1. Provide a valid Hugging Face repository ID.
+(APIServer pid=1216075) 2. Specify a local directory that contains a recognized configuration file.
+(APIServer pid=1216075)    - For Hugging Face models: ensure the presence of a 'config.json'.
+(APIServer pid=1216075)    - For Mistral models: ensure the presence of a 'params.json'.
+(APIServer pid=1216075)  [type=value_error, input_value=ArgsKwargs((), {'model': ...nderer_num_workers': 1}), input_type=ArgsKwargs]
+(APIServer pid=1216075)     For further information visit https://errors.pydantic.dev/2.13/v/value_error

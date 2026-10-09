@@ -1,0 +1,5 @@
+2026-10-09 16:04:39 NIXL INFO    _api.py:363 Backend UCX was instantiated
+2026-10-09 16:04:39 NIXL INFO    _api.py:253 Initialized NIXL agent: target
+TARGET_READY
+TARGET_GOT first_notif_sum=29360128
+TARGET_DONE notifs=140

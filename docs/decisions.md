@@ -1824,3 +1824,34 @@ registered runs reached; they are left for a step of their own.
 **What it affects.** `graphsearch/adapter.py`, `experiments/e_g5/{repredict,
 floor_diagnosis,analyze,deploy_and_bench,conditions}.py`,
 `experiments/results/e_g5_real_hardware.md`, preregistration row 9.
+
+## GS-39 — E-G8 needs no heteropilot claim PR, and its KV path waits on BAR1 · 2026-10-09
+
+**Decision.** E-G8 is claimed by the existing `E-G*` row of heteropilot's
+`CLAUDE.md` id table, so revision R5 opens no docs-only PR there. Its KV path is
+not registered until the user chooses between the GPUDirect path (which needs
+the A5000's BAR1 enlarged) and the host-staged one (`kv_buffer_device: cpu` at
+both ends).
+
+**Why.** `WORK_ORDER_revision.md` R5 asks for E-G8 to be added to "the E-G*
+claim list, as E-G3 to E-G7 were". The real table has one row,
+`` `E-G*` | `WORK_ORDER_graph_search.md` (claimed 2026-09-22) — runs in
+`swsok/heteropilot-graphsearch` ``. E-G3 to E-G7 were never listed one by one.
+`tests/test_experiment_ids.py` there reads ids defined in that repository's
+work orders, and E-G8 is defined in this one. The real code wins
+(CLAUDE.md); a row per id would contradict the tag rule the table exists to
+state.
+
+The R5.0 probes (`experiments/pd_probe/a5000/README.md`) showed four things.
+vLLM 0.19's `NixlConnector` registers the whole KV cache with the NIC. Every
+A5000 here boots with a 256 MiB BAR1, too small for that registration.
+A mixed pair (`cuda` on the A40, `cpu` on the A5000) fails its handshake.
+`cpu`/`cpu` works but stages KV through host memory at both ends, a different
+path from E-G5's. The GPUDirect path does work on `a5000-2` GPU 0 once its
+BAR1 is resized to 32 GB at run time. That resize does not survive a reboot,
+and `a5000-1`'s BIOS setting has not yet taken effect. The path is part of
+what row 11 registers, so it is decided before the first request and not
+after.
+
+**What it affects.** `WORK_ORDER_revision.md` R5 (the claim PR is not made),
+row 11's conditions, and `experiments/pd_probe/a5000/`.

@@ -1,0 +1,49 @@
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/experiments/p2_evidence/link_probe.py", line 158, in <module>
+[rank1]:     raise SystemExit(main())
+[rank1]:                      ^^^^^^
+[rank1]:   File "/home/swsok/heteropilot-graphsearch/vendor/heteropilot/experiments/p2_evidence/link_probe.py", line 109, in main
+[rank1]:     torch.cuda.set_device(device)
+[rank1]:   File "/home/swsok/.venv-eg8/lib/python3.12/site-packages/torch/cuda/__init__.py", line 584, in set_device
+[rank1]:     torch._C._cuda_setDevice(device)
+[rank1]: torch.AcceleratorError: CUDA error: invalid device ordinal
+[rank1]: GPU device may be out of range, do you have enough GPUs?
+[rank1]: CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+[rank1]: For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+[rank1]: Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+[rank1]:[W1009 21:48:59.617201828 ProcessGroupNCCL.cpp:1553] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+E1009 21:48:59.607000 19821 torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 0 (pid: 19918) of binary: /home/swsok/.venv-eg8/bin/python
+Traceback (most recent call last):
+  File "/home/swsok/.venv-eg8/bin/torchrun", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/swsok/.venv-eg8/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.venv-eg8/lib/python3.12/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/home/swsok/.venv-eg8/lib/python3.12/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/home/swsok/.venv-eg8/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/swsok/.venv-eg8/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+experiments/p2_evidence/link_probe.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-10-09_21:48:59
+  host      : a5000-2
+  rank      : 1 (local_rank: 0)
+  exitcode  : 1 (pid: 19918)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+rank1 exit=1

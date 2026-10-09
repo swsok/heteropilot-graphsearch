@@ -1,0 +1,11 @@
+2026-10-09 06:56:59 NIXL INFO    _api.py:363 Backend UCX was instantiated
+2026-10-09 06:56:59 NIXL INFO    _api.py:253 Initialized NIXL agent: target
+[1791529020.138536] [a5000-1:5287 :0]           ib_md.c:296  UCX  ERROR ibv_reg_mr(address=0x7f42aa000000, length=268435456, access=0xf) failed: Bad address
+[1791529020.138553] [a5000-1:5287 :0]          ucp_mm.c:81   UCX  ERROR failed to register address 0x7f42aa000000 (cuda) length 268435456 on md[5]=mlx5_1: Input/output error (md supports: host|cuda)
+E1009 06:57:00.138562    5287 nixl_agent.cpp:479] registerMem: registration failed for the specified or all potential backends
+Traceback (most recent call last):
+  File "/tmp/nixl_target.py", line 14, in <module>
+    agent.register_memory(agent.get_reg_descs([buf]))
+  File "/home/swsok/.venv-eg8/lib/python3.12/site-packages/nixl_cu12/_api.py", line 386, in register_memory
+    self.agent.registerMem(reg_descs, handle_list)
+nixl_cu12._bindings.nixlBackendError: NIXL_ERR_BACKEND
