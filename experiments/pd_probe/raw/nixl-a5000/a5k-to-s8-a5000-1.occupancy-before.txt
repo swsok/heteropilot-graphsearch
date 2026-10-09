@@ -1,0 +1,16 @@
+## before
+2026-10-09T06:59:22Z
+index, uuid, memory.used [MiB]
+0, GPU-6e0d82b1-edc3-40ba-8f19-0f0a4b535efb, 1 MiB
+1, GPU-f2ab2dde-8e6d-dd10-c75f-a5fbd564ed20, 1 MiB
+2, GPU-afa0b43a-8701-483d-ca1b-c191d2fd41be, 1 MiB
+3, GPU-17a5ada3-97b5-ea1c-cc20-d96f6f8ea595, 1 MiB
+4, GPU-11e5c5fd-9e9f-c7da-149f-ed94d235f919, 1 MiB
+5, GPU-f8fda9b5-0d33-e8db-0f7f-92c7d2ff5115, 1 MiB
+6, GPU-3696898a-3170-2649-364e-2051672e3b35, 1 MiB
+7, GPU-be7000bc-605c-8b2d-a2c1-28578ecf6982, 1 MiB
+0
+index, uuid, memory.used [MiB]
+0, GPU-bd2a06dc-51dd-acd4-5593-6ad96385f9d8, 2 MiB
+1, GPU-ef64d4e1-67bf-4808-c1e0-9fe63e896ce1, 2 MiB
+0

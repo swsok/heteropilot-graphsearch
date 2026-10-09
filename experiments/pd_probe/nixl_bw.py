@@ -10,6 +10,10 @@ from nixl._api import nixl_agent, nixl_agent_config
 
 META = sys.argv[1]
 SIZES = [1 << 20, 4 << 20, 16 << 20, 64 << 20, 256 << 20]
+# Optional cap, bytes: a GPU whose BAR1 is smaller than the largest size (the
+# RTX A5000s expose 256 MiB) cannot register a buffer that large for RDMA.
+if len(sys.argv) > 2:
+    SIZES = [n for n in SIZES if n <= int(sys.argv[2])]
 WARMUP, ITERS = 5, 30
 with open(META) as _f:
     info = json.load(_f)
