@@ -451,6 +451,31 @@ class Engines:
 
 # --- 3. the background --------------------------------------------------------
 
+REMOTE_BG_LOG = "/tmp/eg8_bg_bursts.jsonl"
+
+#: `NicBackground._loop`, as a program the sender runs itself. Same command,
+#: burst size and duty-cycle rule; each burst is logged as it ends.
+REMOTE_LOOP = """
+import json, subprocess, time
+t0 = time.monotonic(); busy = 0.0
+while True:
+    start = time.monotonic()
+    out = subprocess.run({cmd!r}, shell=True, capture_output=True, text=True).stdout
+    gbit = None
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[0] == str({bytes}):
+            gbit = float(parts[3])
+    if gbit:
+        busy += {bytes} * {iters} * 8 / (gbit * 1e9)
+    with open({log!r}, "a") as f:
+        f.write(json.dumps({{"t": round(start - t0, 3), "gbit_s": gbit}}) + "\\n")
+    wait = busy / {duty} - (time.monotonic() - t0)
+    if wait > 0:
+        time.sleep(wait)
+"""
+
+
 class NicBackground:
     """`ib_send_bw` from the prefill node to the decode node -- the direction
     the KV crosses -- at a target duty cycle, measured as it runs (E-G5's
@@ -480,9 +505,22 @@ class NicBackground:
                               f"setsid nohup bash -c {shlex.quote(loop)} "
                               f"> /tmp/eg8_bg_server.log 2>&1 < /dev/null & echo $!").strip()
         time.sleep(2)
-        self.thread = threading.Thread(target=self._loop, daemon=True)
         self.t0 = time.monotonic()
-        self.thread.start()
+        if self.sender.local:
+            self.thread = threading.Thread(target=self._loop, daemon=True)
+            self.thread.start()
+        else:
+            # The same loop, run ON the sender: driven from here, each burst
+            # paid an ssh round trip and the duty cycle topped out at 0.51
+            # (D2's pilot pairs, row 11).
+            src = REMOTE_LOOP.format(cmd=f"ib_send_bw {self._common(self.sender)} "
+                                         f"{self.receiver.ib_ip}",
+                                     bytes=BG_BYTES, iters=self.iters(), duty=DUTY,
+                                     log=REMOTE_BG_LOG)
+            self.client_pgid = sh(self.sender,
+                                  f"rm -f {REMOTE_BG_LOG}; setsid nohup {self.sender.python} "
+                                  f"-u -c {shlex.quote(src)} > /tmp/eg8_bg_client.err 2>&1 "
+                                  "< /dev/null & echo $!").strip()
         return self
 
     def _loop(self):
@@ -507,13 +545,31 @@ class NicBackground:
 
     def __exit__(self, *exc):
         self.stop_event.set()
-        self.thread.join(timeout=90)
+        if self.sender.local:
+            self.thread.join(timeout=90)
+        else:
+            sh(self.sender, f"kill -- -{self.client_pgid} 2>/dev/null; true",
+               timeout=60, check=False)
+            self._read_remote(sh(self.sender, f"cat {REMOTE_BG_LOG}; rm -f {REMOTE_BG_LOG}",
+                                 timeout=60, check=False))
         self.t1 = time.monotonic()
         # The process GROUP, never a `pkill -f` pattern (E-G5: a pattern naming
         # ib_send_bw also matches the remote shell, which then kills itself).
         sh(self.receiver, f"kill -- -{self.server_pgid} 2>/dev/null; true",
            timeout=60, check=False)
         return False
+
+    def _read_remote(self, text: str) -> None:
+        """The sender's own burst log: one JSON object per burst, its start
+        relative to the loop's own clock and its rate (None if unparsed)."""
+        for line in text.splitlines():
+            try:
+                b = json.loads(line)
+            except ValueError:
+                continue
+            if b.get("gbit_s"):
+                self.busy += BG_BYTES * self.iters() * 8 / (b["gbit_s"] * 1e9)
+            self.bursts.append(b)
 
     def record(self) -> dict:
         span = (self.t1 or time.monotonic()) - self.t0
@@ -523,6 +579,7 @@ class NicBackground:
                 "bursts": len(self.bursts),
                 "median_gbit_s": rates[len(rates) // 2] if rates else None,
                 "direction": f"{self.sender.name} -> {self.receiver.name}",
+                "loop_runs_on": "harness" if self.sender.local else self.sender.name,
                 "instrument": "ib_send_bw, as E-G4(b)"}
 
 
