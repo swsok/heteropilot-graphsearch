@@ -57,6 +57,10 @@ def fmt(x: float | None) -> str:
     return "-" if x is None else f"{x:g}"
 
 
+def fmt_feasible(x: bool | None) -> str:
+    return "unknown" if x is None else str(x)
+
+
 def verdict(m: dict, slo: dict) -> dict:
     """Measured met/MISSED per SLO term, from E-G5's latency summary."""
     ttft = m["p99_ttft_ms"] is not None and m["p99_ttft_ms"] <= slo["ttft_max_ms"]
@@ -108,16 +112,35 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
     sel_path = raw / f"selection-{direction}.json"
     if sel_path.exists():
         sel = json.loads(sel_path.read_text())
-        out += [f"Template, fixed for every run: `{sel['chosen']}`, chosen once at seed "
-                f"{sel['seed']} by row 5's rule (predictor `{sel.get('predictor')}`).", "",
-                "| template | predicted p99 TTFT | predicted p99 TPOT | feasible |",
-                "| --- | --- | --- | --- |"]
+        if sel.get("rule_applied", True):
+            out += [f"Template, fixed for every run: `{sel['chosen']}`, chosen once at seed "
+                    f"{sel['seed']} by row 5's rule (predictor `{sel.get('predictor')}`)."]
+        else:
+            m = sel["mirror_of"]
+            out += [f"Template, fixed for every run: `{sel['chosen']}`, the mirror image of "
+                    f"{m['direction']}'s `{m['template_id']}`. Row 5's rule **could not be "
+                    f"applied**: no template has a simulator verdict here, so the prediction "
+                    f"is `{sel['state']}` -- {sel['reason']}."]
+            out += [f"Simulator error: `{e}`" for e in sel.get("simulator_errors", [])]
+        out += ["", "| template | state | predicted p99 TTFT | predicted p99 TPOT | feasible |",
+                "| --- | --- | --- | --- | --- |"]
         for t in sel["table"]:
             ttft = f"{t['p99_ttft_ms']:.1f} ms" if t["p99_ttft_ms"] is not None else "-"
             tpot = f"{t['p99_tpot_ms']:.1f} ms" if t["p99_tpot_ms"] is not None else "-"
-            out.append(f"| `{t['template_id']}` | {ttft} | {tpot} | {t['feasible']} |")
+            out.append(f"| `{t['template_id']}` | {t.get('state', '-')} | {ttft} | {tpot} | "
+                       f"{fmt_feasible(t['feasible'])} |")
     else:
         out += ["The template has not been selected."]
+
+    ceil_path = raw / f"sim-ceiling-{direction}.json"
+    if ceil_path.exists():
+        ceil = json.loads(ceil_path.read_text())
+        out += ["", "### Simulator ceiling (report-only, not a criterion)", "",
+                "The highest rate on the pilot ladder at which the simulator returns a "
+                f"verdict for `{ceil['template_id']}`, descending: "
+                f"**{fmt(ceil['highest_judged_rps'])} rps** "
+                + ", ".join(f"{st['rps']:g} rps {st['state']}" for st in ceil["steps"])
+                + ". Read beside the measured onset of preemption in the knee pilot."]
 
     # The knee pilot and the pilot pairs: excluded from validation.
     knee = []
@@ -125,14 +148,16 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
         req = d / "pd" / "requests.jsonl"
         if req.exists():
             prov = json.loads((d / "provenance.json").read_text())
-            knee.append((prov["offered_rps"], g5.pd_latencies(req)))
+            knee.append((prov["offered_rps"], g5.pd_latencies(req),
+                         preemptions(d / "decode.metrics.txt")))
     if knee:
         out += ["", "### Knee pilot (excluded from validation)", "",
-                "| offered rps | drain-corrected goodput / offered | p99 TTFT | mean interval |",
-                "| --- | --- | --- | --- |"]
-        for rate, m in sorted(knee, key=lambda x: x[0]):
+                "| offered rps | drain-corrected goodput / offered | p99 TTFT | mean interval "
+                "| decode preemptions |", "| --- | --- | --- | --- | --- |"]
+        for rate, m, pre in sorted(knee, key=lambda x: x[0]):
             out.append(f"| {rate:g} | {m['goodput_drain_corrected_rps'] / rate:.3f} | "
-                       f"{m['p99_ttft_ms']:.0f} ms | {m['interval_mean_ms']:.1f} ms |")
+                       f"{m['p99_ttft_ms']:.0f} ms | {m['interval_mean_ms']:.1f} ms | "
+                       f"{fmt(pre)} |")
     pp = pairs(raw / "pilot" / "pairs", direction)
     if pp:
         out += ["", "### Pilot pairs (excluded from validation)", "",
@@ -152,11 +177,20 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
     out += ["", f"### 1. Judgement agreement, {rate:g} rps", "",
             "| condition | rep | predicted | measured p99 TTFT | measured p99 TPOT | "
             "measured | agree |", "| --- | --- | --- | --- | --- | --- | --- |"]
-    agree = false_met = judged = 0
+    agree = false_met = judged = unknown = 0
     for r in rows:
         m = r["measured"]
         if m is None or pred is None:
             out.append(f"| {r['condition']} | {r['rep']} | - | - | - | {r['state']} | - |")
+            continue
+        if pred[r["condition"]]["feasible"] is None:
+            # unknown_measurement is not a verdict, so it neither agrees nor misses.
+            v = verdict(m, slo)
+            unknown += 1
+            out.append(f"| {r['condition']} | {r['rep']} | "
+                       f"{pred[r['condition']].get('state', 'unknown_measurement')} | "
+                       f"{m['p99_ttft_ms']:.1f} ms | {m['p99_tpot_ms']:.1f} ms | "
+                       f"{'met' if v['met'] else 'MISSED'} | not judged |")
             continue
         p_met = bool(pred[r["condition"]]["feasible"])
         v = verdict(m, slo)
@@ -168,7 +202,9 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
                    f"{m['p99_ttft_ms']:.1f} ms | {m['p99_tpot_ms']:.1f} ms | "
                    f"{'met' if v['met'] else 'MISSED'} | {'yes' if ok else 'no'} |")
     out += ["", f"Agreement: **{agree} of {judged}**; false met (counted as a miss): "
-            f"**{false_met}**."]
+            f"**{false_met}**."
+            + (f" Not judged, the prediction being `unknown_measurement`: **{unknown}**."
+               if unknown else "")]
 
     # 2. the contention effect
     main = pairs(raw / "runs", direction)

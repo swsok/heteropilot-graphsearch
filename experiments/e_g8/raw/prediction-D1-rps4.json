@@ -1,0 +1,31 @@
+{
+  "direction": "D1",
+  "independent": {
+    "detail": "candidate_id='pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192@b84e6bf588a5' stage=<RejectionStage.SIM_ERROR: 'sim_error'> reason='crashed: exit 1:   File \"/home/swsok/heteropilot-graphsearch/vendor/heteropilot/serving/core/memory_model.py\", line 252, in allocate |     raise RuntimeError( | RuntimeError: [MemoryModel] [node_id=1,inst=1] NPU: tried to load 152.00MB but only 11.89MB is available.'",
+    "feasible": null,
+    "p50_prompt_tokens": 731,
+    "p99_tpot_ms": null,
+    "p99_ttft_ms": null,
+    "state": "unknown_measurement",
+    "xfer_ms_mean": 14.81792026501035,
+    "xfer_ms_p50": 13.2247939268461,
+    "xfer_ms_per_token": 0.01809137336093858
+  },
+  "mean_prompt_tokens": 819.06,
+  "offered_rps": 4.0,
+  "predicted_interval_change_ms": 22.233272942927528,
+  "predicted_p99_ttft_change_ms": null,
+  "predictor": "sim",
+  "shared": {
+    "detail": "candidate_id='pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192@b84e6bf588a5' stage=<RejectionStage.SIM_ERROR: 'sim_error'> reason='crashed: exit 1:   File \"/home/swsok/heteropilot-graphsearch/vendor/heteropilot/serving/core/memory_model.py\", line 252, in allocate |     raise RuntimeError( | RuntimeError: [MemoryModel] [node_id=1,inst=1] NPU: tried to load 152.00MB but only 11.89MB is available.'",
+    "feasible": null,
+    "p50_prompt_tokens": 731,
+    "p99_tpot_ms": null,
+    "p99_ttft_ms": null,
+    "state": "unknown_measurement",
+    "xfer_ms_mean": 37.05119320793788,
+    "xfer_ms_p50": 33.067690077653154,
+    "xfer_ms_per_token": 0.04523623813632442
+  },
+  "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192"
+}

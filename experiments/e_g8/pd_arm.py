@@ -28,6 +28,7 @@ Modes:
 
     --mode select  --direction D1      choose the template once (row 7 a)
     --mode predict --direction D1      the prediction at the run's rate
+    --mode sim-ceiling --direction D1  report-only: the highest pilot rate with a verdict
     --mode run     --direction D1 --condition independent --rep 1 [--dry-run]
 
 Nothing here is registered: what the run measures and how it is judged is
@@ -39,6 +40,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import statistics
 import subprocess
@@ -179,13 +181,67 @@ def select_template(direction: str, spec_path: Path, work: Path, args, seed: int
         })
     judged = [t for t in table if t["p99_ttft_ms"] is not None]
     if not judged:
-        raise SystemExit(f"{direction}: no P/D template was simulated to a result")
+        return unjudged_selection(direction, table, work / "select", args, seed)
     chosen = min(judged, key=lambda t: (not t["feasible"], t["p99_ttft_ms"]))
     return {"direction": direction, "chosen": chosen["template_id"], "seed": seed,
+            "state": "evaluated", "rule_applied": True,
             "table": table, "all_infeasible": not any(t["feasible"] for t in table),
             "predictor": args.predictor,
             "rule": "feasible first, then the lower predicted p99 TTFT, at "
                     "s8/gpu0 + a5k2/gpu0 (row 5), applied once (row 7 a)"}
+
+
+MIRROR = {"D1": "D2", "D2": "D1"}
+PD_ID = re.compile(r"^pd\((?P<p>\S+) P \+ (?P<d>\S+) D\)(?P<knobs>-.*)$")
+
+
+def mirror_template_id(template_id: str) -> str:
+    """The same knobs with the prefill and decode islands swapped."""
+    m = PD_ID.match(template_id)
+    if m is None:
+        raise SystemExit(f"{template_id} is not a P/D template id")
+    return f"pd({m['d']} P + {m['p']} D){m['knobs']}"
+
+
+def sim_errors(sim_dir: Path) -> list[str]:
+    """The simulator's own error lines, for the record of why there is no verdict."""
+    found = set()
+    for log in sorted(sim_dir.glob("sims/pd_*/sim*.log")):
+        for line in log.read_text(errors="replace").splitlines():
+            if line.startswith("RuntimeError:"):
+                found.add(re.sub(r"\d+\.\d+MB", "<n>MB", line.strip()))
+    return sorted(found)
+
+
+def unjudged_selection(direction: str, table: list[dict], sub: Path, args,
+                       seed: int) -> dict:
+    """No P/D template has a verdict, so row 5's rule cannot be applied here.
+
+    The template is fixed instead as the mirror image of the one the rule chose
+    in the other direction, which must already be selected. The prediction is
+    `unknown_measurement`: an unevaluated placement is not an infeasible one."""
+    other = selection_path(MIRROR[direction], args)
+    if not other.exists():
+        raise SystemExit(f"{direction}: no P/D template was simulated to a result, and "
+                         f"{other} (whose mirror image would be used) is missing")
+    source = json.loads(other.read_text())
+    if not source.get("rule_applied", True):
+        raise SystemExit(f"{direction}: {other} is itself a mirror; nothing to mirror")
+    chosen = mirror_template_id(source["chosen"])
+    if chosen not in {t["template_id"] for t in table}:
+        raise SystemExit(f"{direction}: the mirror {chosen} is not among {direction}'s templates")
+    return {"direction": direction, "chosen": chosen, "seed": seed,
+            "state": "unknown_measurement", "rule_applied": False,
+            "table": table, "all_infeasible": None, "predictor": args.predictor,
+            "mirror_of": {"direction": MIRROR[direction], "template_id": source["chosen"],
+                          "selection": str(other.relative_to(ROOT))},
+            "simulator_errors": sim_errors(sub / "sim"),
+            "rule": ("row 5's rule was NOT applied: no template has a simulator verdict "
+                     "at s8/gpu0 + a5k2/gpu0. The template is the mirror image of the "
+                     f"one the rule chose in {MIRROR[direction]}."),
+            "reason": ("the simulator's memory model exhausts the decode instance's KV "
+                       "and raises instead of returning a verdict -- the same cause as "
+                       "E-G3's C14 (e_g3_sim_error_causes.md)")}
 
 
 def predict_at(direction: str, template_id: str, spec_path: Path, work: Path, args,
@@ -206,25 +262,71 @@ def predict_at(direction: str, template_id: str, spec_path: Path, work: Path, ar
         objs = cmd_plan_objects(pa)
         v = evaluate_placement(pa, objs, template_id, devices())
         emb = embedding(objs, template_id)
-        if emb is None or v.plan is None:
-            raise SystemExit(f"{name}: {template_id} has no verdict at {sorted(devices())}")
-        _, info = apply_pd_transfer_cost_embedded(
-            emb, v.plan.predicted, objs.spec, objs.graph,
-            contention=contention_model("fluid"))
+        if emb is None:
+            raise SystemExit(f"{name}: {template_id} has no embedding at {sorted(devices())}")
+        # The fluid model prices the KV transfer from the path alone, so it has
+        # a number even where the simulator returned no verdict.
+        xfer_p50 = fluid_xfer_ms_p50(emb, objs.graph, contention_model("fluid"))
+        if v.plan is not None:
+            _, info = apply_pd_transfer_cost_embedded(
+                emb, v.plan.predicted, objs.spec, objs.graph,
+                contention=contention_model("fluid"))
+            assert abs(info["xfer_ms_p50"] - xfer_p50) < 1e-9
         p50_tokens = objs.spec.traffic.input_tokens.p50
-        per_token = info["xfer_ms_p50"] / p50_tokens
+        per_token = xfer_p50 / p50_tokens
         out[name] = {
-            "p99_ttft_ms": v.plan.predicted.p99_ttft_ms,
-            "p99_tpot_ms": v.plan.predicted.p99_tpot_ms,
+            "state": v.state, "detail": v.detail,
+            "p99_ttft_ms": v.plan.predicted.p99_ttft_ms if v.plan else None,
+            "p99_tpot_ms": v.plan.predicted.p99_tpot_ms if v.plan else None,
             "feasible": v.feasible,
-            "xfer_ms_p50": info["xfer_ms_p50"], "p50_prompt_tokens": p50_tokens,
+            "xfer_ms_p50": xfer_p50, "p50_prompt_tokens": p50_tokens,
             "xfer_ms_per_token": per_token, "xfer_ms_mean": per_token * mean_prompt,
         }
     out["predicted_interval_change_ms"] = (
         out["shared"]["xfer_ms_mean"] - out["independent"]["xfer_ms_mean"])
+    ttfts = [out[c]["p99_ttft_ms"] for c in CONDITIONS]
     out["predicted_p99_ttft_change_ms"] = (
-        out["shared"]["p99_ttft_ms"] - out["independent"]["p99_ttft_ms"])
+        None if None in ttfts else ttfts[1] - ttfts[0])
     return out
+
+
+def fluid_xfer_ms_p50(emb, graph, contention) -> float:
+    """The p50 KV transfer time over the embedding's path, exactly as
+    `apply_pd_transfer_cost_embedded` computes it before it touches metrics."""
+    from graphsearch.demand import FlowKind
+
+    flows = [f for f in emb.flows if f.kind is FlowKind.PD_KV_TRANSFER]
+    times = contention.transfer_times_ns(flows, graph) if flows else {}
+    return max(times.values(), default=0.0) / 1e6
+
+
+SIM_CEILING_LADDER = (4.0, 3.0, 2.0, 1.5, 1.0)   # the run's rate, then the knee pilot's
+
+
+def sim_ceiling(direction: str, template_id: str, work: Path, args) -> dict:
+    """Report-only: the highest rate on the pilot ladder at which the simulator
+    returns a verdict for this placement, descending until one does. Not a
+    criterion of anything; reported beside the measured onset of preemption."""
+    from graphsearch.__main__ import cmd_plan_objects, evaluate_placement
+
+    steps = []
+    for rps in SIM_CEILING_LADDER:
+        pa = plan_args(_spec(rps, work), CLUSTER, work / direction / f"ceiling-rps{rps:g}",
+                       args, 42)
+        v = evaluate_placement(pa, cmd_plan_objects(pa), template_id, devices())
+        steps.append({"rps": rps, "state": v.state, "feasible": v.feasible,
+                      "p99_ttft_ms": v.plan.predicted.p99_ttft_ms if v.plan else None,
+                      "p99_tpot_ms": v.plan.predicted.p99_tpot_ms if v.plan else None,
+                      "detail": v.detail if v.plan is None else ""})
+        say(f"{direction} ceiling: {rps:g} rps -> {v.state}")
+        if v.plan is not None:
+            break
+    judged = [s["rps"] for s in steps if s["state"] == "evaluated"]
+    return {"direction": direction, "template_id": template_id, "report_only": True,
+            "ladder": list(SIM_CEILING_LADDER), "steps": steps,
+            "highest_judged_rps": max(judged) if judged else None,
+            "note": ("descends the ladder and stops at the first rate with a verdict; "
+                     "None means no rate on the ladder had one")}
 
 
 # --- 2. deploy ----------------------------------------------------------------
@@ -479,7 +581,8 @@ def run(args) -> int:
         out = selection_path(d, args)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(sel, indent=2, sort_keys=True) + "\n")
-        say(f"{d}: selected {sel['chosen']} (all infeasible: {sel['all_infeasible']}); wrote {out}")
+        say(f"{d}: selected {sel['chosen']} ({sel['state']}, rule applied: "
+            f"{sel['rule_applied']}); wrote {out}")
         return 0
 
     if not selection_path(d, args).exists():
@@ -489,6 +592,14 @@ def run(args) -> int:
     _, workload_at = _service_tools()
     trace = workload_at(rps, "llama31-8b", work)
     spec_path = _spec(rps, work)
+
+    if args.mode == "sim-ceiling":
+        ceil = sim_ceiling(d, template_id, work, args)
+        ceil["written_at"] = datetime.now(timezone.utc).isoformat()
+        out = raw_root(args) / f"sim-ceiling-{d}.json"
+        out.write_text(json.dumps(ceil, indent=2, sort_keys=True) + "\n")
+        say(f"{d}: highest rate with a verdict {ceil['highest_judged_rps']}; wrote {out}")
+        return 0
 
     if args.mode == "predict":
         pred = predict_at(d, template_id, spec_path, work / d / f"predict-rps{rps:g}",
@@ -584,7 +695,8 @@ def run(args) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--mode", choices=("select", "predict", "run"), required=True)
+    ap.add_argument("--mode", choices=("select", "predict", "sim-ceiling", "run"),
+                    required=True)
     ap.add_argument("--direction", choices=sorted(DIRECTIONS), required=True)
     ap.add_argument("--condition", choices=CONDITIONS, default=None)
     ap.add_argument("--rep", type=int, default=1)

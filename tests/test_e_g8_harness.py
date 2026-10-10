@@ -55,3 +55,40 @@ def test_engine_argv_and_env_follow_the_node(arm, node, util, hca) -> None:
 def test_a_mock_rehearsal_never_writes_beside_registered_files(arm) -> None:
     assert arm.raw_root(SimpleNamespace(predictor="mock")) != arm.RAW
     assert arm.raw_root(SimpleNamespace(predictor="sim")) == arm.RAW
+
+
+D1_ID = "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192"
+D2_ID = "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s32-t8192"
+
+
+def test_the_mirror_swaps_the_islands_and_keeps_the_knobs(arm) -> None:
+    assert arm.mirror_template_id(D2_ID) == D1_ID
+    assert arm.mirror_template_id(arm.mirror_template_id(D1_ID)) == D1_ID
+
+
+def test_an_unjudged_direction_takes_the_mirror_and_stays_unknown(arm, tmp_path,
+                                                                  monkeypatch) -> None:
+    monkeypatch.setattr(arm, "ROOT", tmp_path)
+    monkeypatch.setattr(arm, "selection_path", lambda d, a: tmp_path / f"selection-{d}.json")
+    (tmp_path / "selection-D2.json").write_text(json.dumps(
+        {"chosen": D2_ID, "rule_applied": True}))
+    log = tmp_path / "select" / "sim" / "sims" / "pd_x" / "sim1.log"
+    log.parent.mkdir(parents=True)
+    log.write_text("RuntimeError: [MemoryModel] NPU: tried to load 108.00MB but only "
+                   "25.89MB is available.\n")
+    table = [{"template_id": D1_ID, "state": "unknown_measurement", "feasible": None,
+              "p99_ttft_ms": None, "p99_tpot_ms": None}]
+    sel = arm.unjudged_selection("D1", table, tmp_path / "select",
+                                 SimpleNamespace(predictor="sim"), 42)
+    assert sel["chosen"] == D1_ID and sel["state"] == "unknown_measurement"
+    assert sel["rule_applied"] is False and sel["all_infeasible"] is None
+    assert sel["simulator_errors"] == [
+        "RuntimeError: [MemoryModel] NPU: tried to load <n>MB but only <n>MB is available."]
+
+
+def test_a_mirror_is_never_mirrored_again(arm, tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(arm, "selection_path", lambda d, a: tmp_path / f"selection-{d}.json")
+    (tmp_path / "selection-D2.json").write_text(json.dumps(
+        {"chosen": D2_ID, "rule_applied": False}))
+    with pytest.raises(SystemExit):
+        arm.unjudged_selection("D1", [], tmp_path, SimpleNamespace(predictor="sim"), 42)

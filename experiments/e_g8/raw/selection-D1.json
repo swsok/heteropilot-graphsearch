@@ -1,0 +1,64 @@
+{
+  "all_infeasible": null,
+  "chosen": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192",
+  "direction": "D1",
+  "mirror_of": {
+    "direction": "D2",
+    "selection": "experiments/e_g8/raw/selection-D2.json",
+    "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s32-t8192"
+  },
+  "predictor": "sim",
+  "reason": "the simulator's memory model exhausts the decode instance's KV and raises instead of returning a verdict -- the same cause as E-G3's C14 (e_g3_sim_error_causes.md)",
+  "rule": "row 5's rule was NOT applied: no template has a simulator verdict at s8/gpu0 + a5k2/gpu0. The template is the mirror image of the one the rule chose in D2.",
+  "rule_applied": false,
+  "seed": 42,
+  "simulator_errors": [
+    "RuntimeError: [MemoryModel] [node_id=1,inst=1] NPU: tried to load <n>MB but only <n>MB is available."
+  ],
+  "state": "unknown_measurement",
+  "table": [
+    {
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "state": "unknown_measurement",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s128-t2048"
+    },
+    {
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "state": "unknown_measurement",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s128-t8192"
+    },
+    {
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "state": "unknown_measurement",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s256-t2048"
+    },
+    {
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "state": "unknown_measurement",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s256-t8192"
+    },
+    {
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "state": "unknown_measurement",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t2048"
+    },
+    {
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "state": "unknown_measurement",
+      "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192"
+    }
+  ],
+  "written_at": "2026-10-10T12:26:41.971403+00:00"
+}
