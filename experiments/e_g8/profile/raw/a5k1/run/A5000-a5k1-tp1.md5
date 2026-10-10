@@ -1,0 +1,6 @@
+a227e907f5e50e8e6a44d7fb6391082b  profiler/perf/A5000-a5k1/meta-llama/Llama-3.1-8B/bf16/meta.yaml
+1a63af3dfee723a5798098a764693712  profiler/perf/A5000-a5k1/meta-llama/Llama-3.1-8B/bf16/tp1/attention.csv
+9ac5bf40c301e73cf44633467fd256a6  profiler/perf/A5000-a5k1/meta-llama/Llama-3.1-8B/bf16/tp1/dense.csv
+a5aead05bbcdd5de84065c218638bd1c  profiler/perf/A5000-a5k1/meta-llama/Llama-3.1-8B/bf16/tp1/per_sequence.csv
+931ac3baa44013cd88c546572c27ae85  profiler/perf/A5000-a5k1/meta-llama/Llama-3.1-8B/bf16/tp1/skew.csv
+469c55076ce227b8f2ba78c073c37f60  profiler/perf/A5000-a5k1/meta-llama/Llama-3.1-8B/bf16/tp1/skew_fit.csv
