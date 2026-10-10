@@ -32,6 +32,7 @@ as in `real-s8s6`.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import statistics
@@ -46,7 +47,19 @@ HERE = Path(__file__).resolve().parent
 ROOT = paths_root.GRAPHSEARCH_ROOT
 sys.path.insert(0, str(ROOT / "experiments" / "e_g5"))
 sys.path.insert(0, str(ROOT / "experiments" / "microbench"))
-import analyze as microbench  # noqa: E402
+
+
+def _load(name: str, path: Path):
+    """By path and under its own name: e_g5 and microbench both have an
+    `analyze` module, and whichever is imported first would win."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+microbench = _load("microbench_analyze", ROOT / "experiments" / "microbench" / "analyze.py")
 import build_cluster as single  # noqa: E402
 import build_cluster_s8s6 as pair  # noqa: E402
 
