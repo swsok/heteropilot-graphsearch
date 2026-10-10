@@ -95,6 +95,19 @@ def rule_txt(lr: dict) -> str:
     return "passes" if not failed else "fails: " + ", ".join(failed)
 
 
+#: Row 11 (e): floor sensitivity, analysis only, as row 9 (c) did for E-G5.
+SENSITIVITY_FLOORS = (0.75, 0.7)
+PRED_GOODPUT = re.compile(r"metric='slo_goodput_rps', target=[0-9.eE+-]+, "
+                          r"predicted=([0-9.eE+-]+)")
+
+
+def predicted_goodput(p: dict) -> float | None:
+    """The simulator's goodput, from the goodput violation in the committed
+    prediction's detail; None when no goodput violation was recorded."""
+    found = PRED_GOODPUT.search(p.get("detail") or "")
+    return float(found.group(1)) if found else None
+
+
 def met_txt(x: bool | None) -> str:
     return "-" if x is None else ("met" if x else "MISSED")
 
@@ -135,6 +148,32 @@ def pairs(root: Path, direction: str) -> list[dict]:
                     "mean_b": statistics.mean(b[i] for i in common),
                     "diff": statistics.mean(diffs),
                     "diff_sd": statistics.stdev(diffs) if len(diffs) > 1 else 0.0})
+    return out
+
+
+def sensitivity(rows: list[dict], pred: dict | None, slo: dict) -> list[str]:
+    """Analysis only, not a criterion: the three-axis verdicts re-judged at
+    other floors, predicted from the same committed predictions."""
+    if pred is None or not any(r["measured"] for r in rows):
+        return []
+    head = " | ".join(f"floor {f:g}: predicted / measured / agree" for f in SENSITIVITY_FLOORS)
+    out = ["", "Floor sensitivity (analysis only; row 11 (e), as row 9 (c)):", "",
+           f"| condition | rep | predicted goodput | {head} |",
+           "| --- | --- | --- | " + " | ".join("---" for _ in SENSITIVITY_FLOORS) + " |"]
+    for r in rows:
+        m = r["measured"]
+        if m is None:
+            continue
+        p = pred[r["condition"]]
+        g = predicted_goodput(p)
+        lat = predicted_latency_met(p, slo)
+        cells = []
+        for f in SENSITIVITY_FLOORS:
+            pm = None if g is None or lat is None else lat and g >= f
+            mm = verdict(m, slo, f)["met"]
+            ok = "-" if pm is None else ("yes" if pm == mm else "no")
+            cells.append(f"{met_txt(pm)} / {met_txt(mm)} / {ok}")
+        out.append(f"| {r['condition']} | {r['rep']} | {fmt(g)} | " + " | ".join(cells) + " |")
     return out
 
 
@@ -258,6 +297,7 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
             + (f" Not judged, the prediction being `unknown_measurement`: **{unknown}**."
                if unknown else "")
             + f" Auxiliary, latency only: {lat_agree} of {lat_judged}."]
+    out += sensitivity(rows, pred, slo)
 
     # 2. the contention effect
     main = pairs(raw / "runs", direction)

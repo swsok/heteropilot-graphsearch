@@ -54,3 +54,10 @@ def test_the_predicted_latency_verdict_is_unknown_without_a_prediction(an) -> No
 ])
 def test_the_load_rule(an, kw, pre, passes) -> None:
     assert an.load_rule(m(**kw), 1.0, pre)["passes"] is passes
+
+
+def test_the_predicted_goodput_is_read_from_the_committed_detail(an) -> None:
+    detail = ("FeasibilityReport(passed=False, violations=[Violation(metric='slo_goodput_rps', "
+              "target=0.8, predicted=0.7852656419517176)])")
+    assert an.predicted_goodput({"detail": detail}) == pytest.approx(0.7852656419517176)
+    assert an.predicted_goodput({"detail": ""}) is None
