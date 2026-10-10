@@ -1862,3 +1862,9 @@ setting did not take. BAR1 is resized by hand with
 `experiments/pd_probe/a5000/gpu0_rebar.sh` before every run, and its output
 goes into the run's raw files. A boot-time unit doing the same unbind hung
 the node, and a load-time hook was declined as boot persistence.
+
+**Then made unnecessary (2026-10-10).** After the user's BIOS update (2201,
+Re-Size BAR enabled), `a5000-2` boots with a 32 GB BAR1 on both GPUs.
+`gpu0_rebar.sh` is now only the pre-run check that BAR1 is 32 GB. The path,
+the node and the GPU are unchanged. `real-s8a5k` still carries GPU 0 only,
+now as scope: it is where E-G8 deploys and where R5.0 measured.

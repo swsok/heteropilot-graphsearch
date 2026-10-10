@@ -20,10 +20,10 @@ Every `source: measured` value is read from a committed raw file, never typed:
   run's largest-message figure. NCCL chose `GDR 0` in every run, so it is a
   host-staged figure and its note says so.
 
-**`a5k2` carries GPU 0 only.** GPU 1 boots with a 256 MiB BAR1, too small for
-the KV registration E-G8's GPUDirect path makes (GS-39). E-G8 never deploys on
-it, and a placement there could not run the path the arm measures. The
-choice is about scope, not feasibility, and the header says so.
+**`a5k2` carries GPU 0 only.** E-G8 deploys there and nowhere else on the
+node, and every R5.0 figure was taken from it. GPU 1 is out of scope, not
+infeasible. Since `a5000-2`'s BIOS update of 2026-10-10 both GPUs boot with a
+32 GB BAR1, so GPU 1's earlier 256 MiB BAR1 is no longer the reason.
 
 `s8`'s intra-node figures are E-G4's, inherited through `real-a40x8`, exactly
 as in `real-s8s6`.
@@ -157,7 +157,7 @@ def build(shared: str | None = None) -> dict:
             "msg_bytes": [268435456], "date": "2026-10-09",
             "raw": "experiments/pd_probe/raw/nixl-a5000/rebar32g",
             "note": (f"{src} cuda:0 to {dst} cuda:0, {nixl} Gbit/s, median of 30 after "
-                     f"5 warmup; a5000-2 GPU 0 BAR1 resized to 32 GB; UCX rc_mlx5 "
+                     f"5 warmup; a5000-2 GPU 0 BAR1 32 GB (resized at run time); UCX rc_mlx5 "
                      f"zero-copy cuda to cuda (GPUDirect RDMA)"),
         }, {
             "collective": "all_reduce", "msg_size_class": "bulk", "binding": "unknown",
@@ -206,10 +206,10 @@ def header(shared: str | None) -> str:
         "#               NCCL GDR 0: host-staged).",
         f"# NIC s8 -> a5k2   {fwd} Gbit/s ({NIC_RAW[('s8', 'a5k2')]})",
         f"# NIC a5k2 -> s8   {back} Gbit/s ({NIC_RAW[('a5k2', 's8')]})",
-        "# a5k2          GPU 0 only. GPU 1's BAR1 is 256 MiB, too small for the",
-        "#               KV registration of E-G8's GPUDirect path (GS-39); out of",
-        "#               scope, not infeasible. GPU 0's BAR1 is resized to 32 GB",
-        "#               by hand before every run (experiments/pd_probe/a5000/gpu0_rebar.sh).",
+        "# a5k2          GPU 0 only: the GPU E-G8 deploys on and every R5.0 figure",
+        "#               came from. GPU 1 is out of scope, not infeasible. Both boot",
+        "#               with a 32 GB BAR1 since the BIOS update of 2026-10-10;",
+        "#               experiments/pd_probe/a5000/gpu0_rebar.sh checks it before a run.",
         "# A5000 profile vendor/heteropilot/profiles/accelerators/a5000.yaml and its",
         "#               perf bundle. Which machine measured that bundle is disputed",
         "#               between the user and the R4.2 record (docs/nodes/a5000.md);",

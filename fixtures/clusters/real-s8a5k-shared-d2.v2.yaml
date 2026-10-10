@@ -9,10 +9,10 @@
 #               NCCL GDR 0: host-staged).
 # NIC s8 -> a5k2   57.96 Gbit/s (2026-10-09-nic-s8-to-a5000-2)
 # NIC a5k2 -> s8   52.61 Gbit/s (2026-10-09-nic-s8-a5000-2)
-# a5k2          GPU 0 only. GPU 1's BAR1 is 256 MiB, too small for the
-#               KV registration of E-G8's GPUDirect path (GS-39); out of
-#               scope, not infeasible. GPU 0's BAR1 is resized to 32 GB
-#               by hand before every run (experiments/pd_probe/a5000/gpu0_rebar.sh).
+# a5k2          GPU 0 only: the GPU E-G8 deploys on and every R5.0 figure
+#               came from. GPU 1 is out of scope, not infeasible. Both boot
+#               with a 32 GB BAR1 since the BIOS update of 2026-10-10;
+#               experiments/pd_probe/a5000/gpu0_rebar.sh checks it before a run.
 # A5000 profile vendor/heteropilot/profiles/accelerators/a5000.yaml and its
 #               perf bundle. Which machine measured that bundle is disputed
 #               between the user and the R4.2 record (docs/nodes/a5000.md);
@@ -653,8 +653,8 @@ links:
     - 268435456
     date: '2026-10-09'
     raw: experiments/pd_probe/raw/nixl-a5000/rebar32g
-    note: s8 cuda:0 to a5k2 cuda:0, 57.76 Gbit/s, median of 30 after 5 warmup; a5000-2 GPU 0 BAR1 resized
-      to 32 GB; UCX rc_mlx5 zero-copy cuda to cuda (GPUDirect RDMA)
+    note: s8 cuda:0 to a5k2 cuda:0, 57.76 Gbit/s, median of 30 after 5 warmup; a5000-2 GPU 0 BAR1 32 GB
+      (resized at run time); UCX rc_mlx5 zero-copy cuda to cuda (GPUDirect RDMA)
   - collective: all_reduce
     msg_size_class: bulk
     binding: unknown
@@ -691,8 +691,8 @@ links:
     - 268435456
     date: '2026-10-09'
     raw: experiments/pd_probe/raw/nixl-a5000/rebar32g
-    note: a5k2 cuda:0 to s8 cuda:0, 47.94 Gbit/s, median of 30 after 5 warmup; a5000-2 GPU 0 BAR1 resized
-      to 32 GB; UCX rc_mlx5 zero-copy cuda to cuda (GPUDirect RDMA)
+    note: a5k2 cuda:0 to s8 cuda:0, 47.94 Gbit/s, median of 30 after 5 warmup; a5000-2 GPU 0 BAR1 32 GB
+      (resized at run time); UCX rc_mlx5 zero-copy cuda to cuda (GPUDirect RDMA)
   - collective: all_reduce
     msg_size_class: bulk
     binding: unknown
