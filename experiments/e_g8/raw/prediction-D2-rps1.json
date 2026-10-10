@@ -1,0 +1,32 @@
+{
+  "direction": "D2",
+  "independent": {
+    "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='slo_goodput_rps', target=0.8, predicted=0.7664711320913091)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+    "feasible": false,
+    "p50_prompt_tokens": 731,
+    "p99_tpot_ms": 39.02203771,
+    "p99_ttft_ms": 407.9768100645161,
+    "state": "evaluated",
+    "xfer_ms_mean": 16.324779672305645,
+    "xfer_ms_p50": 14.56964561870367,
+    "xfer_ms_per_token": 0.01993111575746056
+  },
+  "mean_prompt_tokens": 819.06,
+  "min_goodput_rps": 0.8,
+  "offered_rps": 1.0,
+  "predicted_interval_change_ms": 24.494928434158226,
+  "predicted_p99_ttft_change_ms": 140.40663093426718,
+  "predictor": "sim",
+  "shared": {
+    "detail": "FeasibilityReport(passed=False, violations=[Violation(metric='slo_goodput_rps', target=0.8, predicted=0.7664761064446984)], stage=<RejectionStage.SLO_VIOLATED: 'slo_violated'>, notes=[])",
+    "feasible": false,
+    "p50_prompt_tokens": 731,
+    "p99_tpot_ms": 39.01429943,
+    "p99_ttft_ms": 548.3834409987833,
+    "state": "evaluated",
+    "xfer_ms_mean": 40.81970810646387,
+    "xfer_ms_p50": 36.43103878326996,
+    "xfer_ms_per_token": 0.049837262357414445
+  },
+  "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s32-t8192"
+}

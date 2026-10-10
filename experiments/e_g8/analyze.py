@@ -61,11 +61,42 @@ def fmt_feasible(x: bool | None) -> str:
     return "unknown" if x is None else str(x)
 
 
-def verdict(m: dict, slo: dict) -> dict:
-    """Measured met/MISSED per SLO term, from E-G5's latency summary."""
+def verdict(m: dict, slo: dict, floor: float | None) -> dict:
+    """Measured met/MISSED on the three axes (TTFT, TPOT, goodput against the
+    rate's registered floor), and on latency alone for the auxiliary column.
+    Goodput is E-G5's definition, as row 4's floor rule measured it."""
     ttft = m["p99_ttft_ms"] is not None and m["p99_ttft_ms"] <= slo["ttft_max_ms"]
     tpot = m["p99_tpot_ms"] is not None and m["p99_tpot_ms"] <= slo["tpot_max_ms"]
-    return {"ttft": ttft, "tpot": tpot, "met": ttft and tpot and m["failed"] == 0}
+    good = floor is None or m["goodput_rps"] >= floor
+    latency = ttft and tpot and m["failed"] == 0
+    return {"ttft": ttft, "tpot": tpot, "goodput": good, "latency_met": latency,
+            "met": latency and good}
+
+
+def predicted_latency_met(p: dict, slo: dict) -> bool | None:
+    if p.get("p99_ttft_ms") is None or p.get("p99_tpot_ms") is None:
+        return None
+    return p["p99_ttft_ms"] <= slo["ttft_max_ms"] and p["p99_tpot_ms"] <= slo["tpot_max_ms"]
+
+
+def load_rule(m: dict, rate: float, preempt: float | None) -> dict:
+    """Row 11's load rule: row 7 (b)'s drain-corrected goodput >= 0.9 of
+    offered, plus no decode preemption and a KV interval p99 within 2x its
+    mean (the threshold was set after seeing the pilot ratios; row 11)."""
+    ratio = m["interval_p99_ms"] / m["interval_mean_ms"] if m["interval_mean_ms"] else None
+    checks = {"goodput": m["goodput_drain_corrected_rps"] / rate >= 0.9,
+              "no_preemption": preempt == 0,
+              "interval_ratio": ratio is not None and ratio <= 2.0}
+    return {"ratio": ratio, **checks, "passes": all(checks.values())}
+
+
+def rule_txt(lr: dict) -> str:
+    failed = [k for k in ("goodput", "no_preemption", "interval_ratio") if not lr[k]]
+    return "passes" if not failed else "fails: " + ", ".join(failed)
+
+
+def met_txt(x: bool | None) -> str:
+    return "-" if x is None else ("met" if x else "MISSED")
 
 
 def runs(root: Path) -> list[dict]:
@@ -152,12 +183,20 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
                          preemptions(d / "decode.metrics.txt")))
     if knee:
         out += ["", "### Knee pilot (excluded from validation)", "",
-                "| offered rps | drain-corrected goodput / offered | p99 TTFT | mean interval "
-                "| decode preemptions |", "| --- | --- | --- | --- | --- |"]
+                "| offered rps | drain-corrected goodput / offered | goodput (E-G5) | p99 TTFT "
+                "| mean interval | interval p99 / mean | decode preemptions | load rule |",
+                "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+        onset = None
         for rate, m, pre in sorted(knee, key=lambda x: x[0]):
+            lr = load_rule(m, rate, pre)
+            if onset is None and pre:
+                onset = rate
             out.append(f"| {rate:g} | {m['goodput_drain_corrected_rps'] / rate:.3f} | "
-                       f"{m['p99_ttft_ms']:.0f} ms | {m['interval_mean_ms']:.1f} ms | "
-                       f"{fmt(pre)} |")
+                       f"{m['goodput_rps']:.3f} | {m['p99_ttft_ms']:.0f} ms | "
+                       f"{m['interval_mean_ms']:.1f} ms | {lr['ratio']:.2f} | {fmt(pre)} | "
+                       f"{rule_txt(lr)} |")
+        out += ["", "Decode preemption starts at **"
+                + (f"{onset:g} rps" if onset else "no rate on the sweep") + "** (metric 3)."]
     pp = pairs(raw / "pilot" / "pairs", direction)
     if pp:
         out += ["", "### Pilot pairs (excluded from validation)", "",
@@ -174,37 +213,51 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
     pred = json.loads(pred_path.read_text()) if pred_path.exists() else None
 
     # 1. judgement agreement
+    floor = pred.get("min_goodput_rps") if pred else None
     out += ["", f"### 1. Judgement agreement, {rate:g} rps", "",
+            f"Three axes: p99 TTFT <= {slo['ttft_max_ms']:g} ms, p99 TPOT <= "
+            f"{slo['tpot_max_ms']:g} ms, goodput >= {fmt(floor)} rps (row 4's rule at this "
+            "rate, row 11). The latency-only columns are auxiliary.", "",
             "| condition | rep | predicted | measured p99 TTFT | measured p99 TPOT | "
-            "measured | agree |", "| --- | --- | --- | --- | --- | --- | --- |"]
+            "measured goodput | measured | agree | predicted (latency) | "
+            "measured (latency) | agree (latency) |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     agree = false_met = judged = unknown = 0
+    lat_agree = lat_judged = 0
     for r in rows:
         m = r["measured"]
         if m is None or pred is None:
-            out.append(f"| {r['condition']} | {r['rep']} | - | - | - | {r['state']} | - |")
+            out.append(f"| {r['condition']} | {r['rep']} | - | - | - | - | {r['state']} | - "
+                       "| - | - | - |")
             continue
-        if pred[r["condition"]]["feasible"] is None:
+        p = pred[r["condition"]]
+        v = verdict(m, slo, floor)
+        p_lat = predicted_latency_met(p, slo)
+        lat_ok = None if p_lat is None else p_lat == v["latency_met"]
+        if lat_ok is not None:
+            lat_judged += 1
+            lat_agree += lat_ok
+        if p["feasible"] is None:
             # unknown_measurement is not a verdict, so it neither agrees nor misses.
-            v = verdict(m, slo)
             unknown += 1
-            out.append(f"| {r['condition']} | {r['rep']} | "
-                       f"{pred[r['condition']].get('state', 'unknown_measurement')} | "
-                       f"{m['p99_ttft_ms']:.1f} ms | {m['p99_tpot_ms']:.1f} ms | "
-                       f"{'met' if v['met'] else 'MISSED'} | not judged |")
-            continue
-        p_met = bool(pred[r["condition"]]["feasible"])
-        v = verdict(m, slo)
-        ok = p_met == v["met"]
-        judged += 1
-        agree += ok
-        false_met += p_met and not v["met"]
-        out.append(f"| {r['condition']} | {r['rep']} | {'met' if p_met else 'MISSED'} | "
+            p_txt, ok_txt = p.get("state", "unknown_measurement"), "not judged"
+        else:
+            p_met = bool(p["feasible"])
+            ok = p_met == v["met"]
+            judged += 1
+            agree += ok
+            false_met += p_met and not v["met"]
+            p_txt, ok_txt = met_txt(p_met), "yes" if ok else "no"
+        out.append(f"| {r['condition']} | {r['rep']} | {p_txt} | "
                    f"{m['p99_ttft_ms']:.1f} ms | {m['p99_tpot_ms']:.1f} ms | "
-                   f"{'met' if v['met'] else 'MISSED'} | {'yes' if ok else 'no'} |")
+                   f"{m['goodput_rps']:.3f} rps | {met_txt(v['met'])} | {ok_txt} | "
+                   f"{met_txt(p_lat)} | {met_txt(v['latency_met'])} | "
+                   f"{'-' if lat_ok is None else ('yes' if lat_ok else 'no')} |")
     out += ["", f"Agreement: **{agree} of {judged}**; false met (counted as a miss): "
             f"**{false_met}**."
             + (f" Not judged, the prediction being `unknown_measurement`: **{unknown}**."
-               if unknown else "")]
+               if unknown else "")
+            + f" Auxiliary, latency only: {lat_agree} of {lat_judged}."]
 
     # 2. the contention effect
     main = pairs(raw / "runs", direction)

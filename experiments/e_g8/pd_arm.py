@@ -311,7 +311,10 @@ def sim_ceiling(direction: str, template_id: str, work: Path, args) -> dict:
 
     steps = []
     for rps in SIM_CEILING_LADDER:
-        pa = plan_args(_spec(rps, work), CLUSTER, work / direction / f"ceiling-rps{rps:g}",
+        # Spec S's own floor at every step: the question is whether the
+        # simulator returns a verdict at all, which the floor does not decide.
+        spec = _spec(rps, work, floor=C.SPECS["service"]["min_goodput_rps"])
+        pa = plan_args(spec, CLUSTER, work / direction / f"ceiling-rps{rps:g}",
                        args, 42)
         v = evaluate_placement(pa, cmd_plan_objects(pa), template_id, devices())
         steps.append({"rps": rps, "state": v.state, "feasible": v.feasible,
@@ -541,12 +544,29 @@ def _service_tools():
     return dab.service_spec, dab.workload_at
 
 
-def _spec(rps: float, work: Path) -> Path:
+#: The goodput floor at each rate a spec is built for, by row 4's own rule:
+#: 95 % of the lowest measured goodput (E-G5's definition) across the pilots
+#: at that rate, rounded down to 0.1 -- as row 8 did for `low` and `high`.
+#: 4 rps is spec S's 2.3, used to select. 1 rps, the run rate (row 11), is
+#: from `raw/pilot/knee-rps1/`: D1 0.904, D2 0.875 -> 0.831 -> 0.8. Not
+#: 0.575 x offered, the proportional rule GS-36 rejected.
+GOODPUT_FLOOR = {4.0: 2.3, 1.0: 0.8}
+
+
+def goodput_floor(rps: float) -> float:
+    if rps not in GOODPUT_FLOOR:
+        raise SystemExit(f"no goodput floor registered at {rps:g} rps (row 11)")
+    return GOODPUT_FLOOR[rps]
+
+
+def _spec(rps: float, work: Path, floor: float | None = None) -> Path:
     service_spec, _ = _service_tools()
     S = C.SPECS["service"]
-    return service_spec("llama31-8b", "normal", "knee", rps, work / f"service-rps{rps:g}.yaml",
+    floor = goodput_floor(rps) if floor is None else floor
+    return service_spec("llama31-8b", "normal", "knee", rps,
+                        work / f"service-rps{rps:g}-floor{floor:g}.yaml",
                         ttft_max_ms=S["ttft_max_ms"], tpot_max_ms=S["tpot_max_ms"],
-                        min_goodput_rps=S["min_goodput_rps"])
+                        min_goodput_rps=floor)
 
 
 def _template(template_id: str, spec_path: Path):
@@ -591,7 +611,10 @@ def run(args) -> int:
     rps = args.rps if args.rps is not None else S["arrival_rate_rps"]
     _, workload_at = _service_tools()
     trace = workload_at(rps, "llama31-8b", work)
-    spec_path = _spec(rps, work)
+    # A prediction needs the registered floor at its rate; a run uses the spec
+    # only to rebuild the template, whose knobs no floor touches.
+    spec_path = (_spec(rps, work) if args.mode == "predict" else
+                 _spec(rps, work, floor=GOODPUT_FLOOR.get(rps, S["min_goodput_rps"])))
 
     if args.mode == "sim-ceiling":
         ceil = sim_ceiling(d, template_id, work, args)
@@ -605,6 +628,7 @@ def run(args) -> int:
         pred = predict_at(d, template_id, spec_path, work / d / f"predict-rps{rps:g}",
                           args, trace, C.REQUESTS_PER_RUN)
         pred["offered_rps"] = rps
+        pred["min_goodput_rps"] = goodput_floor(rps)
         out = raw_root(args) / f"prediction-{d}-rps{rps:g}.json"
         out.write_text(json.dumps(pred, indent=2, sort_keys=True) + "\n")
         say(f"{d}: predicted interval change {pred['predicted_interval_change_ms']:+.3f} ms; "
@@ -637,7 +661,8 @@ def run(args) -> int:
         "placement": {"prefill": f"{prefill.name}/gpu0", "decode": f"{decode.name}/gpu0"},
         "gpu_memory_utilization": {n.name: n.gpu_memory_utilization for n in (prefill, decode)},
         "kv_buffer_device": "cuda (both ends; GPUDirect RDMA, GS-39)",
-        "slo": {"ttft_max_ms": S["ttft_max_ms"], "tpot_max_ms": S["tpot_max_ms"]},
+        "slo": {"ttft_max_ms": S["ttft_max_ms"], "tpot_max_ms": S["tpot_max_ms"],
+                "min_goodput_rps": GOODPUT_FLOOR.get(rps)},
         "served_model": info["hf_id"],
         "ttft_definition": ("router prefill-send to first token of the decode stream; "
                             "includes the prefill, the KV pull across the NIC and the "
