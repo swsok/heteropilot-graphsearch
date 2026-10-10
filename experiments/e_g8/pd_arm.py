@@ -260,6 +260,14 @@ def healthy(url: str) -> bool:
         return False
 
 
+def scrape_metrics(url: str) -> str:
+    try:
+        with urllib.request.urlopen(f"{url}/metrics", timeout=10) as r:
+            return r.read().decode()
+    except Exception as exc:
+        return f"# scrape failed: {exc!r}\n"
+
+
 class Engine:
     """One vLLM instance on one node, in its own process group, always torn down."""
 
@@ -559,6 +567,10 @@ def run(args) -> int:
                     r = subprocess.run(router, capture_output=True, text=True,
                                        timeout=args.bench_timeout)
                 (out / "router.log").write_text(r.stdout + r.stderr)
+                # The third metric (KV exhaustion) reads the engines' own
+                # counters, scraped while they are still up.
+                for role, url in eng.urls.items():
+                    (out / f"{role}.metrics.txt").write_text(scrape_metrics(url))
                 record["router_returncode"] = r.returncode
                 record["router_summary"] = r.stdout.strip().splitlines()[-1:]
                 record["state"] = "measured" if r.returncode == 0 else "failed"
