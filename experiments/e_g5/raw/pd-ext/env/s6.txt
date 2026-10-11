@@ -1,0 +1,12 @@
+host: s6  date: 2026-10-11T10:38:09+09:00
+kernel: 5.4.0-187-generic  up since: 2026-07-14 15:46:41
+driver: NVRM version: NVIDIA UNIX Open Kernel Module for x86_64  565.57.01  Release Build  (dvs-builder@U16-A24-9-2)  Thu Oct 10 12:15:00 UTC 2024
+nvidia.ko loaded since boot; module file mtime: 2024-11-28 18:53:48.362046338 +0900
+pkg vllm==0.19.0  installed 2026-09-30T14:00:39
+pkg torch==2.10.0  installed 2026-09-30T14:00:39
+pkg nixl==0.9.0  installed 2026-09-30T14:56:03
+pkg nixl-cu12==0.9.0  installed 2026-09-30T14:56:03
+pkg transformers==4.57.6  installed 2026-09-30T14:00:39
+pkg flashinfer-python==0.6.6  installed 2026-09-30T14:00:39
+dpkg changes to nvidia/cuda/ucx/rdma since 2026-09-25:
+GPU 0: GPU-c0627581-fd5d-dff7-6015-6a06b2ef2ede, 1 MiB; compute apps on GPU 0: 0

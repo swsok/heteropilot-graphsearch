@@ -382,6 +382,10 @@ class NicBackground:
 
 SELECTION = HERE / "raw" / "pd-selection.json"
 PILOT = HERE / "raw" / "pd-pilot"
+#: Preregistration row 12: six more pairs under row 7's protocol. A
+#: post-registration extension, kept apart so that row 7's verdict, computed
+#: from `raw/pd/`, cannot take them in.
+EXTENSION = HERE / "raw" / "pd-ext"
 
 
 def _spec(C, service_spec, rps: float, work: Path) -> Path:
@@ -439,20 +443,24 @@ def run_pd(args, C, service_spec, workload_at) -> int:
         raise SystemExit(f"--mode pd takes --condition {' or '.join(CONDITIONS)}")
     # Pilot runs are excluded from validation (row 7 b) and live apart.
     base = (ROOT / "outputs" / "e_g5" / "dry-run" / "pd" if args.dry_run
-            else PILOT / args.pilot_label if args.pilot_label else RAW)
+            else PILOT / args.pilot_label if args.pilot_label
+            else EXTENSION if args.extension else RAW)
     out = base / args.condition / str(args.rep)
     out.mkdir(parents=True, exist_ok=True)
     info = C.MODELS["llama31-8b"]
     plan = _template(template_id, spec_path)
     say(f"P/D {args.condition} rep {args.rep} at {rps:g} rps, template {template_id}"
-        + (f" [pilot {args.pilot_label}]" if args.pilot_label else ""))
+        + (f" [pilot {args.pilot_label}]" if args.pilot_label else "")
+        + (" [extension, row 12]" if args.extension else ""))
     record = {
         "banner": ("DRY RUN -- nothing was launched." if args.dry_run else
                    "REAL HARDWARE -- two nodes, s8 and s6."),
         "deployed_by": "this experiment harness (pd_arm.py, pd_router.py), NOT "
                        "heteropilot planner/deploy/, which has no router (GS-28, GS-32)",
         "pilot": args.pilot_label,
-        "validation_set": not args.pilot_label,
+        "validation_set": not args.pilot_label and not args.extension,
+        "extension": ("row 12: post-registration extension under row 7's protocol; "
+                      "not part of row 7's verdict") if args.extension else None,
         "condition": args.condition, "rep": args.rep, "offered_rps": rps,
         "trace": str(trace), "num_reqs": C.REQUESTS_PER_RUN,
         "template_id": template_id, "selection": str(SELECTION.relative_to(ROOT)),

@@ -958,6 +958,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pilot-label", default=None,
                         help="--mode pd: a pilot run, written under raw/pd-pilot/ "
                              "and excluded from validation (preregistration row 7)")
+    parser.add_argument("--extension", action="store_true",
+                        help="--mode pd: preregistration row 12's extension pairs, written "
+                             "under raw/pd-ext/ and kept out of row 7's verdict")
     args = parser.parse_args(argv)
     if args.mode.startswith("pd"):
         import pd_arm

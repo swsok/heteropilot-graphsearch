@@ -743,6 +743,7 @@ def pd_section(raw_root: Path) -> list[str]:
                 + ("same sign" if same else "opposite sign")
                 + f". Registered: same sign and a ratio between 0.5 and 2. "
                 f"Verdict: **{'met' if met else 'NOT met'}**.")
+    out += pd_extension_section(raw_root, main)
     out += pd_row5_section(raw_root)
     out += ["",
             "[^pdtokens]: This arm compares **latency** between two P/D conditions, "
@@ -750,6 +751,56 @@ def pd_section(raw_root: Path) -> list[str]:
             "one: across these two nodes two of three probe prompts diverged, "
             "reproducibly (GS-29). No statement about output identity is made from "
             "these rows."]
+    return out
+
+
+#: Two-sided 95 % t quantiles by degrees of freedom, for the extension's CI.
+T95 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365,
+       8: 2.306, 9: 2.262, 10: 2.228, 11: 2.201, 12: 2.179}
+
+
+def pd_extension_section(raw_root: Path, registered: list[dict]) -> list[str]:
+    """Preregistration row 12: six more pairs under row 7's protocol, a
+    post-registration extension. Row 7's verdict above is computed from the
+    registered pairs alone and does not change. The nine pairs together give
+    a mean change and its 95 % CI, reported as an upper bound on the effect."""
+    import statistics
+
+    ext = _pair_rows(raw_root / "pd-ext")
+    if not ext:
+        return []
+    out = ["", "#### Post-registration extension (preregistration row 12)", "",
+           "Six more pairs under row 7's protocol: the same template, `s8` GPU 0 to `s6` "
+           "GPU 0, 1 rps, 150 requests, ABAB, labels 45-50. **Not part of row 7's "
+           "verdict**, which stands as computed above from the registered pairs.", "",
+           "| pair | requests paired | interval mean independent | shared | change | "
+           "background duty (shared) |", "| --- | --- | --- | --- | --- | --- |"]
+    for r in ext:
+        prov = json.loads((raw_root / "pd-ext" / "pd-shared" / str(r["rep"])
+                           / "provenance.json").read_text())
+        duty = (prov.get("background") or {}).get("achieved_duty_cycle")
+        out.append(f"| {r['rep']} | {r['n']} | {r['mean_a']:.2f} ms | {r['mean_b']:.2f} ms | "
+                   f"{r['diff']:+.2f} ms | {duty if duty is not None else '-'} |")
+    diffs = [r["diff"] for r in registered + ext]
+    n = len(diffs)
+    mean, sd = statistics.mean(diffs), statistics.stdev(diffs)
+    half = T95[n - 1] * sd / n ** 0.5
+    out += ["", "| extension quantity | value |", "| --- | --- |",
+            f"| pairs | {n} |",
+            f"| registered pairs | {len(registered)} |",
+            f"| mean change | {mean:+.2f} |",
+            f"| SD across pairs | {sd:.2f} |",
+            f"| 95 % CI low | {mean - half:+.2f} |",
+            f"| 95 % CI high | {mean + half:+.2f} |", "",
+            f"Over all **{n} pairs** (row 7's {len(registered)} and row 12's {len(ext)}), "
+            f"the mean change in the KV interval is **{mean:+.2f} ms**, 95 % CI "
+            f"[{mean - half:+.2f}, {mean + half:+.2f}] ms (t, {n - 1} df). Read as an upper "
+            f"bound: the effect of the background on this interval is at most "
+            f"**{mean + half:.2f} ms** at this confidence."]
+    env = raw_root / "pd-ext" / "env"
+    if env.is_dir():
+        out += ["", "Each node's environment before the extension, compared with "
+                "row 7's in preregistration row 12: `raw/pd-ext/env/`."]
     return out
 
 
