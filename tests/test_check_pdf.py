@@ -133,3 +133,14 @@ def test_the_abstract_is_counted_with_a_macro_as_one_word(tmp_path: Path) -> Non
                    "\\end{abstract}\n")
     assert src.abstract_words(tex) == 7
     assert src.abstract_words() <= src.ABSTRACT_WORD_LIMIT
+
+
+def test_the_room_before_the_references_is_read_through_log_wrapping() -> None:
+    log = ("CONTENT-END: page 9, column 2, remaining 18.0869pt of 579.98688pt, baselineskip\n"
+           " 12.0pt\n")
+    report = C.Report()
+    C.check_margin(log, report)
+    assert round(report.margin_lines, 2) == 1.51 and report.margin_where == "page 9, column 2"
+    left = C.Report()
+    C.check_margin(log.replace("column 2", "column 1"), left)
+    assert round(left.margin_pt, 1) == round(18.0869 + 579.98688, 1)

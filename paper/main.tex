@@ -118,7 +118,14 @@ slowing far more than measured (ratio \egeightRatioLo{}--\egeightRatioHi{}).
 %% Every float is set first: the venue's limit includes figures and tables, so
 %% one deferred past this point would be content the count did not see.
 \FloatBarrier
+%% How much room is left where the content ends, for `make check-pdf`: zero
+%% here builds today and breaks on a TeX installation that sets one line
+%% differently. Read now, not at shipout -- the column being filled.
+\par
 \makeatletter
+\typeout{CONTENT-END: page \thepage, column \if@firstcolumn 1\else 2\fi,
+  remaining \the\dimexpr\pagegoal-\pagetotal\relax\space of \the\pagegoal,
+  baselineskip \the\baselineskip}
 \protected@write\@auxout{}{\string\newlabel{sec:refs}{{}{\thepage}}}
 \makeatother
 \bibliographystyle{IEEEtran}
