@@ -18,6 +18,7 @@
 %%   E-G6           scalability, 32-128 devices by symmetry; its failure
 %%                  condition once under the real simulator (R4.1)
 %%   E-G7           holdout, ablation, baseline fairness
+%%   E-G8           P/D across two accelerator types (hardware, R5)
 %%
 %% The two correctness numbers are reported for every arm, in every table, and
 %% never aggregated away.
@@ -124,8 +125,9 @@ asymmetric one; it folds nothing only where no two placements are isomorphic.
 % claim: C4
 \input{e_g6_scale}
 
-Table~\ref{tab:e_g6_scale} reports the compression against device count and
-cluster symmetry, for a mock evaluator, at 32, 64 and 128 devices.
+Table~\ref{tab:e_g6_scale} reports the compression against cluster symmetry
+at 128 devices, for a mock evaluator; the 32- and 64-device rows are in the
+artifact.
 
 % claim: C23
 The symmetry axis carries the result. The asymmetric ratio, \egsixRatioAsym, is still a substantial fold; the case
@@ -284,17 +286,11 @@ a third again as much as a single direction, while the NIC exceeds twice it,
 because that wire really is full duplex.
 
 % claim: C31
-The collective says the same thing a third time. An all-reduce at two ranks
-reaches \egfourCollNicTwo~GB/s of bus bandwidth across the NIC against
-\egfourCollNodeTwo~inside one node; at four ranks, where half the traffic
-stays local, the two are within a couple of per cent. A bandwidth
-figure is therefore keyed by \emph{where} it was taken as well as by how many
-ranks took part, and neither location answers for the other in either
-direction.
-
-One registered condition is unanswerable here: two
-concurrent flows over \emph{disjoint} NICs is impossible on this
-hardware---each machine has exactly one InfiniBand device.
+So does the collective: a two-rank all-reduce reaches \egfourCollNicTwo~GB/s
+of bus bandwidth across the NIC against \egfourCollNodeTwo{} inside one node,
+so a bandwidth figure is keyed by \emph{where} it was taken as well as by how
+many ranks took part. (Flows over two \emph{disjoint} NICs, also registered,
+cannot be tested: each machine has one InfiniBand device.)
 
 % claim: C15
 The model's accuracy domain has an upper end. Above a message size the hardware
@@ -360,68 +356,84 @@ measurement, so the two pairs looked indistinguishable; that reading was a
 harness defect and is withdrawn.
 
 % claim: C34
-\textbf{Post hoc, the four-way miss has a candidate cause.} After the
-registered runs, the adapter was found to give the simulator the bandwidth of a
-tensor-parallel group's first rank pair only: for the four-way group, its first
-NVLink pair's edge capacity, where the all-reduce measured at four ranks on
-that group is \egfourBusbwFour~GB/s. Every registered prediction in this
-section, at the pairs as well as the group, was made with a first-pair
-figure, and
-every verdict above stands as registered. The adapter was then corrected
-and every deployed row simulated again; this was not registered, and nothing
-was redeployed. The four-way group's recommendation and closest-miss rows agree
-with the hardware in \egfivePostTthreeReAgree{} of \egfivePostTthreeRows{},
-against \egfivePostTthreeOrigAgree{} originally, and its false \emph{met}
-verdicts fall from \egfivePostTthreeOrigFp{} to \egfivePostTthreeReFp. The
-correction is not free: on the NVLink pair, now given its measured two-rank
-all-reduce figure rather than its nominal capacity, agreement falls from
-\egfivePostToneOrigAgree{} to \egfivePostToneReAgree{} of
-\egfivePostToneRows{}, each new disagreement a predicted miss the hardware
-met. This is consistent with the adapter defect being a cause the registered
-experiment did not separate, and the corrected predictions are still short in
-magnitude at the highest load; it does not replace the registered result.
+\textbf{Post hoc, the four-way miss has a candidate cause.} The adapter gave
+the simulator a tensor-parallel group's first rank pair's bandwidth only---for
+the four-way group, one NVLink pair's capacity, where its measured four-rank
+all-reduce is \egfourBusbwFour~GB/s. Every registered prediction used that
+figure and every verdict above stands. Corrected and re-simulated, unregistered
+and with nothing redeployed, the group's recommendation and closest-miss rows
+agree in \egfivePostTthreeReAgree{} of \egfivePostTthreeRows{} (originally
+\egfivePostTthreeOrigAgree{}) and its false \emph{met} verdicts fall from
+\egfivePostTthreeOrigFp{} to \egfivePostTthreeReFp. The correction is not
+free: on the NVLink pair agreement falls from \egfivePostToneOrigAgree{} to
+\egfivePostToneReAgree{} of \egfivePostToneRows{}, each new disagreement a
+predicted miss the hardware met.
 
 % claim: C36
-\textbf{Post hoc, on the candidates the registered runs evaluated, the goodput
-floor changes the answer only at low load.} Re-judging those runs' cached
-predictions at goodput floors from \egfiveFloorLow{} to \egfiveFloorHigh{}
-requests per second, with nothing simulated again, changes whether a
-recommendation exists in \egfiveFloorChanged{} of \egfiveFloorRows{}
-condition-seeds, all at the low load under the normal pattern. There a floor
-derived from the hardware's goodput sits above the simulator's lower
-prediction of it, and every candidate fails on goodput. A run made at another
-floor would also reorder what the budget reaches, which this cannot show.
+\textbf{Post hoc, the goodput floor changes the answer only at low load.}
+Re-judging the cached predictions at floors from \egfiveFloorLow{} to
+\egfiveFloorHigh{} requests per second changes whether a recommendation exists
+in \egfiveFloorChanged{} of \egfiveFloorRows{} condition-seeds, all at the low
+load, where a floor derived from the hardware's goodput sits above the
+simulator's lower prediction of it.
 
 % claim: C35
-\textbf{The ratio depends on load.} A widened matrix, registered before its
-first request, repeats the three placements at a lower and a higher load and
-under a burstier arrival pattern. Under the registered pattern the pair's
-ratio between the two wires is \egfiveWideLowRatio{}x below the knee,
-\egfiveTtwoOverTone{}x at it and \egfiveWideHighRatio{}x above it: the ratio
-is largest at the knee, the verdict differs between the wires at the knee and
-above it and not below, and the claim above is scoped to the knee. The
-four-way group's recommendation is predicted to meet its target at every level
-of both patterns. The hardware meets it only below the knee under the
-registered pattern, at a median of \egfiveWideTthreeLow{} ms, and misses
-everywhere else, a pattern the post-hoc re-prediction above largely removes.
+\textbf{The ratio depends on load.} A widened matrix, registered beforehand,
+adds a lower and a higher load and a burstier pattern. The pair's ratio
+between the wires is \egfiveWideLowRatio{}x below the knee,
+\egfiveTtwoOverTone{}x at it and \egfiveWideHighRatio{}x above, so the claim
+is scoped to the knee. The four-way group is predicted to meet its target
+everywhere; the hardware meets it only below the knee under the registered
+pattern (median \egfiveWideTthreeLow{} ms).
 
 % claim: C19
 % claim: C20
-The bound-stress alternative is deployed against the bound that rejected it,
-offered the rate \emph{its own} spec declares so that a predicted and a
-measured column answer the same question. It is the only boundary alternative
-that is a separate test. The prediction is optimistic on time to first token in most
-rows, not all of them. This experiment does not separate the candidate
-causes (prediction error, the contention model, the engine's scheduler), and
-does not choose the most flattering one.
+\textbf{The lower bound was right, and loose.} The candidate the throughput
+bound rejected by the smallest margin, deployed at the floor it was rejected
+against, did not reach it, so this one rejection was not wrong on hardware---a
+weak test by construction, since a relaxation rejects only what the most
+optimistic arithmetic already misses. The bound's ceiling exceeds the capacity
+the hardware delivered by more than an order of magnitude: the price of
+soundness, on this machine. Its time to first token is predicted optimistic in
+most rows, and the causes are not separated.
 
-\textbf{The lower bound was right, and the interesting number is how loose it
-is.} The candidate the throughput bound rejected by the smallest margin was
-deployed and offered the floor it had been rejected against. It did not reach
-it, so this one rejection was not wrong on hardware. That outcome
-was expected, and the test is registered as weak for that reason: a
-relaxation rejects only what the most optimistic arithmetic already misses. What the deployment
-buys is the ratio between the ceiling the bound computed and the capacity the
-hardware actually delivered, and it is more than an order of magnitude. That
-looseness is the price of soundness; this is its size on this machine.
 
+\subsection{Across two accelerator types}
+\label{sec:eval-pd}
+
+% claim: C38
+% claim: C39
+Do the verdict and the contention model hold when prefill and decode run on
+different accelerators? Neither does.
+
+% claim: C38
+% claim: C39
+\input{e_g8_hetero_pd}
+
+% claim: C38
+\textbf{The registered agreement, \egeightAgree{} of \egeightRuns{} runs, is
+trivial.} An A40 and an RTX A5000 on two nodes take prefill and decode in turn,
+in both directions, at an unqueued load, the KV pulled over GPUDirect by
+NIXL~\cite{nixl} (Table~\ref{tab:e_g8_hetero_pd}). Every prediction misses the
+goodput floor, which row 4's rule derives from the hardware's goodput while the
+simulator predicts less, and every run misses on latency, so both sides read
+as misses. On latency alone the verdict agrees in \egeightLatAgree{} of
+\egeightRuns{}: the simulator under-predicts $p99$ time to first token in both
+directions. With the A5000 decoding, the simulator raised on every candidate at
+the selection load, so that direction deploys the other's template mirrored.
+
+% claim: C39
+\textbf{The contention model over-predicts on all three inter-node directions
+measured}, with measured-to-predicted ratios of \egeightGfiveRatio{} on the
+same-accelerator pair (Section~\ref{sec:limits}), \egeightDoneRatio{} with the
+A40 sending and \egeightDtwoRatio{} with the A5000 sending. Post hoc and not
+registered, a competing flow in place of the reservation gives
+\egeightPsGfive{}, \egeightPsDone{} and \egeightPsDtwo{}: it accounts for one
+direction only. Why the two directions between the same nodes differ is not
+separated here.
+
+% claim: C40
+\textbf{KV exhaustion appears in the pilot only.} With the A5000 decoding, the
+hardware preempts from \egeightOnset{} requests per second; the simulator
+judges the same placement up to \egeightCeiling{} and raises from
+\egeightRaises{}. No validation run preempted.

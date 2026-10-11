@@ -45,10 +45,13 @@ different cache from the bucket key of Section~\ref{sec:candidates}, where
 sharing a prediction within a class is the saving being claimed.
 
 % claim: C15
+% claim: C39
 \paragraph{Contention.}
 Flows that share a resource are priced by processor
 sharing~\cite{kleinrock1967,massoulie1999}: the active flows
 on a resource divide what capacity it has left, a flow's rate is the minimum
 over its path, and the schedule is recomputed whenever a flow starts or
 finishes. It is not packet-level, and candidates do not contend with each
-other: they are alternatives, and only one is deployed.
+other: they are alternatives, and only one is deployed. Traffic that is not
+the candidate's own enters as a standing reservation of its duty cycle, an
+assumption the hardware contradicts (Section~\ref{sec:eval-pd}).
