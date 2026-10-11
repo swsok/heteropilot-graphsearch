@@ -221,6 +221,10 @@ class TableSpec:
     #: Replaces the "<file title> (continued)" caption, for a table whose
     #: caption should say what it counts.
     caption: str | None = None
+    #: Rows kept, `{column: [values]}`: a row is shown when every named
+    #: column holds one of the listed values. A filter that keeps nothing is
+    #: an error, so a renamed value cannot empty a table silently.
+    where: dict = field(default_factory=dict)
 
 
 _SIZES = ("small", "footnotesize", "scriptsize")
@@ -242,6 +246,8 @@ def load_specs(path: Path = TABLES_YAML) -> dict[str, TableSpec]:
             width=entry.get("width", "column"),
             size=entry.get("size", "small"),
             caption=entry.get("caption"),
+            where={str(k): [str(x) for x in v]
+                   for k, v in (entry.get("where") or {}).items()},
         )
         if spec.width not in ("column", "page"):
             raise TableSpecError(f"{key}: width must be column or page, not {spec.width!r}")
@@ -280,6 +286,12 @@ def apply_spec(key: str, header: list[str], rows: list[list[str]], spec: TableSp
             for column in join["columns"]:
                 record[column] = match.get(column, "-")
     available = set(header) | {c for join in spec.joins for c in join["columns"]}
+    for column, values in spec.where.items():
+        if column not in available:
+            raise TableSpecError(f"{key}: `where` names {column!r}, not in the table")
+        records = [r for r in records if r[column] in values]
+    if spec.where and not records:
+        raise TableSpecError(f"{key}: `where` {spec.where} keeps no row")
     out_header, getters = [], []
     for column in spec.columns:
         if isinstance(column, dict):

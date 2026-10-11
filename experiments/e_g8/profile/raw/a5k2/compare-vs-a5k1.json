@@ -1,0 +1,72 @@
+{
+  "attention.csv": {
+    "compared": "time_us",
+    "difference": "rel",
+    "keys_common": 8643,
+    "keys_new": 8643,
+    "keys_old": 8643,
+    "max": 0.1396,
+    "median_signed": 0.0063,
+    "only_new": 0,
+    "only_old": 0,
+    "p50": 0.0079,
+    "p90": 0.0519,
+    "p99": 0.0889
+  },
+  "dense.csv": {
+    "compared": "time_us",
+    "difference": "rel",
+    "keys_common": 1368,
+    "keys_new": 1368,
+    "keys_old": 1368,
+    "max": 0.0676,
+    "median_signed": 0.0222,
+    "only_new": 0,
+    "only_old": 0,
+    "p50": 0.0252,
+    "p90": 0.0522,
+    "p99": 0.0598
+  },
+  "per_sequence.csv": {
+    "compared": "time_us",
+    "difference": "rel",
+    "keys_common": 80,
+    "keys_new": 80,
+    "keys_old": 80,
+    "max": 0.0793,
+    "median_signed": 0.0432,
+    "only_new": 0,
+    "only_old": 0,
+    "p50": 0.0435,
+    "p90": 0.0542,
+    "p99": 0.0732
+  },
+  "skew.csv": {
+    "compared": "t_mean_us",
+    "difference": "rel",
+    "keys_common": 13009,
+    "keys_new": 13009,
+    "keys_old": 13009,
+    "max": 0.1248,
+    "median_signed": 0.0173,
+    "only_new": 0,
+    "only_old": 0,
+    "p50": 0.0221,
+    "p90": 0.0532,
+    "p99": 0.0721
+  },
+  "skew_fit.csv": {
+    "compared": "alpha",
+    "difference": "abs",
+    "keys_common": 3977,
+    "keys_new": 3981,
+    "keys_old": 3980,
+    "max": 8.0722,
+    "median_signed": -0.0003,
+    "only_new": 4,
+    "only_old": 3,
+    "p50": 0.0066,
+    "p90": 0.0673,
+    "p99": 0.6365
+  }
+}

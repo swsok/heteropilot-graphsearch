@@ -1,0 +1,42 @@
+[12:26:45] INFO     Model config:                                               
+                    /home/swsok/heteropilot-A5000-a5k2-reprofile/configs/model/m
+                    eta-llama/Llama-3.1-8B.json (model_type=llama →             
+                    architecture=llama)                                         
+─────────── Profiling meta-llama/Llama-3.1-8B on A5000-a5k2 (llama) ────────────
+           INFO     Variant: bf16                                               
+           INFO     TP degrees: [1]                                             
+           INFO     Output root:                                                
+                    /home/swsok/heteropilot-A5000-a5k2-reprofile/profiler/perf/A
+                    5000-a5k2/meta-llama/Llama-3.1-8B/bf16                      
+           INFO     → TP=1  booting vLLM engine                                 
+[12:26:55] INFO     ✓ TP=1  booting vLLM engine (9.9s)                          
+           INFO     TP=1 limits: num_cache_tokens=4781568 max_model_len=131072  
+                    max_num_batched_tokens=2048 max_num_seqs=256                
+TP=1  dense ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 152/152 0:00:28 • 0:00:00
+[12:27:23] INFO     ✓ dense →                                                   
+                    /home/swsok/heteropilot-A5000-a5k2-reprofile/profiler/perf/A
+                    5000-a5k2/meta-llama/Llama-3.1-8B/bf16/tp1/dense.csv        
+TP=1  per_sequence ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40/40 0:00:21 • 0:00:00
+[12:27:45] INFO     ✓ per_sequence →                                            
+                    /home/swsok/heteropilot-A5000-a5k2-reprofile/profiler/perf/A
+                    5000-a5k2/meta-llama/Llama-3.1-8B/bf16/tp1/per_sequence.csv 
+TP=1  attention ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8643/8643 0:49:52 • 0:00:00
+[13:17:38] INFO     ✓ attention →                                               
+                    /home/swsok/heteropilot-A5000-a5k2-reprofile/profiler/perf/A
+                    5000-a5k2/meta-llama/Llama-3.1-8B/bf16/tp1/attention.csv    
+           INFO     skew grid: n=2-256 x2 ratio=[0.0625, 0.125, 0.25, 0.5, 0.75,
+                    0.9] pc=0, 16-2048 x2 kp=0, 512-8192 x2 kvs=128-16384 x2    
+                    skew=(T1=4.0, T2 swept)                                     
+TP=1  skew ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 13009/13009 5:06:55 • 0:00:00
+[18:24:34] INFO     mixed: n=12682 alpha mean=0.136 min=-146.436 max=108.684    
+           INFO     pure: n=327 alpha mean=0.085 min=-0.442 max=0.661           
+           INFO     ✓ skew →                                                    
+                    /home/swsok/heteropilot-A5000-a5k2-reprofile/profiler/perf/A
+                    5000-a5k2/meta-llama/Llama-3.1-8B/bf16/tp1/skew.csv         
+[18:24:35] INFO     → replicating tp_stable layers across TP folders            
+           INFO     ✓ replicating tp_stable layers across TP folders (0.0s)     
+───────────────────────────────────── Done ─────────────────────────────────────
+[18:24:36] INFO     Results written to:                                         
+                    /home/swsok/heteropilot-A5000-a5k2-reprofile/profiler/perf/A
+                    5000-a5k2/meta-llama/Llama-3.1-8B/bf16                      
+EXIT=0

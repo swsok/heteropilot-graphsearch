@@ -92,10 +92,9 @@ time to first token \egfiveTtwoOverTone{}x apart at the load knee. Against an
 exhaustive simulated oracle on the largest toy fixture, \egthreeFalseInfAbcde{}
 judged feasible placements were wrongly eliminated, and compression
 saved \egthreeSavingAbcde{} of \egthreeSimOracleAbcde{} seconds. Registered
-results also go against us, the contention model's among them: across a
-NIC it predicted a
-\egfivePdPredicted{}~ms slowdown of a disaggregated KV transfer; hardware
-showed \egfivePdEffect{}~ms, not distinguishable from zero.
+results also go against us: on three inter-node directions across two
+accelerator types, the contention model predicted a disaggregated KV transfer
+slowing far more than measured (ratio \egeightRatioLo{}--\egeightRatioHi{}).
 \end{abstract}
 
 \input{sections/intro}
@@ -119,7 +118,14 @@ showed \egfivePdEffect{}~ms, not distinguishable from zero.
 %% Every float is set first: the venue's limit includes figures and tables, so
 %% one deferred past this point would be content the count did not see.
 \FloatBarrier
+%% How much room is left where the content ends, for `make check-pdf`: zero
+%% here builds today and breaks on a TeX installation that sets one line
+%% differently. Read now, not at shipout -- the column being filled.
+\par
 \makeatletter
+\typeout{CONTENT-END: page \thepage, column \if@firstcolumn 1\else 2\fi,
+  remaining \the\dimexpr\pagegoal-\pagetotal\relax\space of \the\pagegoal,
+  baselineskip \the\baselineskip}
 \protected@write\@auxout{}{\string\newlabel{sec:refs}{{}{\thepage}}}
 \makeatother
 \bibliographystyle{IEEEtran}

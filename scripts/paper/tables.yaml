@@ -31,10 +31,12 @@ e_g3_real_sim_oracle:
     mismerged_pairs: mis-merged
     saving_s: saving (s)
 
-# Table II -- E-G6, scale. The other timing columns stay in the results file.
+# Table II -- E-G6, scale. The other timing columns stay in the results file,
+# and so do the 32- and 64-device rows (R5.5, for the page budget).
 e_g6_scale:
   width: column
   size: footnotesize
+  where: {devices: ["128"]}
   columns: [devices, symmetry, embeddings, representatives, compression_ratio,
             t_vf2_s, t_total_s]
   labels:
@@ -106,3 +108,26 @@ e_g7_ablation:
     mismerged_pairs: mis-merged
     compression_ratio: ratio
     feasible_recall: recall
+
+# Table -- E-G8, prefill/decode across two accelerator types (revision R5.5).
+# The per-direction tables, the knee pilot and the floor sensitivity stay in
+# the results file.
+e_g8_hetero_pd:
+  caption: "E-G8 -- P/D across two accelerator types, 1 rps, three repetitions per row"
+  width: page
+  size: footnotesize
+  columns:
+    - run
+    - {name: three, cells: [predicted, measured], sep: " / "}
+    - agree
+    - {name: lat, cells: ["predicted (latency)", "measured (latency)"], sep: " / "}
+    - "agree (latency)"
+    - {name: ttft, cells: ["p99 TTFT predicted", "p99 TTFT measured"], sep: " / "}
+    - {name: kv, cells: ["KV change", "predicted change"], sep: " / "}
+    - ratio
+  labels:
+    three: "three axes: predicted / measured"
+    lat: "latency only: predicted / measured"
+    "agree (latency)": agree
+    ttft: "p99 TTFT: predicted / measured median [range]"
+    kv: "KV interval change: measured / predicted"

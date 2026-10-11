@@ -1,0 +1,53 @@
+{
+  "all_infeasible": true,
+  "chosen": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s32-t8192",
+  "direction": "D2",
+  "predictor": "sim",
+  "rule": "feasible first, then the lower predicted p99 TTFT, at s8/gpu0 + a5k2/gpu0 (row 5), applied once (row 7 a)",
+  "seed": 42,
+  "table": [
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.7769067,
+      "p99_ttft_ms": 979.2714694845146,
+      "state": "evaluated",
+      "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s128-t2048"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.81348053,
+      "p99_ttft_ms": 509.6735059445162,
+      "state": "evaluated",
+      "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s128-t8192"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.7769067,
+      "p99_ttft_ms": 979.2714694845146,
+      "state": "evaluated",
+      "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s256-t2048"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 61.81348053,
+      "p99_ttft_ms": 509.6735059445162,
+      "state": "evaluated",
+      "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s256-t8192"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 160.64581470999997,
+      "p99_ttft_ms": 979.3641244845146,
+      "state": "evaluated",
+      "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s32-t2048"
+    },
+    {
+      "feasible": false,
+      "p99_tpot_ms": 160.65555893999996,
+      "p99_ttft_ms": 509.6382761745162,
+      "state": "evaluated",
+      "template_id": "pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s32-t8192"
+    }
+  ],
+  "written_at": "2026-10-10T12:23:32.354202+00:00"
+}

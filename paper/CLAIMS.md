@@ -59,6 +59,9 @@ the failure this file exists to prevent.
 | C29 | The inter-node NIC is full duplex: both directions together exceed twice a single stream, where the intra-node pair reaches 1.33x | `experiments/results/e_g4_microbench.md` | hardware | Established |
 | C31 | A collective's bandwidth is keyed by **where** it ran as well as by how many ranks: at two ranks the same all-reduce is 3.8x slower across the NIC than inside one node | `experiments/results/e_g4_microbench.md` | hardware | Established[^collb] |
 | C30 | On an inter-node P/D deployment, a 0.6-duty background on the shared NIC lengthens the KV interval far less than the fluid model predicts: the registered agreement criterion is **not met** | `experiments/results/e_g5_real_hardware.md` | hardware | Established[^disagg] |
+| C38 | P/D placement across two accelerator types (A40, RTX A5000) deployed on hardware in both directions; the search's registered verdict agrees trivially (12 of 12, every prediction and every measurement missing on goodput: the floor property row 9 named), and the latency-only verdict disagrees: 0 of 12 agree --- the simulator under-predicts p99 TTFT in both directions (375-548 ms predicted, 630-802 ms measured) | `experiments/results/e_g8_hetero_pd.md` | hardware | Established, **one model, 1 rps, three repetitions per condition**[^eg8] |
+| C39 | The fluid reservation model over-predicts NIC contention on three inter-node directions across two link types (A40 to A40, A40 to A5000, A5000 to A40): measured/predicted 0.11, 0.33 and 0.05; the registered criterion is not met in E-G8 either | `experiments/results/e_g8_hetero_pd.md` (summary), `experiments/results/e_g5_real_hardware.md` | hardware | Established[^eg8c] |
+| C40 | Decode KV exhaustion with an A5000 decoding: the hardware preempts from 1.5 rps; the simulator returns a verdict up to 2 rps and raises from 3 rps | `experiments/results/e_g8_hetero_pd.md` (knee pilot, simulator ceiling) | hardware + real-sim | Established, **report-only**[^eg8kv] |
 | C34 | **Post hoc** (preregistration row 9, GS-38; not registered, nothing redeployed): with the adapter corrected to every rank pair and the measured all-reduce at `world_size = tp`, re-predicting every deployed row removes T3's false positives (agreement 3 -> 17 of 18 recommendation/closest-miss rows, false positives 15 -> 0) and lowers T1's agreement (8 -> 6 of 10) | `experiments/results/e_g5_real_hardware.md` (GS-38 section), `docs/decisions.md` GS-38 | hardware + real-sim | Established, **post hoc**[^eg5post] |
 | C35 | In the widened matrix (row 8) the T2/T1 ratio depends on load (normal pattern: 1.1x low, 8.3x knee, 1.4x high), and T3's recommendation is predicted met at every level of both patterns while the hardware meets it only at normal-low | `experiments/results/e_g5_real_hardware.md` (widened matrix), `docs/decisions.md` GS-37 | hardware | Established |
 | C36 | **Post hoc** (preregistration row 9, GS-38; analysis only, no new simulation): re-judging the registered runs' cached predictions at goodput floors 1.4-1.6 changes whether a recommendation exists in 4 of 42 condition-seeds, all at the low load (normal T1/T2, seeds 42 and 44). Only on the candidates the registered runs evaluated: a run at another floor would reorder the ranker's budget (GS-36) | `experiments/results/e_g5_real_hardware.md` (floor sensitivity), `docs/decisions.md` GS-38 | hardware + real-sim | Established, **post hoc** |
@@ -144,7 +147,35 @@ the failure this file exists to prevent.
     0.11; the band was 0.5 to 2. The deployment is the experiment harness's,
     not heteropilot's, which has no router (D128). Row 5's earlier attempt is
     kept and not validated: its repetitions deployed two templates and its
-    load saturated them (GS-33).
+    load saturated them (GS-33). E-G8 measured the same effect on two more
+    directions, across accelerator types, and missed the same criterion (C39,
+    preregistration row 11).
+
+[^eg8]: Preregistration row 11, written before the first validation
+    request. D2's template is row 5's rule; D1's is its mirror image, because
+    at the selection rate the simulator raised on every D1 template (C14's
+    cause). At the run rate both directions are simulated. The goodput floor
+    0.8 is row 4's rule at 1 rps; the simulator predicts goodput below it
+    (0.785, 0.766) and the hardware delivers above it (0.904, 0.875) yet still
+    misses on latency, so both sides are MISSED and the agreement carries no
+    information. D2 `shared`'s predicted p99 TTFT has a 0.3 % margin and is not
+    counted as evidence either way. Placement: `s8` GPU 0 and `a5000-2` GPU 0,
+    KV over NIXL GPUDirect, which needs that card's BAR1 at 32 GB.
+
+[^eg8c]: Mean pair change against prediction: s8 -> s6 +1.57 / +14.45 ms,
+    D1 +7.41 / +22.23, D2 +1.13 / +24.49. **Post hoc, not registered**: with
+    the background as a competing flow under processor sharing rather than a
+    reservation (row 7 (g) named it beforehand), the ratios are 0.27, 0.83 and
+    0.12. That brings D1 inside the 0.5-2 band and leaves the other two well
+    below it, so the reservation assumption accounts for part of the gap in
+    one direction and not the rest. Why D1 and D2 differ (for example, whether
+    the A5000's PCIe x8 slot binds the background and the KV differently when
+    it sends) is not separated by anything measured here (GS-40).
+
+[^eg8kv]: Knee pilot, excluded from validation: 0 preemptions at 1 rps, 17 at
+    1.5. The simulator's ceiling is a report-only diagnostic of row 11: it
+    descends 4, 3, 2 rps and stops at the first verdict. At 1 rps, the
+    validation rate, no run preempted. Simulator fix: heteropilot#137.
 
 [^eg5verdict]: Counted by independent deployment of the recommendation
     at normal x knee: T1 3/3, T2 3/3, T3 0/3, every T3 disagreement a predicted

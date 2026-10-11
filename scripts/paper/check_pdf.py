@@ -69,6 +69,12 @@ class Report:
     undefined: list[str] = field(default_factory=list)
     anonymity: list[tuple[str, str]] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
+    #: Room left where the content ends (`CONTENT-END` in the log), in pt and
+    #: in lines of body text. Reported, not judged: a margin of zero passes
+    #: here and fails on an installation that breaks one line differently.
+    margin_pt: float | None = None
+    margin_lines: float | None = None
+    margin_where: str = ""
 
 
 def final_pass(log: str) -> str:
@@ -80,6 +86,30 @@ def final_pass(log: str) -> str:
     """
     marker = "Rerunning TeX"
     return log.rsplit(marker, 1)[-1] if marker in log else log
+
+
+_CONTENT_END = re.compile(
+    r"CONTENT-END: page (?P<page>\d+), column (?P<col>[12]),\s*remaining "
+    r"(?P<rem>-?[0-9.]+)pt of (?P<goal>[0-9.]+)pt,\s*baselineskip (?P<bl>[0-9.]+)pt")
+
+
+def check_margin(log: str, report: Report) -> None:
+    """The space left in the column where the content ends; an empty
+    right-hand column is added when the content ends in the left one."""
+    # TeX wraps its log at a fixed width, mid-token if need be; the wrap
+    # inserts a newline and nothing else, so removing newlines undoes it.
+    found = list(_CONTENT_END.finditer(final_pass(log).replace("\n", "")))
+    if not found:
+        return
+    m = found[-1]
+    goal, rem, bl = float(m["goal"]), float(m["rem"]), float(m["bl"])
+    if goal >= 16000:          # \maxdimen: the content ended exactly on a page break
+        rem = 0.0
+    if m["col"] == "1":
+        rem += goal
+    report.margin_pt = rem
+    report.margin_lines = rem / bl if bl else None
+    report.margin_where = f"page {m['page']}, column {m['col']}"
 
 
 def check_log(log: str, report: Report) -> None:
@@ -139,6 +169,7 @@ def run(paper: Path) -> tuple[Report, int]:
         report.failures.append("no main.pdf / main.log: run `make -C paper pdf` first")
         return report, 2
     check_log(log.read_text(errors="replace"), report)
+    check_margin(log.read_text(errors="replace"), report)
     pages, text = pdf_pages_and_text(pdf)
     check_pages(pages, references_start(aux.read_text(errors="replace")) if aux.exists() else None,
                 report)
@@ -157,6 +188,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(f"pages: {report.content_pages} before the references "
           f"(limit {PAGE_LIMIT}), {report.pages} in all")
+    if report.margin_pt is not None:
+        print(f"room before the references: {report.margin_pt:.1f} pt, about "
+              f"{report.margin_lines:.1f} lines ({report.margin_where})")
+    else:
+        print("room before the references: unknown (no CONTENT-END in main.log)")
     print(f"overfull boxes: {len(report.overfull)} "
           f"({sum(pt > OVERFULL_LIMIT_PT for pt, _ in report.overfull)} over "
           f"{OVERFULL_LIMIT_PT:g} pt)")

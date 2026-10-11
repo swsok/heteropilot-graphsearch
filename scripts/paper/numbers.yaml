@@ -124,3 +124,29 @@ egfiveFloorLow:     {file: e_g5_real_hardware.md, find: ["floor sensitivity", "v
 egfiveFloorHigh:    {file: e_g5_real_hardware.md, find: ["floor sensitivity", "value"], row: highest floor tried, column: value}
 egfiveFloorRows:    {file: e_g5_real_hardware.md, find: ["floor sensitivity", "value"], row: condition-seeds re-judged, column: value}
 egfiveFloorChanged: {file: e_g5_real_hardware.md, find: ["floor sensitivity", "value"], row: condition-seeds whose answer changes, column: value}
+
+# --- E-G8, P/D across two accelerator types (preregistration row 11) ---------
+egeightRuns:        {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: validation runs, column: value}
+egeightAgree:       {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: three-axis agreement, column: value, pattern: "^([0-9]+) of"}
+egeightLatAgree:    {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: latency-only agreement, column: value, pattern: "^([0-9]+) of"}
+egeightFloor:       {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: goodput floor, column: value}
+egeightTtftMeasLo:  {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: p99 TTFT measured low, column: value}
+egeightTtftMeasHi:  {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: p99 TTFT measured high, column: value}
+egeightTtftPredLo:  {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: p99 TTFT predicted low, column: value}
+egeightTtftPredHi:  {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: p99 TTFT predicted high, column: value}
+egeightRatioLo:     {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: ratio low, column: value}
+egeightRatioHi:     {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: ratio high, column: value}
+egeightOnset:       {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: hardware preemption onset (D1), column: value}
+egeightCeiling:     {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: simulator highest judged rate (D1), column: value}
+egeightRaises:      {file: e_g8_hetero_pd.md, find: ["quantity", "value"], row: simulator raises from (D1), column: value}
+# The three inter-node directions; the competing-flow columns are POST HOC.
+egeightGfiveRatio:  {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: s8 -> s6 (E-G5), column: ratio}
+egeightDoneRatio:   {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D1 s8 -> a5k2, column: ratio}
+egeightDtwoRatio:   {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D2 a5k2 -> s8, column: ratio}
+egeightDoneChange:  {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D1 s8 -> a5k2, column: measured change, pattern: "^\\+?(-?[0-9.]+) ms$"}
+egeightDonePred:    {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D1 s8 -> a5k2, column: predicted change, pattern: "^\\+?(-?[0-9.]+) ms$"}
+egeightDtwoChange:  {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D2 a5k2 -> s8, column: measured change, pattern: "^\\+?(-?[0-9.]+) ms$"}
+egeightDtwoPred:    {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D2 a5k2 -> s8, column: predicted change, pattern: "^\\+?(-?[0-9.]+) ms$"}
+egeightPsGfive:     {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: s8 -> s6 (E-G5), column: ratio to it}
+egeightPsDone:      {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D1 s8 -> a5k2, column: ratio to it}
+egeightPsDtwo:      {file: e_g8_hetero_pd.md, find: ["direction", "accelerators"], row: D2 a5k2 -> s8, column: ratio to it}

@@ -12,6 +12,7 @@
 % claim: C11
 % claim: C18
 % claim: C30
+% claim: C39
 Placement is a decision a serving planner has to make and, enumerating over
 islands, has no language for. This work gives it one: a relation that folds
 only what a graph isomorphism confirms interchangeable, with the shared
@@ -20,6 +21,6 @@ feasible placement was wrongly removed and nothing differently priced was
 folded, and under the real simulator the compression saved more time than it
 cost. On
 hardware, one plan at two of its placements is \egfiveTtwoOverTone{}x apart in
-$p99$ time to first token at the load knee; across a NIC, the contention model
-predicted far more slowdown than the hardware showed, which is reported as a
-miss.
+$p99$ time to first token at the load knee; on three inter-node directions
+across two accelerator types, the contention model predicted far more slowdown
+than the hardware showed, which is reported as a miss.

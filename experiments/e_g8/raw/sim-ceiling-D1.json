@@ -1,0 +1,41 @@
+{
+  "direction": "D1",
+  "highest_judged_rps": 2.0,
+  "ladder": [
+    4.0,
+    3.0,
+    2.0,
+    1.5,
+    1.0
+  ],
+  "note": "descends the ladder and stops at the first rate with a verdict; None means no rate on the ladder had one",
+  "report_only": true,
+  "steps": [
+    {
+      "detail": "candidate_id='pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192@b84e6bf588a5' stage=<RejectionStage.SIM_ERROR: 'sim_error'> reason='crashed: exit 1:   File \"/home/swsok/heteropilot-graphsearch/vendor/heteropilot/serving/core/memory_model.py\", line 252, in allocate |     raise RuntimeError( | RuntimeError: [MemoryModel] [node_id=1,inst=1] NPU: tried to load 152.00MB but only 11.89MB is available.'",
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "rps": 4.0,
+      "state": "unknown_measurement"
+    },
+    {
+      "detail": "candidate_id='pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192@b84e6bf588a5' stage=<RejectionStage.SIM_ERROR: 'sim_error'> reason='crashed: exit 1:   File \"/home/swsok/heteropilot-graphsearch/vendor/heteropilot/serving/core/memory_model.py\", line 252, in allocate |     raise RuntimeError( | RuntimeError: [MemoryModel] [node_id=1,inst=1] NPU: tried to load 146.00MB but only 71.89MB is available.'",
+      "feasible": null,
+      "p99_tpot_ms": null,
+      "p99_ttft_ms": null,
+      "rps": 3.0,
+      "state": "unknown_measurement"
+    },
+    {
+      "detail": "",
+      "feasible": false,
+      "p99_tpot_ms": 45.49595841999997,
+      "p99_ttft_ms": 410.0967811029467,
+      "rps": 2.0,
+      "state": "evaluated"
+    }
+  ],
+  "template_id": "pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192",
+  "written_at": "2026-10-10T12:39:17.733281+00:00"
+}

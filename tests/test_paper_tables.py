@@ -74,3 +74,13 @@ def test_a_composite_sets_two_cells_side_by_side() -> None:
                         labels={"r": "recall"})
     header, rows = MD.apply_spec("t", *table, spec, [table])
     assert header == ["recall"] and rows == [["0.6 / 0.1"]]
+
+
+def test_where_keeps_only_the_named_rows_and_refuses_to_empty_a_table() -> None:
+    main = (["devices", "ratio"], [["32", "0.08"], ["128", "0.02"]])
+    spec = MD.TableSpec(columns=["devices", "ratio"], where={"devices": ["128"]})
+    _, rows = MD.apply_spec("t", *main, spec, [main])
+    assert rows == [["128", "0.02"]]
+    with pytest.raises(MD.TableSpecError):
+        MD.apply_spec("t", *main, MD.TableSpec(columns=["devices"],
+                                              where={"devices": ["64"]}), [main])

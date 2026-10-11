@@ -26,6 +26,7 @@ saves, the registered response is to demote exact compression to a cache key.
 
 % claim: C13
 % claim: C14
+% claim: C40
 \paragraph{Some placements never simulate.}
 On the smallest corpus \egthreeUnjudgedLab{} of \egthreeEmbeddingsLab{}
 placements returned no verdict, so the correctness result there is a
@@ -33,7 +34,9 @@ statement about the placements the simulator judged; on the toy corpora, once
 the missing profile was measured, every placement was judged. Neither of the two causes
 identified in Section~\ref{sec:eval} becomes a
 verdict by being understood: the KV exhaustion is detected and raised, so the
-failure carries a reason but not a verdict.
+failure carries a reason but not a verdict. With an A5000 decoding, the
+simulator judged loads at which the hardware already preempts
+(Section~\ref{sec:eval-pd}).
 
 % claim: C34
 % claim: C3
@@ -52,6 +55,7 @@ that the labels are sufficient.
 
 % claim: C22
 % claim: C30
+% claim: C39
 \paragraph{Inter-node contention on a disaggregated deployment is smaller than
 the model predicts.}
 Inter-node \emph{P/D} runs---prefill on one node, decode on the other, the KV
@@ -62,25 +66,22 @@ interval from prefill response to first decoded token by \egfivePdEffect{}
 ms, with a standard deviation of \egfivePdSd{} ms over three pairs, so not
 distinguishable from zero, where the fluid model predicted
 \egfivePdPredicted{} ms: a ratio of \egfivePdRatio{}, outside the registered
-agreement band. The model enters the background as a standing reservation of
-its duty cycle, which slows a transfer more than a competing flow would; even
-so, the hardware's effect is below what processor sharing predicts, and this
-experiment does not separate why.
+agreement band. Across two accelerator types the two further directions miss
+it too (Section~\ref{sec:eval-pd}). The model enters the background as a
+standing reservation of its duty cycle; post hoc, a competing flow under
+processor sharing brings one direction of three inside the band and leaves the
+other two well below it. So the reservation is one wrong assumption, not the
+only one, and nothing here separates the rest.
 
+% claim: C38
 % claim: C21
 % not-established
-\paragraph{The knee shift is not established.}
-That the slower wire moves the load knee itself, and not only the latency at
-it, was observed only in the pilot runs, which are the fitted set the
-specification was derived from and are excluded from validation; no results
-file carries it, and the paper does not claim it.
-
 \paragraph{Deferred by scope.}
-Every hardware result here runs on one accelerator model: the placements are
-heterogeneous in interconnect, not in accelerator. The burst pattern's parameter
-meant opposite things to the simulator and to the trace generator, and the
-hardware trace ignored it; both were fixed before the widened matrix was
-registered, and no reported run used either. NPU deployment (no backend exists), a tensor-parallel group spanning two
+On hardware only P/D crosses accelerator types, an A40 and an RTX A5000
+(Section~\ref{sec:eval-pd}); every tensor-parallel group stays within one.
+That the slower wire moves the load knee itself was seen only in the excluded
+pilot runs and is not claimed. A burst-pattern defect was fixed before any
+reported run. NPU deployment (no backend exists), a tensor-parallel group spanning two
 accelerator vendors, KV-cache format conversion between them, learned rankers
 and mixed parallelism degrees within one group are outside this work; nothing
 here shows they cannot be done.
