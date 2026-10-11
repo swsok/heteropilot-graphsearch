@@ -61,3 +61,10 @@ def test_the_predicted_goodput_is_read_from_the_committed_detail(an) -> None:
               "target=0.8, predicted=0.7852656419517176)])")
     assert an.predicted_goodput({"detail": detail}) == pytest.approx(0.7852656419517176)
     assert an.predicted_goodput({"detail": ""}) is None
+
+
+def test_the_competing_flow_alternative_reproduces_row_7g(an) -> None:
+    # Row 7 (g) stated +5.8 ms for s8 -> s6 before E-G5's run.
+    import json
+    ind = json.loads(an.E_G5_PREDICTION.read_text())["independent"]["xfer_ms_mean"]
+    assert round(an.competing_flow_change(ind), 1) == 5.8

@@ -1868,3 +1868,71 @@ Re-Size BAR enabled), `a5000-2` boots with a 32 GB BAR1 on both GPUs.
 `gpu0_rebar.sh` is now only the pre-run check that BAR1 is 32 GB. The path,
 the node and the GPU are unchanged. `real-s8a5k` still carries GPU 0 only,
 now as scope: it is where E-G8 deploys and where R5.0 measured.
+
+## GS-40 — E-G8, P/D across two accelerator types: what the registered criteria say · 2026-10-11
+
+**Result, under preregistration row 11.** Twelve validation runs: `s8` (A40)
+and `a5000-2` GPU 0 (RTX A5000), two directions, `independent` and `shared`,
+1 rps, three ABAB pairs each. None failed, and GPU 0 was free on both nodes
+before and after each run. The background's duty cycle was 0.600 (D1) and
+0.595-0.598 (D2). Results: `experiments/results/e_g8_hetero_pd.md`.
+
+**Metric 1 agrees trivially, 12 of 12.** Every registered prediction misses
+on goodput (0.785 and 0.766 against the 0.8 floor). Every measurement misses
+too: the hardware clears the floor (0.904, 0.875) but not the latency target.
+This is the floor property row 9 named, reproduced, and row 11 said so before
+the runs. The information is in the latency-only column, which agrees in
+**0 of 12**. The simulator predicts p99 TTFT at 375-548 ms; the hardware
+measured 630-802 ms, in both directions. TPOT is within its target on both
+sides. D2 `shared`'s 0.3 % TTFT margin was excluded as evidence beforehand,
+and the same answer holds without it.
+
+**Metric 2 is not met in either direction.** Across the three inter-node
+directions measured so far:
+
+| direction | measured | predicted (reservation) | ratio | competing flow, post hoc | ratio to it |
+| --- | --- | --- | --- | --- | --- |
+| s8 -> s6 (E-G5, A40 -> A40) | +1.57 ms | +14.45 ms | 0.11 | +5.78 ms | 0.27 |
+| D1 s8 -> a5k2 (A40 -> A5000) | +7.41 ms | +22.23 ms | 0.33 | +8.89 ms | 0.83 |
+| D2 a5k2 -> s8 (A5000 -> A40) | +1.13 ms | +24.49 ms | 0.05 | +9.79 ms | 0.12 |
+
+All three have the sign the model predicts, and all three fall below the
+registered 0.5-2 band.
+
+**Post hoc, not registered: the competing-flow alternative.** Row 7 (g)
+stated before E-G5's run that the model enters the background as a standing
+reservation of its duty cycle, slowing a transfer 2.5x. A competing flow at
+that duty cycle would, under processor sharing, slow it about 1.6x:
+`0.6 x` the predicted independent transfer, +5.8 ms for s8 -> s6. Computed
+for all three directions, it brings **D1 inside the band (0.83)** and leaves
+s8 -> s6 (0.27) and D2 (0.12) well below it. So "the model is wrong" narrows
+only partly. The reservation assumption accounts for D1's gap. It does not
+account for the other two, where the hardware is below even the
+competing-flow figure.
+
+**The asymmetry between D1 (0.33) and D2 (0.05) is not explained.** Like
+GS-34, nothing measured here separates the candidates, and none is chosen:
+
+- the A5000 sits in a PCIe Gen3 x8 slot, which caps its NIC at about 54
+  Gbit/s, and it may bind the background and the KV differently when the
+  A5000 is the sender (D2) than when it receives (D1);
+- RDMA READ (the KV pull, decode side) against SEND (the background)
+  arbitration may differ by which end initiates;
+- the pull may overlap other work, or not lie on the interval's critical
+  path, to a different degree on each decode engine.
+
+**KV exhaustion (metric 3, report-only).** No validation run preempted. In
+the knee pilot the hardware first preempts at 1.5 rps (17), with the A5000
+decoding (D1). The simulator returns a verdict for the same placement up to
+2 rps and raises from 3 rps (`sim-ceiling-D1.json`). It therefore treats the
+A5000's KV as roomier than the engine does. It also fails by raising, not by
+predicting preemption (heteropilot#137).
+
+**On the paper.** C38, C39 and C40, and the C30 footnote, go into
+`paper/CLAIMS.md`. Section VIII.H reports the experiment. The P/D sentence in
+the abstract, Section I and Section XI widens to three directions across two
+accelerator types. Section X's "heterogeneous in interconnect, not in
+accelerator" becomes "P/D crosses accelerator types; a TP group stays within
+one". The competing-flow figures are labelled post hoc wherever they appear.
+R5.4 (six more s8-s6 pairs) will be preregistration row 12 once `s6` is
+reachable from `s8`; it does not block this.

@@ -4,6 +4,41 @@
 
 SLO (spec S): p99 TTFT <= 550.0 ms, p99 TPOT <= 60.0 ms. 150 requests per run.
 
+## Summary
+
+Metric 1 per direction and condition (three repetitions each; the latency-only verdict is the auxiliary column, row 11 (e)); metric 2 on the `shared` row.
+
+| run | predicted | measured | agree | predicted (latency) | measured (latency) | agree (latency) | p99 TTFT predicted | p99 TTFT measured | KV change | predicted change | ratio |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| D1 independent | MISSED | 0 of 3 met | 3 of 3 | met | 0 of 3 met | 0 of 3 | 375 ms | 637 ms [630, 662] | - | - | - |
+| D1 shared | MISSED | 0 of 3 met | 3 of 3 | met | 0 of 3 met | 0 of 3 | 497 ms | 670 ms [665, 706] | +7.41 ms | +22.23 ms | 0.33 |
+| D2 independent | MISSED | 0 of 3 met | 3 of 3 | met | 0 of 3 met | 0 of 3 | 408 ms | 775 ms [766, 785] | - | - | - |
+| D2 shared | MISSED | 0 of 3 met | 3 of 3 | met | 0 of 3 met | 0 of 3 | 548 ms | 794 ms [790, 802] | +1.13 ms | +24.49 ms | 0.05 |
+
+The contention effect on three inter-node directions, each at 1 rps with three pairs. The last two columns are **post hoc, not registered**: the background as a competing flow under processor sharing (row 7 (g)), `0.6 x` the predicted independent transfer.
+
+| direction | accelerators | measured change | SD across pairs | predicted change | ratio | registered criterion | competing flow, post hoc | ratio to it |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| s8 -> s6 (E-G5) | A40 -> A40 | +1.57 ms | 1.67 ms | +14.45 ms | 0.11 | NOT met | +5.78 ms | 0.27 |
+| D1 s8 -> a5k2 | A40 -> A5000 | +7.41 ms | 1.54 ms | +22.23 ms | 0.33 | NOT met | +8.89 ms | 0.83 |
+| D2 a5k2 -> s8 | A5000 -> A40 | +1.13 ms | 0.41 ms | +24.49 ms | 0.05 | NOT met | +9.79 ms | 0.12 |
+
+| quantity | value |
+| --- | --- |
+| three-axis agreement | 12 of 12 |
+| latency-only agreement | 0 of 12 |
+| validation runs | 12 |
+| p99 TTFT measured low | 630 |
+| p99 TTFT measured high | 802 |
+| p99 TTFT predicted low | 375 |
+| p99 TTFT predicted high | 548 |
+| goodput floor | 0.8 |
+| ratio low | 0.05 |
+| ratio high | 0.33 |
+| hardware preemption onset (D1) | 1.5 |
+| simulator highest judged rate (D1) | 2 |
+| simulator raises from (D1) | 3 |
+
 ## D1: prefill `s8` (A40) -> decode `a5k2` (RTX A5000)
 
 Template, fixed for every run: `pd(cuda-a40-s8-tp1-dp1 P + cuda-rtx-a5000-a5k2-tp1-dp1 D)-s32-t8192`, the mirror image of D2's `pd(cuda-rtx-a5000-a5k2-tp1-dp1 P + cuda-a40-s8-tp1-dp1 D)-s32-t8192`. Row 5's rule **could not be applied**: at the selection rate no template has a simulator verdict, so the selection is `unknown_measurement` -- the simulator's memory model exhausts the decode instance's KV and raises instead of returning a verdict -- the same cause as E-G3's C14 (e_g3_sim_error_causes.md). At the run rate the deployed placement *is* simulated, and metric 1 is judged against that prediction (row 11 (e)).

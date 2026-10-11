@@ -345,6 +345,134 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
     return out
 
 
+E_G5_RESULTS = ROOT / "experiments" / "results" / "e_g5_real_hardware.md"
+E_G5_PREDICTION = ROOT / "experiments" / "e_g5" / "raw" / "pd-prediction-rps1.json"
+DUTY = 0.6
+LINK = {"D1": "s8 -> a5k2", "D2": "a5k2 -> s8"}
+
+
+def competing_flow_change(independent_xfer_ms: float, duty: float = DUTY) -> float:
+    """**Post hoc, not registered** (row 7 (g) named it beforehand): the
+    background as a competing flow under processor sharing instead of a
+    standing reservation. A transfer that starts while the background is on
+    (a fraction `duty` of the time) gets half the link, and otherwise all of
+    it, so it takes (1 + duty) times as long on average. The change is
+    `duty` times the independent transfer time. Bursts are 0.6 s long and a
+    transfer takes tens of ms, so one rarely straddles a burst edge."""
+    return duty * independent_xfer_ms
+
+
+def e_g5_quantities() -> dict[str, str]:
+    """E-G5's registered P/D result (row 7), from its own results file."""
+    text = E_G5_RESULTS.read_text()
+    i = text.index("| quantity | value |")
+    out = {}
+    for line in text[i:].splitlines()[2:]:
+        if not line.startswith("|"):
+            break
+        k, v = [c.strip() for c in line.strip("|").split("|")]
+        out[k] = v
+    return out
+
+
+def summary(raw: Path, slo: dict) -> list[str]:
+    """The paper's view: one row per direction x condition, then the effect
+    across the three inter-node directions measured so far."""
+    rows = runs(raw / "runs")
+    if not rows:
+        return []
+    out = ["", "## Summary", "",
+           "Metric 1 per direction and condition (three repetitions each; the latency-only "
+           "verdict is the auxiliary column, row 11 (e)); metric 2 on the `shared` row.", "",
+           "| run | predicted | measured | agree | predicted (latency) | measured (latency) "
+           "| agree (latency) | p99 TTFT predicted | p99 TTFT measured | KV change | "
+           "predicted change | ratio |", "| " + " | ".join(["---"] * 12) + " |"]
+    totals = {"agree": 0, "lat_agree": 0, "n": 0}
+    ttft_meas, ttft_pred = [], []
+    for d in DIRECTIONS:
+        pred_path = raw / f"prediction-{d}-rps1.json"
+        pred = json.loads(pred_path.read_text())
+        floor = pred["min_goodput_rps"]
+        main = pairs(raw / "runs", d)
+        effect = statistics.mean(r["diff"] for r in main) if main else None
+        for c in CONDITIONS:
+            rs = [r for r in rows if r["direction"] == d and r["condition"] == c
+                  and r["measured"]]
+            p = pred[c]
+            vs = [verdict(r["measured"], slo, floor) for r in rs]
+            p_met, p_lat = bool(p["feasible"]), predicted_latency_met(p, slo)
+            agree = sum(p_met == v["met"] for v in vs)
+            lat = sum(p_lat == v["latency_met"] for v in vs)
+            totals["agree"] += agree
+            totals["lat_agree"] += lat
+            totals["n"] += len(vs)
+            meas = sorted(r["measured"]["p99_ttft_ms"] for r in rs)
+            ttft_meas += meas
+            ttft_pred.append(p["p99_ttft_ms"])
+            met_n = sum(v["met"] for v in vs)
+            lat_n = sum(v["latency_met"] for v in vs)
+            m2 = (f"{effect:+.2f} ms | {pred['predicted_interval_change_ms']:+.2f} ms | "
+                  f"{effect / pred['predicted_interval_change_ms']:.2f}"
+                  if c == "shared" and effect is not None else "- | - | -")
+            out.append(
+                f"| {d} {c} | {met_txt(p_met)} | {met_n} of {len(vs)} met | "
+                f"{agree} of {len(vs)} | {met_txt(p_lat)} | {lat_n} of {len(vs)} met | "
+                f"{lat} of {len(vs)} | {p['p99_ttft_ms']:.0f} ms | "
+                f"{statistics.median(meas):.0f} ms [{meas[0]:.0f}, {meas[-1]:.0f}] | {m2} |")
+
+    g5q = e_g5_quantities()
+    g5_ind = json.loads(E_G5_PREDICTION.read_text())["independent"]["xfer_ms_mean"]
+    three = [("s8 -> s6 (E-G5)", "A40 -> A40", float(g5q["measured change"]),
+              float(g5q["SD across pairs"]), float(g5q["predicted change"]), g5_ind)]
+    for d in DIRECTIONS:
+        pred = json.loads((raw / f"prediction-{d}-rps1.json").read_text())
+        main = pairs(raw / "runs", d)
+        diffs = [r["diff"] for r in main]
+        three.append((f"{d} {LINK[d]}", "A40 -> A5000" if d == "D1" else "A5000 -> A40",
+                      statistics.mean(diffs), statistics.stdev(diffs),
+                      pred["predicted_interval_change_ms"],
+                      pred["independent"]["xfer_ms_mean"]))
+    out += ["", "The contention effect on three inter-node directions, each at 1 rps with "
+            "three pairs. The last two columns are **post hoc, not registered**: the "
+            "background as a competing flow under processor sharing (row 7 (g)), "
+            "`0.6 x` the predicted independent transfer.", "",
+            "| direction | accelerators | measured change | SD across pairs | "
+            "predicted change | ratio | registered criterion | competing flow, post hoc | "
+            "ratio to it |", "| " + " | ".join(["---"] * 9) + " |"]
+    for name, acc, m, sd, pv, ind in three:
+        ps = competing_flow_change(ind)
+        ok = (m > 0) == (pv > 0) and 0.5 <= m / pv <= 2.0
+        out.append(f"| {name} | {acc} | {m:+.2f} ms | {sd:.2f} ms | {pv:+.2f} ms | "
+                   f"{m / pv:.2f} | {'met' if ok else 'NOT met'} | {ps:+.2f} ms | "
+                   f"{m / ps:.2f} |")
+
+    ceil = json.loads((raw / "sim-ceiling-D1.json").read_text())
+    raises = min(st["rps"] for st in ceil["steps"] if st["state"] != "evaluated")
+    onset = None
+    for rate in sorted(float(x.name.removeprefix("knee-rps"))
+                       for x in (raw / "pilot").glob("knee-rps*")):
+        pre = preemptions(raw / "pilot" / f"knee-rps{rate:g}" / "D1" / "independent" / "1"
+                          / "decode.metrics.txt")
+        if onset is None and pre:
+            onset = rate
+    ratios = [m / pv for _, _, m, _, pv, _ in three]
+    out += ["", "| quantity | value |", "| --- | --- |",
+            f"| three-axis agreement | {totals['agree']} of {totals['n']} |",
+            f"| latency-only agreement | {totals['lat_agree']} of {totals['n']} |",
+            f"| validation runs | {totals['n']} |",
+            f"| p99 TTFT measured low | {min(ttft_meas):.0f} |",
+            f"| p99 TTFT measured high | {max(ttft_meas):.0f} |",
+            f"| p99 TTFT predicted low | {min(ttft_pred):.0f} |",
+            f"| p99 TTFT predicted high | {max(ttft_pred):.0f} |",
+            f"| goodput floor | {floor:g} |",
+            f"| ratio low | {min(ratios):.2f} |",
+            f"| ratio high | {max(ratios):.2f} |",
+            f"| hardware preemption onset (D1) | {fmt(onset)} |",
+            f"| simulator highest judged rate (D1) | {fmt(ceil['highest_judged_rps'])} |",
+            f"| simulator raises from (D1) | {raises:g} |"]
+    return out
+
+
 def render(raw: Path) -> str:
     any_measured = any(r["state"] == "measured" for r in runs(raw / "runs"))
     banner = ("> **REAL HARDWARE** -- two nodes, `s8` (A40) and `a5k2` (`a5000-2` GPU 0); "
@@ -356,6 +484,7 @@ def render(raw: Path) -> str:
     out = ["# E-G8 -- prefill/decode across two different accelerators", "", banner, "",
            f"SLO (spec S): p99 TTFT <= {slo['ttft_max_ms']} ms, p99 TPOT <= "
            f"{slo['tpot_max_ms']} ms. {C.REQUESTS_PER_RUN} requests per run."]
+    out += summary(raw, slo)
     for d in DIRECTIONS:
         out += section(raw, d, slo)
     out += ["", "## Reproducing", "", "```bash",
