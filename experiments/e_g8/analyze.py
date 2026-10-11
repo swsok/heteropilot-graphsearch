@@ -41,6 +41,7 @@ import conditions as C  # noqa: E402
 
 DEFAULT_RAW = ROOT / "experiments" / "e_g8" / "raw"
 DEFAULT_OUT = ROOT / "experiments" / "results" / "e_g8_hetero_pd.md"
+CONDITIONS = ("independent", "shared")
 DIRECTIONS = {"D1": "prefill `s8` (A40) -> decode `a5k2` (RTX A5000)",
               "D2": "prefill `a5k2` (RTX A5000) -> decode `s8` (A40)"}
 PREEMPT = re.compile(r"^vllm:num_preemptions_total(?:\{[^}]*\})?\s+([0-9.eE+-]+)", re.M)
@@ -144,6 +145,8 @@ def pairs(root: Path, direction: str) -> list[dict]:
             continue
         diffs = [b[i] - a[i] for i in common]
         out.append({"rep": int(a_dir.name), "n": len(common),
+                    "duty": (json.loads((b_dir / "provenance.json").read_text())
+                             .get("background") or {}).get("achieved_duty_cycle"),
                     "mean_a": statistics.mean(a[i] for i in common),
                     "mean_b": statistics.mean(b[i] for i in common),
                     "diff": statistics.mean(diffs),
@@ -189,8 +192,10 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
             m = sel["mirror_of"]
             out += [f"Template, fixed for every run: `{sel['chosen']}`, the mirror image of "
                     f"{m['direction']}'s `{m['template_id']}`. Row 5's rule **could not be "
-                    f"applied**: no template has a simulator verdict here, so the prediction "
-                    f"is `{sel['state']}` -- {sel['reason']}."]
+                    f"applied**: at the selection rate no template has a simulator verdict, "
+                    f"so the selection is `{sel['state']}` -- {sel['reason']}. At the run "
+                    "rate the deployed placement *is* simulated, and metric 1 is judged "
+                    "against that prediction (row 11 (e))."]
             out += [f"Simulator error: `{e}`" for e in sel.get("simulator_errors", [])]
         out += ["", "| template | state | predicted p99 TTFT | predicted p99 TPOT | feasible |",
                 "| --- | --- | --- | --- | --- |"]
@@ -297,6 +302,13 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
             + (f" Not judged, the prediction being `unknown_measurement`: **{unknown}**."
                if unknown else "")
             + f" Auxiliary, latency only: {lat_agree} of {lat_judged}."]
+    margins = [(c, (slo["ttft_max_ms"] - pred[c]["p99_ttft_ms"]) / slo["ttft_max_ms"])
+               for c in CONDITIONS if pred and pred[c].get("p99_ttft_ms") is not None]
+    for c, margin in margins:
+        if 0 <= margin < 0.01:
+            out += ["", f"`{c}`'s predicted p99 TTFT has a {100 * margin:.1f} % margin, so its "
+                    "latency-only verdict is **not counted as evidence of prediction "
+                    "accuracy**, whichever way it went (row 11 (e))."]
     out += sensitivity(rows, pred, slo)
 
     # 2. the contention effect
@@ -305,10 +317,10 @@ def section(raw: Path, direction: str, slo: dict) -> list[str]:
     if not main:
         out.append("No complete independent/shared pair.")
     else:
-        out += ["| pair | requests paired | independent mean | shared mean | change |",
-                "| --- | --- | --- | --- | --- |"]
+        out += ["| pair | requests paired | independent mean | shared mean | change | "
+                "background duty (shared) |", "| --- | --- | --- | --- | --- | --- |"]
         out += [f"| {r['rep']} | {r['n']} | {r['mean_a']:.2f} ms | {r['mean_b']:.2f} ms | "
-                f"{r['diff']:+.2f} ms |" for r in main]
+                f"{r['diff']:+.2f} ms | {fmt(r['duty'])} |" for r in main]
         effect = statistics.mean(r["diff"] for r in main)
         pv = pred["predicted_interval_change_ms"] if pred else None
         if not pv:
